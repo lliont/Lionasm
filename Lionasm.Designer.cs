@@ -37,6 +37,7 @@
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.Displv = new System.Windows.Forms.ToolStripMenuItem();
+            this.createBinaryToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.buildToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.buildObjectToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -50,15 +51,14 @@
             this.SLine = new System.Windows.Forms.ToolStripStatusLabel();
             this.printDocument1 = new System.Drawing.Printing.PrintDocument();
             this.printDialog1 = new System.Windows.Forms.PrintDialog();
-            this.textBox1 = new System.Windows.Forms.TextBox();
-            this.button1 = new System.Windows.Forms.Button();
-            this.button2 = new System.Windows.Forms.Button();
-            this.button3 = new System.Windows.Forms.Button();
-            this.button4 = new System.Windows.Forms.Button();
-            this.button5 = new System.Windows.Forms.Button();
-            this.button6 = new System.Windows.Forms.Button();
+            this.txtSearch = new System.Windows.Forms.TextBox();
+            this.btnFind = new System.Windows.Forms.Button();
+            this.btnU = new System.Windows.Forms.Button();
+            this.btnR = new System.Windows.Forms.Button();
+            this.btnCopy = new System.Windows.Forms.Button();
+            this.btnAssemble = new System.Windows.Forms.Button();
+            this.btnPaint = new System.Windows.Forms.Button();
             this.source = new Glos.Flickerfreertf();
-            this.createBinaryToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -142,6 +142,14 @@
             this.Displv.Text = "List labels-variables";
             this.Displv.Click += new System.EventHandler(this.toolStripMenuItem1_Click);
             // 
+            // createBinaryToolStripMenuItem
+            // 
+            this.createBinaryToolStripMenuItem.Checked = true;
+            this.createBinaryToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.createBinaryToolStripMenuItem.Name = "createBinaryToolStripMenuItem";
+            this.createBinaryToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
+            this.createBinaryToolStripMenuItem.Text = "Create Binary";
+            // 
             // buildToolStripMenuItem
             // 
             this.buildToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -153,7 +161,7 @@
             // buildObjectToolStripMenuItem
             // 
             this.buildObjectToolStripMenuItem.Name = "buildObjectToolStripMenuItem";
-            this.buildObjectToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.buildObjectToolStripMenuItem.Size = new System.Drawing.Size(125, 22);
             this.buildObjectToolStripMenuItem.Text = "Assemble";
             this.buildObjectToolStripMenuItem.Click += new System.EventHandler(this.buildObjectToolStripMenuItem_Click);
             // 
@@ -223,7 +231,7 @@
             // 
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.SLine});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 759);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 728);
             this.statusStrip1.Name = "statusStrip1";
             this.statusStrip1.Size = new System.Drawing.Size(1126, 22);
             this.statusStrip1.TabIndex = 5;
@@ -245,74 +253,74 @@
             this.printDialog1.Document = this.printDocument1;
             this.printDialog1.UseEXDialog = true;
             // 
-            // textBox1
+            // txtSearch
             // 
-            this.textBox1.Location = new System.Drawing.Point(263, 8);
-            this.textBox1.Name = "textBox1";
-            this.textBox1.Size = new System.Drawing.Size(143, 18);
-            this.textBox1.TabIndex = 6;
-            this.textBox1.TextChanged += new System.EventHandler(this.textBox1_TextChanged);
-            this.textBox1.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.textBox1_KeyPress);
+            this.txtSearch.Location = new System.Drawing.Point(263, 8);
+            this.txtSearch.Name = "txtSearch";
+            this.txtSearch.Size = new System.Drawing.Size(143, 18);
+            this.txtSearch.TabIndex = 6;
+            this.txtSearch.TextChanged += new System.EventHandler(this.txtSearch_TextChanged);
+            this.txtSearch.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.txtSearch_KeyPress);
             // 
-            // button1
+            // btnFind
             // 
-            this.button1.Location = new System.Drawing.Point(213, 5);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(44, 21);
-            this.button1.TabIndex = 7;
-            this.button1.Text = "Find";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.btnFind.Location = new System.Drawing.Point(213, 5);
+            this.btnFind.Name = "btnFind";
+            this.btnFind.Size = new System.Drawing.Size(44, 21);
+            this.btnFind.TabIndex = 7;
+            this.btnFind.Text = "Find";
+            this.btnFind.UseVisualStyleBackColor = true;
+            this.btnFind.Click += new System.EventHandler(this.btnFind_Click);
             // 
-            // button2
+            // btnU
             // 
-            this.button2.Location = new System.Drawing.Point(477, 8);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(25, 21);
-            this.button2.TabIndex = 8;
-            this.button2.Text = "U";
-            this.button2.UseVisualStyleBackColor = true;
-            this.button2.Click += new System.EventHandler(this.button2_Click);
+            this.btnU.Location = new System.Drawing.Point(477, 8);
+            this.btnU.Name = "btnU";
+            this.btnU.Size = new System.Drawing.Size(25, 21);
+            this.btnU.TabIndex = 8;
+            this.btnU.Text = "U";
+            this.btnU.UseVisualStyleBackColor = true;
+            this.btnU.Click += new System.EventHandler(this.btnU_Click);
             // 
-            // button3
+            // btnR
             // 
-            this.button3.Location = new System.Drawing.Point(508, 8);
-            this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(25, 21);
-            this.button3.TabIndex = 9;
-            this.button3.Text = "R";
-            this.button3.UseVisualStyleBackColor = true;
-            this.button3.Click += new System.EventHandler(this.button3_Click);
+            this.btnR.Location = new System.Drawing.Point(508, 8);
+            this.btnR.Name = "btnR";
+            this.btnR.Size = new System.Drawing.Size(25, 21);
+            this.btnR.TabIndex = 9;
+            this.btnR.Text = "R";
+            this.btnR.UseVisualStyleBackColor = true;
+            this.btnR.Click += new System.EventHandler(this.btnR_Click);
             // 
-            // button4
+            // btnCopy
             // 
-            this.button4.Location = new System.Drawing.Point(658, 5);
-            this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(47, 21);
-            this.button4.TabIndex = 10;
-            this.button4.Text = "Copy";
-            this.button4.UseVisualStyleBackColor = true;
-            this.button4.Click += new System.EventHandler(this.button4_Click);
+            this.btnCopy.Location = new System.Drawing.Point(658, 5);
+            this.btnCopy.Name = "btnCopy";
+            this.btnCopy.Size = new System.Drawing.Size(47, 21);
+            this.btnCopy.TabIndex = 10;
+            this.btnCopy.Text = "Copy";
+            this.btnCopy.UseVisualStyleBackColor = true;
+            this.btnCopy.Click += new System.EventHandler(this.btnCopy_Click);
             // 
-            // button5
+            // btnAssemble
             // 
-            this.button5.Location = new System.Drawing.Point(586, 5);
-            this.button5.Name = "button5";
-            this.button5.Size = new System.Drawing.Size(60, 21);
-            this.button5.TabIndex = 11;
-            this.button5.Text = "Assemble";
-            this.button5.UseVisualStyleBackColor = true;
-            this.button5.Click += new System.EventHandler(this.button5_Click);
+            this.btnAssemble.Location = new System.Drawing.Point(586, 5);
+            this.btnAssemble.Name = "btnAssemble";
+            this.btnAssemble.Size = new System.Drawing.Size(60, 21);
+            this.btnAssemble.TabIndex = 11;
+            this.btnAssemble.Text = "Assemble";
+            this.btnAssemble.UseVisualStyleBackColor = true;
+            this.btnAssemble.Click += new System.EventHandler(this.btnAssemble_Click);
             // 
-            // button6
+            // btnPaint
             // 
-            this.button6.Location = new System.Drawing.Point(796, 5);
-            this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(60, 21);
-            this.button6.TabIndex = 12;
-            this.button6.Text = "Paint";
-            this.button6.UseVisualStyleBackColor = true;
-            this.button6.Click += new System.EventHandler(this.button6_Click);
+            this.btnPaint.Location = new System.Drawing.Point(796, 5);
+            this.btnPaint.Name = "btnPaint";
+            this.btnPaint.Size = new System.Drawing.Size(60, 21);
+            this.btnPaint.TabIndex = 12;
+            this.btnPaint.Text = "Paint";
+            this.btnPaint.UseVisualStyleBackColor = true;
+            this.btnPaint.Click += new System.EventHandler(this.btnPaint_Click);
             // 
             // source
             // 
@@ -336,27 +344,19 @@
             this.source.TextChanged += new System.EventHandler(this.source_TextChanged);
             this.source.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.source_KeyPress);
             // 
-            // createBinaryToolStripMenuItem
-            // 
-            this.createBinaryToolStripMenuItem.Checked = true;
-            this.createBinaryToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.createBinaryToolStripMenuItem.Name = "createBinaryToolStripMenuItem";
-            this.createBinaryToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
-            this.createBinaryToolStripMenuItem.Text = "Create Binary";
-            // 
             // Lionasm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.ClientSize = new System.Drawing.Size(1126, 781);
-            this.Controls.Add(this.button6);
-            this.Controls.Add(this.button5);
-            this.Controls.Add(this.button4);
-            this.Controls.Add(this.button3);
-            this.Controls.Add(this.button2);
-            this.Controls.Add(this.button1);
-            this.Controls.Add(this.textBox1);
+            this.ClientSize = new System.Drawing.Size(1126, 750);
+            this.Controls.Add(this.btnPaint);
+            this.Controls.Add(this.btnAssemble);
+            this.Controls.Add(this.btnCopy);
+            this.Controls.Add(this.btnR);
+            this.Controls.Add(this.btnU);
+            this.Controls.Add(this.btnFind);
+            this.Controls.Add(this.txtSearch);
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.VHDL);
             this.Controls.Add(this.errorbox);
@@ -405,13 +405,13 @@
         private System.Drawing.Printing.PrintDocument printDocument1;
         private System.Windows.Forms.PrintDialog printDialog1;
         public System.Windows.Forms.ToolStripMenuItem Displv;
-        private System.Windows.Forms.TextBox textBox1;
-        private System.Windows.Forms.Button button1;
-        private System.Windows.Forms.Button button2;
-        private System.Windows.Forms.Button button3;
-        private System.Windows.Forms.Button button4;
-        private System.Windows.Forms.Button button5;
-        private System.Windows.Forms.Button button6;
+        private System.Windows.Forms.TextBox txtSearch;
+        private System.Windows.Forms.Button btnFind;
+        private System.Windows.Forms.Button btnU;
+        private System.Windows.Forms.Button btnR;
+        private System.Windows.Forms.Button btnCopy;
+        private System.Windows.Forms.Button btnAssemble;
+        private System.Windows.Forms.Button btnPaint;
         private System.Windows.Forms.ToolStripMenuItem createBinaryToolStripMenuItem;
     }
 }

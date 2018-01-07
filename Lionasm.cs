@@ -43,9 +43,9 @@ namespace WindowsFormsApplication1
                     if (ctok != "")
                     {
                         ctok = ctok.ToUpper();
-                        if (par.clist.ContainsKey(ctok.ToUpper()))
+                        if (par.colorList.ContainsKey(ctok.ToUpper()))
                         {
-                            c = (Color)par.clist[ctok];
+                            c = (Color)par.colorList[ctok];
                             source.Select(l - ctok.Length, ctok.Length);
                             source.SelectionColor = c;
                             //source.ClearUndo();
@@ -72,9 +72,9 @@ namespace WindowsFormsApplication1
             if (ctok != "")
             {
                 ctok = ctok.ToUpper();
-                if (par.clist.ContainsKey(ctok))
+                if (par.colorList.ContainsKey(ctok))
                 {
-                    c = (Color)par.clist[ctok];
+                    c = (Color)par.colorList[ctok];
                     source.Select(l - ctok.Length, ctok.Length);
                     source.SelectionColor = c;
                 }
@@ -133,9 +133,9 @@ namespace WindowsFormsApplication1
                     if (ctok != "")
                     {
                         ctok = ctok.ToUpper();
-                        if (par.clist.ContainsKey(ctok))
+                        if (par.colorList.ContainsKey(ctok))
                         {
-                            c = (Color)par.clist[ctok];
+                            c = (Color)par.colorList[ctok];
                             source.Select(l - ctok.Length, ctok.Length);
                             source.SelectionColor = c;
                         }
@@ -152,9 +152,9 @@ namespace WindowsFormsApplication1
             if (ctok != "")
             {
                 ctok = ctok.ToUpper();
-                if (par.clist.ContainsKey(ctok))
+                if (par.colorList.ContainsKey(ctok))
                 {
-                    c = (Color)par.clist[ctok];
+                    c = (Color)par.colorList[ctok];
                     source.Select(l - ctok.Length, ctok.Length);
                     source.SelectionColor = c;
                 }
@@ -474,12 +474,12 @@ namespace WindowsFormsApplication1
 
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void btnFind_Click(object sender, EventArgs e)
         {
             try
             {
-                source.SelectionStart = source.Find(textBox1.Text, fstart, source.TextLength - 1, 0);
-                source.SelectionLength = textBox1.Text.Length - 1;
+                source.SelectionStart = source.Find(txtSearch.Text, fstart, source.TextLength - 1, 0);
+                source.SelectionLength = txtSearch.Text.Length - 1;
                 fstart = source.SelectionStart + 1;
                 source.ScrollToCaret();
             }
@@ -492,35 +492,35 @@ namespace WindowsFormsApplication1
             }
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        private void btnU_Click(object sender, EventArgs e)
         {
-            if (textBox1.CanUndo == true)
+            if (txtSearch.CanUndo == true)
             {
                 // Undo the last operation.
-                textBox1.Undo();
+                txtSearch.Undo();
                 // Clear the undo buffer to prevent last action from being redone.
-                textBox1.ClearUndo();
+                txtSearch.ClearUndo();
             }
         }
 
-        private void button3_Click(object sender, EventArgs e)
+        private void btnR_Click(object sender, EventArgs e)
         {
             source.Redo();
         }
 
-        private void textBox1_TextChanged(object sender, EventArgs e)
+        private void txtSearch_TextChanged(object sender, EventArgs e)
         {
 
         }
 
-        private void textBox1_KeyPress(object sender, KeyPressEventArgs e)
+        private void txtSearch_KeyPress(object sender, KeyPressEventArgs e)
         {
             if (e.KeyChar == 13)
             {
                 try
                 {
-                    source.SelectionStart = source.Find(textBox1.Text, fstart, source.TextLength - 1, 0);
-                    source.SelectionLength = textBox1.Text.Length - 1;
+                    source.SelectionStart = source.Find(txtSearch.Text, fstart, source.TextLength - 1, 0);
+                    source.SelectionLength = txtSearch.Text.Length - 1;
                     fstart = source.SelectionStart + 1;
                     source.ScrollToCaret();
                 }
@@ -545,19 +545,19 @@ namespace WindowsFormsApplication1
             }
         }
 
-        private void button4_Click(object sender, EventArgs e)
+        private void btnCopy_Click(object sender, EventArgs e)
         {
             VHDL.SelectAll();
             VHDL.Refresh();
             VHDL.Copy();
         }
 
-        private void button5_Click(object sender, EventArgs e)
+        private void btnAssemble_Click(object sender, EventArgs e)
         {
             par.parse();
         }
 
-        private void button6_Click(object sender, EventArgs e)
+        private void btnPaint_Click(object sender, EventArgs e)
         {
             Cursor.Current = Cursors.WaitCursor;
             try
