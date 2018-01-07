@@ -1,0 +1,13 @@
+     ORG    8192
+
+TEST:	
+
+	DW	0
+	MOVR	(TEST),A1
+	MOVR	A1,(TEST)
+	MOVR.B	(TEST),A1
+	MOVR.B	A1,(TEST)
+	GADR	A0,TEST
+	DW	0
+
+

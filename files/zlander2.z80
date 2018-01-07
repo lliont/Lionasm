@@ -1,0 +1,601 @@
+;Lunar Lander II
+;By: Ahmed El-Helw
+;CopyRight (C) 1997
+;September 27, 1997
+;Ported to Ion by John Wyrwas
+;Date : April 19, 2000
+
+
+.NOLIST
+#include "ion.inc"
+#define getvar saferam1			;Define Difficulty Variable, for Getkey
+#define platx  saferam1+2			;Define PlatForm X coord
+#define landx  saferam1+4			;Define Lander X
+#define landy  saferam1+6			;Define Lander Y
+#define auto   saferam1+8			;Define AutoVariable (For GetkY)
+#define fuel   saferam1+10                      ;Define Fuel Variable
+	
+	 .list
+
+#ifdef TI83P
+        .org    progstart-2
+        .db     $BB,6D
+#else
+        .org    progstart
+#endif
+        xor a				
+        jr      nc,begin			;where to go to start the program
+
+        .db     "Lunar Lander II",0		;the title
+begin:
+init:
+	bcall(_clrLCDFull)		;Clear Screen
+	bcall(_IndicatorOff)		;RunIndicator Off
+	call	title			;Calls Title
+	jp	TitleGetkey		;Goes to TitleGetkey
+
+title:
+        bcall(_cleargbuf)               ;Clear Graph Buffer
+        bcall(_homeup)                 ;Cursor at 0,0
+	ld	hl,titlestring		;Loads Title String
+        bcall(_puts)                   ;Sends it to screen
+	ld      b,0			;Load line coords
+   	ld      c,55			
+   	ld      d,94			
+   	ld      e,55			
+  	ld      h,1			
+        bcall(_ILine)                  ;Draw a line w/above coordinates
+	ld	hl,9*256+0		;Load (pencol)*256+(penrow) into hl
+	ld	(pencol),hl		;Load hl into Pencol
+	ld	hl,author		;Loads Author String
+        bcall(_vputs)                  ;Sends to screen
+	ld	hl,16*256+0		;Load (pencol)*256+(penrow) into hl
+	ld	(pencol),hl		;Load hl into Pencol
+	ld	hl,email		;Loads E-Mail String
+        bcall(_vputs)                  ;Sends to screen
+	ld	hl,23*256+0		;Load (pencol)*256+(penrow) into hl
+	ld	(pencol),hl		;Load hl into Pencol
+	ld	hl,website		;Loads Website string
+        bcall(_vputs)                  ;Sends to screen
+        ld    hl,9
+        ld    (PENCOL),hl
+        ld    hl,31
+        ld    (PENROW),hl
+        ld    hl,strport
+        bcall(_vputs)
+        ld      hl,42*256+20            ;Load (pencol)*256+(penrow) into hl
+	ld	(pencol),hl		;Load hl into Pencol
+	ld	hl,EasyString		;Loads EasyString
+        bcall(_vputs)                  ;Sends to screen
+	ld	hl,49*256+20		;Load (pencol)*256+(penrow) into hl
+	ld	(pencol),hl		;Load hl into Pencol
+	ld	hl,MediumString		;Loads MediumString
+        bcall(_vputs)                  ;Sends to screen
+	ld	hl,56*256+20		;Load (pencol)*256+(penrow) into hl
+	ld	(pencol),hl		;Load hl into Pencol
+	ld	hl,HardString		;Loads HardString
+        bcall(_vputs)                  ;Sends to screen
+	ret				;Return to where it was called from (init)
+	
+
+TitleGetkey:
+	ld 	a,0ffh		;Reset Keyport
+	out 	(1),a		;Clear anything in 'a'
+	ld 	a,0fbh		;Pick Column The Keys are In
+	out 	(1),a		;Clear anything in 'a'
+	in 	a,(1)		;Input a key
+	cp	253		;Did you press key 3 ?
+	jp	z,hard		;Jump to Hard Level
+	ld 	a,0ffh		;Reset Keyport
+	out 	(1),a		;Clear anything in 'a'
+	ld 	a,0f7h		;Pick Column The Keys are In
+	out 	(1),a		;Clear anything in 'a'
+	in 	a,(1)		;Input a key
+	cp	253		;Did you press key 2 ?
+	jp	z,medium	;Jump to Medium Level
+	ld 	a,0ffh		;Reset Keyport
+	out 	(1),a		;Clear anything in 'a'
+	ld 	a,0efh		;Pick Column The Keys are In
+	out 	(1),a		;Clear anything in 'a'
+	in 	a,(1)		;Input a key
+	cp	253		;Did you press key 1 ?
+	jp	z,easy		;Jump to Easy Level
+	ld 	a,0fdh		;Reset Keyport
+	out 	(1),a		;Clear anything in 'a'
+	ld 	a,0fbh		;Pick Column The Keys are In
+	out 	(1),a		;Clear anything in 'a'
+	in 	a,(1)		;Input a key
+	cp	191		;Did you press key Clear (Why would you do that)?
+	jp	z,quit		;Jump to Quit Game
+	jp	nz,TitleGetkey	;No key?  Repeat the loop!
+
+easy:				;Sets Easy Getkey Level
+	ld	a,30		;Stores 30 to A
+	ld	(getvar),a	;Stores a to GetVar
+	ld	a,90
+	ld	(fuel),a	;Stores Fuel
+	jp	gameinit	;Goes to GameInit
+
+medium:				;Sets Medium GetKey Level
+	ld	a,20		;Stores 20 to A
+	ld	(getvar),a	;Stores a to GetVar
+	ld	a,50
+	ld	(fuel),a	;Stores Fuel
+	jp	gameinit	;Goes to GameInit
+
+hard:				;Sets Hard GetKey Level
+	ld	a,10		;Stores 10 to A
+	ld	(getvar),a	;Stores a to GetVar
+	ld	a,30
+	ld	(fuel),a	;Stores Fuel 
+	jp	gameinit	;Goes to GameInit
+
+gameinit:
+        bcall(_clrLCDFull)     ;Clear Screen
+        bcall(_cleargbuf)       ;Clear Graph Buffer
+	ld 	hl,background	;background data->hl
+	ld 	de,plotsscreen	;8e29h->de
+	ld 	bc,768		;bytes to copy (?)
+	ldir			;copy bytes to buffer
+        call    ionfastcopy     ;copy buffer to display
+	call	random		;Calls routine that creates Random Init
+	call	dispPlat	;Calls routine to display Platform
+	ld	a,45		;Load 45 into a
+	ld	(landx),a	;Load a into Lander X
+	ld	a,10		;Load 10 into a
+	ld	(landy),a	;Load a into Lander Y
+	set textwrite,(iy+sgrflags)	;Allow Writing on GraphBuffer
+	ld	hl,0*256+0		;Load Coordinates
+	ld	(pencol),hl		;Into PenCol
+	ld	hl,fuelstring		;Load "Fuel"
+        bcall(_vputs)                  ;Send to Screen
+	res textwrite,(iy+sgrflags)	;Reset text write on GraphBuffer
+	jp	MainLoop
+
+dispLander:
+	ld	a,(landy)
+	ld	e,a		;Loads Y into e
+	ld	a,(landx)	;Loads X into a
+	ld	bc,lander	;Sprite Name
+	call	SPRXOR		;Display Sprite
+        call    ionfastcopy    ;Show Changes on GRBUF
+	ret
+
+FuelDisplay:		
+	set textwrite,(iy+sgrflags)	;Sets Text Write on GraphBuffer
+	ld	hl,0*256+20		;Load Coords
+	ld	(pencol),hl		;Into PenCol
+	ld	hl,blank		;Load Blank String
+        bcall(_vputs)                  ;Display
+	ld	a,(fuel)		;Load Fuel into A
+        bcall(_setxxop1)               ;A into Op1
+	ld      hl,0*256+20		;Text Coords
+    	ld      (PENCOL),hl		;Into PenCol
+    	ld      a,2			;Max. Number of Digits to Display
+        bcall(_DISPOP1A)               ;Display Op1
+	res textwrite,(iy+sgrflags)	;Resets Text Write on GraphBuffer
+	ret				;Returns to Call Location
+
+MainLoop:
+	call	fueldisplay		;Displays Fuel
+	call	dispLander		;Displays Lander
+	ld	a,(fuel)		;Loads Fuel into A
+	dec	a			;Decrease it
+	ld	(fuel),a		;A Back into Fuel
+	cp	0
+	jp	nz,chklocation		;If you have fuel, goto CheckLocation
+        bcall(_clrLCDFull)             ;ClearScreen
+        bcall(_cleargbuf)
+	ld	hl,30*256+20		;Load hl,30 (PENCOL) and 5 (PENROW), *256 is a must
+	ld	(PENCOL),hl		;Load hl into Pencol
+	ld	hl,outoffuel		;Load string
+        bcall(_vputs)                  ;Terminate String to screen
+	call	pause			;Call Pause Loop
+	ret		
+
+MainLoop1:
+	jp	movegkey		;Gets Key
+
+movegkey:
+	ld 	a,0ffh			;Reset keyport
+	out 	(1),a
+	ld 	a,0feh			;Load desired port
+	out     (1),a
+	in 	a,(1)			;Input Key
+	cp	251			;If key is right
+	jp 	z,left			;Goto left
+	cp 	253			;If key is left
+	jp 	z,right			;Goto right
+	cp 	254			;If key is down
+	jp 	z,down			;Goto Down
+	ld 	a,0ffh			;Reset KeyPort
+	out 	(1),a
+	ld 	a,0fdh			;Load desired keyport
+	out 	(1),a	
+	in 	a,(1)			;Input key
+	cp 	191			;If key is clear
+	jp 	z,quit			;Goto Quit
+	jp	nz,automove		;Goto Automove if no key
+
+;Automatically Moves Ship
+
+automove:
+	ld	a,(auto)		;Loads AutoVariable into a
+	inc	a			;Increases it
+	ld	(auto),a		;Loads A back into AutoVariable
+        bcall(_setxxop1)               ;Stores into OP1
+	ld	a,(getvar)		;Loads GetVar into A
+        bcall(_setxxop2)               ;Stores it into OP2
+        bcall(_cpop1op2)               ;Compare Op1 w/Op2 
+	jp	nz,movegkey		;If it is not 0, goto Movekey
+	call	displander		;Remove Lander off the screen
+	ld	a,0			;Reset Auto Variable
+	ld	(auto),a
+	ld	a,(landy)		;Loading Lander Y into A
+	inc	a			;Increasing it
+	ld	(landy),a		;Store Back to A
+	ld	a,(landy)		;Check Y Coordinate
+	cp	43			;Below the platform?
+	jp	z,out
+	jp	MainLoop		;Start over!
+
+
+;Update if you press key
+
+left:
+	call	displander		;Clear sprite
+	ld	a,(landx)
+	dec	a			;Decrease A
+	ld	(landx),a		;Reload A into LandX
+	cp	0			;If X is going out
+	jp	z,out			;Goto Out
+	ld	a,(landy)		;Check Y Coordinate
+	cp	43			;Below the platform?
+	jp	z,out
+	jp	MainLoop
+	
+right:
+	call	displander		;Clear sprite
+	ld	a,(landx)
+	inc	a			;Increase A
+	ld	(landx),a		;Load A back into LandX
+	cp 	89			;If it is 89
+	jp	z,out			;Goto out
+	ld	a,(landy)		;Check Y Coordinate
+	cp	43			;Below the platform?
+	jp	z,out
+	jp	MainLoop
+
+down:
+	call	displander		;Again clear sprite
+	ld	a,(landy)		;Load YCoord into A
+	dec	a			;Decrease it
+	ld	(landy),a		;Put it into LANDY
+	cp	7			;If you are at 7
+	jp	z,out			;Goto Out
+	cp	43			;Below the platform?
+	jp	z,out
+	jp	MainLoop
+
+out:
+        bcall(_clrLCDFull)      
+        bcall(_cleargbuf)
+	ld	hl,30*256+5		;Load hl,30 (PENCOL) and 5 (PENROW), *256 is a must
+	ld	(PENCOL),hl		;Load hl into Pencol
+	ld	hl,outt			;Load string
+        bcall(_vputs)                  ;Terminate String to screen
+	call	pause			;Call Pause Loop
+	ret
+
+random:
+        call    ionRandom         ;Creats Random Number 
+	ld 	a,80		;Loads 80 into a
+        bcall(_setxxop2)       ;Stores a into OP2
+        bcall(_FPMULT)         ;Multiplies Op1 by Op2
+        bcall(_CONVOP1)        ;Puts op 1 into e
+	ld	a,e		;Loads e into a
+	ld	(platx),a	;Loads a into Platx
+	ret			;Returns to Called Location
+
+dispPlat:
+	ld	a,45		;Loads Y Coordinate into A
+	ld	e,a		;Loads a into e
+	ld	a,(platx)	;Loads XCoord into a
+	ld	bc,platform	;Loads PlatForm into BC
+	call	SPRXOR		;Calls Sprite Routine
+	ret			;Return to call location
+
+chklocation:			;Checks your Location =)
+	ld	a,(landy)	;Checks Y Coordinate
+	cp	40		;If 40
+	jp	nz,MainLoop1	;If it is not 40, goto MainLoop1
+	ld	a,(landx)	;Otherwise, begin comparing #'s
+        bcall(_setxxop1)
+        ld      a,(platx)
+        bcall(_setxxop2)
+        bcall(_cpop1op2)
+	jp	z,safteyland	;Numbers are equal ?  You land saftley!
+	jp	nz,chkloc1	;No?  Try something else ...
+
+chkloc1:
+	ld	a,(landx)
+        bcall(_setxxop1)
+	ld	a,(platx)
+	inc	a
+        bcall(_setxxop2)
+        bcall(_cpop1op2)
+	jp	z,safteyland
+	jp	nz,chkloc2
+
+chkloc2:
+	ld	a,(landx)
+        bcall(_setxxop1)
+	ld	a,(platx)
+	inc	a
+	inc	a
+        bcall(_setxxop2)
+        bcall(_cpop1op2)
+	jp	z,safteyland
+	jp	nz,chkloc3
+
+chkloc3:
+	ld	a,(landx)
+        bcall(_setxxop1)
+	ld	a,(platx)
+	dec	a
+        bcall(_setxxop2)
+        bcall(_cpop1op2)
+	jp	z,safteyland
+	jp	nz,chkloc4
+
+chkloc4:
+	ld	a,(landx)
+        bcall(_setxxop1)
+	ld	a,(platx)
+	dec	a
+	dec	a
+        bcall(_setxxop2)
+        bcall(_cpop1op2)
+	jp	z,safteyland
+	jp	nz,crash
+
+crash:
+        bcall(_clrLCDFull)      
+        bcall(_cleargbuf)
+	ld	hl,30*256+20		;Load hl,30 (PENCOL) and 20 (PENROW), *256 is a must
+	ld	(PENCOL),hl		;Load hl into Pencol
+	ld	hl,crashburn		;Load string
+        bcall(_vputs)                  ;Terminate String to screen
+	call	pause			;Call Pause Loop
+	ret
+
+safteyland:
+        bcall(_clrLCDFull)      
+        bcall(_cleargbuf)
+	ld	hl,30*256+20		;Load hl,30 (PENCOL) and 5 (PENROW), *256 is a must
+	ld	(PENCOL),hl		;Load hl into Pencol
+	ld	hl,landstr		;Load string
+        bcall(_vputs)                  ;Terminate String to screen
+	call	pause			;Call Pause Loop
+	ret		
+
+quit:
+        bcall(_clrLCDFull)     ;Clears Screen
+        bcall(_cleargbuf)       ;Clears GraphBuffer
+	ret			;Return to Basic Mode
+
+pause:
+        bcall(_getkey)         ;Calls Getkey
+	cp	09		;If Key is Clear
+	jp	nz,pause	;If not, Goto Pause
+	ret			;If so, go back
+
+
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ÛÛÛÛÛ Z80 ÛÛÛÛÛÛ³    Sprite83    ³ÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ³ movax ³ÛÛÛÛÛÛÛÛÛÛÛÛ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+; Sprite xor routine v1.0
+; Coded by Hannes Edfeldt in 1997
+
+; This routine uses xor to draw the sprite, therefore you can erase the sprite
+; by just drawing it again at the same x and y coordinates. See xordemo.z80
+; for an example of how to use this routine.
+
+; Feel free to use this routine in your own productions as long as you give me
+; some credit.
+
+; This file should of course be viewed in a DOS texteditor ;)
+
+; Hannes Edfeldt -+- movax@algonet.se -+- http://www.algonet.se/~movax
+
+
+;ÜÛÛÛÛÛÛÛÛÛÛÛÛß SPRXOR ßÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ Xor 8x8 sprite ş a=x, e=y, bc=sprite address                               ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+SPRXOR:
+
+        push    bc              ; Save sprite address
+
+;ÛÛÛÛ   Calculate the address in graphbuf   ÛÛÛÛ
+
+        ld      hl,0            ; Do y*12
+        ld      d,0
+        add     hl,de
+        add     hl,de
+        add     hl,de
+        add     hl,hl
+        add     hl,hl
+
+        ld      d,0             ; Do x/8
+        ld      e,a
+        srl     e
+        srl     e
+        srl     e
+        add     hl,de
+
+        ld      de,plotsscreen
+        add     hl,de           ; Add address to graphbuf
+
+        ld      b,00000111b     ; Get the remainder of x/8
+        and     b
+        cp      0               ; Is this sprite aligned to 8*n,y?
+        jp      z,ALIGN
+
+
+;ÛÛÛÛ   Non aligned sprite blit starts here   ÛÛÛÛ
+
+        pop     ix              ; ix->sprite
+        ld      d,a             ; d=how many bits to shift each line
+
+        ld      e,8             ; Line loop
+LILOP:  ld      b,(ix+0)        ; Get sprite data
+
+        ld      c,0             ; Shift loop
+        push    de
+SHLOP:  srl     b
+        rr      c
+        dec     d
+        jp      nz,SHLOP
+        pop     de
+
+        ld      a,b             ; Write line to graphbuf
+        xor     (hl)
+        ld      (hl),a
+        inc     hl
+        ld      a,c
+        xor     (hl)
+        ld      (hl),a
+
+        ld      bc,11           ; Calculate next line address
+        add     hl,bc
+        inc     ix              ; Inc spritepointer
+
+        dec     e
+        jp      nz,LILOP        ; Next line
+
+        jp      DONE1
+
+
+;ÛÛÛÛ   Aligned sprite blit starts here   ÛÛÛÛ
+
+ALIGN:                          ; Blit an aligned sprite to graphbuf
+        pop     de              ; de->sprite
+        ld      b,8
+ALOP1:  ld      a,(de)
+        xor     (hl)
+        ld      (hl),a
+        inc     de
+        push    bc
+        ld      bc,12
+        add     hl,bc
+        pop     bc
+        djnz    ALOP1
+
+DONE1:
+        ret
+;ÜÛÛÛÛÛÛÛÛÛÛÛÛÜ SPRXOR ÜÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ
+
+
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ÛÛÛÛÛ Z80 ÛÛÛÛÛÛ³    Sprite83    ³ÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ³ movax ³ÛÛÛÛÛÛÛÛÛÛÛÛ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+
+
+;--------------------------BackGround Graphic---------------------------------
+background:
+    .db     0,0,0,0,0,0,192,0,0,0,0,1,0,0,0,0,0,0,192,0,0,0,0,1,0,0,0,0,0,0,208
+    .db     153,157,128,225,1,0,0,0,0,0,0,209,85,81,74,34,129,0,0,0,0,0,0,209,213,89,138,250,129,0,0
+    .db     0,0,0,0,209,85,81,68,170,129,0,0,0,0,0,0,221,85,157,68,233,1,0,0,0,0,0,0,192,0,0
+    .db     0,0,1,255,255,255,255,255,255,255,255,255,255,255,249,255,255,255,255,255,255,255,255,255,255,255,249,0,0,0,0
+    .db     0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0
+    .db     25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0
+    .db     0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0
+    .db     0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0
+    .db     0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0
+    .db     0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0
+    .db     0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0
+    .db     0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25
+    .db     0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0
+    .db     0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0
+    .db     0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0
+    .db     0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0
+    .db     0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0
+    .db     25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0
+    .db     0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0
+    .db     0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,25,0,255,128,0,0,1,128,0
+    .db     0,0,0,25,63,255,224,0,0,3,248,0,0,0,0,25,255,255,248,0,0,7,255,128,0,0,0,121,255,255,244
+    .db     0,0,31,255,248,0,0,0,249,255,255,255,0,0,63,255,255,128,0,1,249,255,255,255,128,0,119,255,255,255,255
+    .db     255,249,255,255,247,224,0,239,255,255,255,255,255,249,255,255,255,248,1,255,255,255,255,255,255,249,255,255,247,180,7
+    .db     255,255,255,255,255,255,249,255,255,255,255,15,255,255,255,255,255,255,249,255,255,255,255,255,255,255,255,255,255,255,249
+    .db     255,255,255,255,255,255,255,255,255,255,255,249,0,0,0,0,0,0,0,0,0,0,0,1
+
+;--------------------------End BackGround Graphic---------------------------------
+
+
+;----------------------------- Start Sprites --------------------------------------
+
+platform:
+	.db %00000000
+	.db %00000000
+	.db %10000001
+	.db %11000011
+	.db %11100111
+	.db %11111111
+	.db %11111111
+	.db %11111111
+
+lander:
+	.db %00011000
+   	.db %00100100
+   	.db %01100110
+   	.db %01011010
+   	.db %01011010
+   	.db %01100110
+   	.db %01111110
+   	.db %10000001
+
+
+;----------------------------- End Sprites --------------------------------------
+
+
+;----------------------------- Text Strings --------------------------------------
+
+titlestring:
+	.db	"Lunar Lander II",0
+author:
+	.db	"By: Ahmed El-Helw",0
+email:
+	.db	"ahmed3@worldnet.att.net",0
+website:
+	.db	"http://asm83.home.ml.org",0
+menustring:
+	.db	"Menu",0
+easystring:
+	.db	"Press 1 for Easy",0
+mediumstring:
+	.db	"Press 2 for Medium",0
+hardstring:
+	.db	"Press 3 for Hard",0
+outt:
+	.db	"You got sucked out of orbit!",0
+landstr:
+	.db	"You Landed Saftley!",0
+crashburn:
+	.db	"Crash and Burn =(",0
+outoffuel:
+	.db	"You ran out of fuel!",0
+fuelstring:
+	.db	"Fuel:",0
+blank:
+	.db	"     ",0
+strport:
+        .db "Ion Port by John Wyrwas",0
+
+
+;--------------------------- End Text Strings --------------------------------------
+
+.end
+END
