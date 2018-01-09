@@ -23,7 +23,7 @@ namespace Lion_assembler
 
     public enum OperandType : int
     {
-        Implied = -1,
+        Undefined = -1,
         RegisterADirect = 1,
         RegisterAIndirect = 2,
         MemoryDirect = 3,
@@ -53,7 +53,7 @@ namespace Lion_assembler
         public string opcode = string.Empty;
         public string op1 = string.Empty;
         public string op2 = string.Empty;
-        public OperandType op1t = OperandType.Implied, op2t = OperandType.Implied;
+        public OperandType op1t = OperandType.Undefined, op2t = OperandType.Undefined;
         public int opno = 0;
         public string word1 = string.Empty, word2 = string.Empty, word3 = string.Empty;
         public bool relative = false;
@@ -411,7 +411,7 @@ namespace Lion_assembler
         private OperandType parameter_type(string s)
         {
             int i;
-            if (string.IsNullOrEmpty(s)) return OperandType.Implied;
+            if (string.IsNullOrEmpty(s)) return OperandType.Undefined;
             if (s.Length == 2 && s[0] == 'A' && (s[1] >= '0' && s[1] < '8'))
             {
                 return OperandType.RegisterADirect;
@@ -431,13 +431,13 @@ namespace Lion_assembler
             if (s[0] == '$')
             {
                 try { Convert.ToInt32(s.Substring(1, s.Length - 1), 16); }
-                catch { return OperandType.Implied; }
+                catch { return OperandType.Undefined; }
                 return OperandType.MemoryDirect;
             }
             if (s[0] == '#')
             {
                 try { Convert.ToInt32(s.Substring(1, s.Length - 1), 2); }
-                catch { return OperandType.Implied; }
+                catch { return OperandType.Undefined; }
                 return OperandType.MemoryDirect;
             }
             if (s[0] == '(')
@@ -449,13 +449,13 @@ namespace Lion_assembler
                 if (s[1] == '$')
                 {
                     try { Convert.ToInt32(s.Substring(2, s.Length - 3), 16); }
-                    catch { return OperandType.Implied; }
+                    catch { return OperandType.Undefined; }
                     return OperandType.MemoryIndirect;
                 }
                 if (s[1] == '#')
                 {
                     try { Convert.ToInt32(s.Substring(2, s.Length - 3), 2); }
-                    catch { return OperandType.Implied; }
+                    catch { return OperandType.Undefined; }
                     return OperandType.MemoryIndirect;
                 }
             }
@@ -483,7 +483,7 @@ namespace Lion_assembler
                 return OperandType.MemoryNamedIndirect;
             }
 
-            return OperandType.Implied;
+            return OperandType.Undefined;
         }
 
         private int is_reg(string s)
@@ -512,7 +512,7 @@ namespace Lion_assembler
             int r1 = 0, r2 = 0; string s1, s2;
             il.op1t = parameter_type(il.op1);
             il.op2t = parameter_type(il.op2);
-            if (il.op1t == OperandType.Implied || il.op2t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined || il.op2t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -795,7 +795,7 @@ namespace Lion_assembler
             int r1 = 0, r2 = 0; string s1, s2;
             il.op1t = parameter_type(il.op1);
             il.op2t = parameter_type(il.op2);
-            if (il.op1t == OperandType.Implied || il.op2t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined || il.op2t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -1059,7 +1059,7 @@ namespace Lion_assembler
             int r1 = 0, r2 = 0; string s1, s2;
             il.op1t = parameter_type(il.op1);
             il.op2t = parameter_type(il.op2);
-            if (il.op1t == OperandType.Implied || il.op2t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined || il.op2t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -1323,7 +1323,7 @@ namespace Lion_assembler
             int r1 = 0, r2 = 0; string s1, s2;
             il.op1t = parameter_type(il.op1);
             il.op2t = parameter_type(il.op2);
-            if (il.op1t == OperandType.Implied || il.op2t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined || il.op2t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -1459,7 +1459,7 @@ namespace Lion_assembler
             int r1 = 0, r2 = 0; string s1, s2;
             il.op1t = parameter_type(il.op1);
             il.op2t = parameter_type(il.op2);
-            if (il.op1t == OperandType.Implied || il.op2t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined || il.op2t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -1594,7 +1594,7 @@ namespace Lion_assembler
         {
             int r1 = 0; string s1;
             il.op1t = parameter_type(il.op1);
-            if (il.op1t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -1619,7 +1619,7 @@ namespace Lion_assembler
         {
             int r1 = 0; string s1;
             il.op1t = parameter_type(il.op1);
-            if (il.op1t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -1645,7 +1645,7 @@ namespace Lion_assembler
             int r1 = 0, r2 = 0; string s1, s2;
             il.op1t = parameter_type(il.op1);
             il.op2t = parameter_type(il.op2);
-            if (il.op1t == OperandType.Implied || il.op2t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined || il.op2t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -1833,7 +1833,7 @@ namespace Lion_assembler
             int r1 = 0, r2 = 0; string s1, s2;
             il.op1t = parameter_type(il.op1);
             il.op2t = parameter_type(il.op2);
-            if (il.op1t == OperandType.Implied || il.op2t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined || il.op2t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect || il.op1t == OperandType.RegisterBDirect)
             {
                 r1 = is_reg(il.op1);
@@ -1857,7 +1857,7 @@ namespace Lion_assembler
         {
             int r1 = 0; string s1;
             il.op1t = parameter_type(il.op1);
-            if (il.op1t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined) return false;
             switch (il.op1t)
             {
                 case OperandType.RegisterADirect:
@@ -1924,7 +1924,7 @@ namespace Lion_assembler
             int r1 = 0, ii = 0; string s1;
             il.op1t = parameter_type(il.op1);
             il.relative = true;
-            if (il.op1t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined) return false;
             ii = (int)address;
             switch (il.op1t)
             {
@@ -1997,7 +1997,7 @@ namespace Lion_assembler
             il.op1t = parameter_type(il.op1);
             il.op2t = parameter_type(il.op2);
             il.relative = true;
-            if (il.op1t == OperandType.Implied || il.op2t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined || il.op2t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -2222,7 +2222,7 @@ namespace Lion_assembler
         {
             int r1 = 0; string s1;
             il.op1t = parameter_type(il.op1);
-            if (il.op1t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined) return false;
             switch (il.op1t)
             {
                 case OperandType.RegisterADirect:
@@ -2275,7 +2275,7 @@ namespace Lion_assembler
         {
             int r1 = 0; string s1;
             il.op1t = parameter_type(il.op1);
-            if (il.op1t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined) return false;
             switch (il.op1t)
             {
                 case OperandType.RegisterADirect:
@@ -2327,7 +2327,7 @@ namespace Lion_assembler
         {
             int r1 = 0;
             il.op1t = parameter_type(il.op1);
-            if (il.op1t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined) return false;
             switch (il.op1t)
             {
                 case OperandType.MemoryDirect:
@@ -2351,7 +2351,7 @@ namespace Lion_assembler
         {
             int r1 = 0; string s1;
             il.op1t = parameter_type(il.op1);
-            if (il.op1t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -2385,7 +2385,7 @@ namespace Lion_assembler
         {
             int r1 = 0; string s1;
             il.op1t = parameter_type(il.op1);
-            if (il.op1t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -2420,7 +2420,7 @@ namespace Lion_assembler
             int r1 = 0, r2 = 0; string s1, s2;
             il.op1t = parameter_type(il.op1);
             il.op2t = parameter_type(il.op2);
-            if (il.op1t == OperandType.Implied || il.op2t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined || il.op2t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -2564,7 +2564,7 @@ namespace Lion_assembler
             int r1 = 0, r2 = 0; string s1, s2;
             il.op1t = parameter_type(il.op1);
             il.op2t = parameter_type(il.op2);
-            if (il.op1t == OperandType.Implied || il.op2t == OperandType.Implied) return false;
+            if (il.op1t == OperandType.Undefined || il.op2t == OperandType.Undefined) return false;
             if (il.op1t == OperandType.RegisterADirect)
             {
                 r1 = is_reg(il.op1);
@@ -2940,7 +2940,7 @@ namespace Lion_assembler
             if (address % 2 == 1)
             {
                 il.address = address + 1;
-                LionAsmForm.errorbox.Text += " Warning operation at line: " + il.lno.ToString() + " automaticly alinged to even address\r\n";
+                LionAsmForm.errorbox.Text += " Warning operation at line: " + il.lno.ToString() + " automatically alinged to even address\r\n";
             }
             else il.address = address;
             if (il.opno > 0)
