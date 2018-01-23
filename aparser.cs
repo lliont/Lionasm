@@ -396,6 +396,7 @@ namespace Lion_assembler
                 LionAsmForm.errorbox.Text += " Warning Label " + t + " automaticly alinged to even address\r\n";
             }
             else il.address = address;
+            if (varList.ContainsKey(il.label) || constList.ContainsKey(il.label)) { error = -5; return false; }
             try
             {
                 lblList.Add(il.label, (int)address);
@@ -3087,6 +3088,7 @@ namespace Lion_assembler
                     v = (ushort)conv_int(t);
                 }
                 else return false;
+                if (varList.ContainsKey(il.variable) || lblList.ContainsKey(il.variable)) { error = -5; return false; }
                 try
                 {
                     constList.Add(il.variable, v);
@@ -3100,6 +3102,7 @@ namespace Lion_assembler
             else if (t == "DB")
             {
                 t = string.Empty; il.merge = false;
+                if (lblList.ContainsKey(il.variable) || constList.ContainsKey(il.variable)) { error = -5; return false; }
                 try { varList.Add(il.variable, (int)address); }
                 catch
                 {
@@ -3175,6 +3178,7 @@ namespace Lion_assembler
             else if (t == "TEXT")
             {
                 t = string.Empty; il.merge = false;
+                if (lblList.ContainsKey(il.variable) || constList.ContainsKey(il.variable)) { error = -5; return false; }
                 try { varList.Add(il.variable, (int)address); }
                 catch
                 {
@@ -3240,6 +3244,7 @@ namespace Lion_assembler
                 }
                 t = string.Empty;
                 il.values = new List<int>();
+                if (lblList.ContainsKey(il.variable) || constList.ContainsKey(il.variable)) { error = -5; return false; }
                 try
                 {
                     varList.Add(il.variable, (int)address);
@@ -3267,6 +3272,7 @@ namespace Lion_assembler
                 int i;
                 il.opcode = t;
                 t = string.Empty;
+                if (lblList.ContainsKey(il.variable) || constList.ContainsKey(il.variable)) { error = -5; return false; }
                 try { varList.Add(il.variable, (int)address); }
                 catch
                 {
@@ -3302,6 +3308,7 @@ namespace Lion_assembler
                     // L.errorbox.Text += " Warning Label " + t + " automaticly alinged to even address\r\n";
                 }
                 t = string.Empty;
+                if (lblList.ContainsKey(il.variable) || constList.ContainsKey(il.variable)) { error = -5; return false; }
                 try { varList.Add(il.variable, (int)address); }
                 catch
                 {
@@ -3338,6 +3345,7 @@ namespace Lion_assembler
                     v = (ushort)conv_int(t);
                 }
                 else return false;
+                if (lblList.ContainsKey(il.variable) || varList.ContainsKey(il.variable)) { error = -5; return false; }
                 try
                 {
                     constList.Add(il.variable, v);
