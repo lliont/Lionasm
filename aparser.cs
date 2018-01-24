@@ -3599,7 +3599,7 @@ namespace Lion_assembler
         private bool pass1()
         {
             bool res = true; l = 0; error = 0;
-            LionAsmForm.errorbox.Text += "Pass1 - start \r\n";
+            LionAsmForm.errorbox.Text += "*** Pass1 - start \r\n";
             while (l < sourceLinesArr.Length && res)
             {
                 p = 0;
@@ -3611,7 +3611,7 @@ namespace Lion_assembler
                 LionAsmForm.errorbox.Text += "Error " + errList[-error] + " at line: " + Convert.ToString(l) + " \r\n";
                 return false;
             }
-            LionAsmForm.errorbox.Text += "Pass1 - end \r\n";
+            LionAsmForm.errorbox.Text += "*** Pass1 - end \r\n";
             return true;
         }
 
@@ -3634,7 +3634,12 @@ namespace Lion_assembler
             //create the mif file
             StreamWriter sw = new StreamWriter(LionAsmForm.fname + ".mif", false, System.Text.Encoding.GetEncoding(1253));
             sw.WriteLine("WIDTH=16;\nDEPTH=4096;\nADDRESS_RADIX=UNS;\nDATA_RADIX=BIN;\n\nCONTENT BEGIN\n\n");
-
+            int bad = 65535;
+            int ad2;
+            foreach (InstructionLine il1 in instListArr)
+            {
+                if (il1.opcode == "ORG" && il1.address < bad) bad = il1.address;
+            }
             foreach (InstructionLine il in instListArr)
             {
                 if (il.opcode == "ORG") temps += "\r\n";
@@ -3689,13 +3694,14 @@ namespace Lion_assembler
                 if (il.word1 != string.Empty)
                 {
                     if (il.address > 8191) ad = il.address - 8192; else ad = il.address;
+                    ad2 = il.address - bad;
                     temps += "tmp(" + Convert.ToString(ad / 2) + "):=\"" + il.word1 + "\"; ";
                     if (il.word2 != string.Empty) temps += "tmp(" + Convert.ToString(1 + ad / 2) + "):=\"" + il.word2 + "\";";
                     if (il.word3 != string.Empty) temps += " tmp(" + Convert.ToString(2 + ad / 2) + "):=\"" + il.word3 + "\";";
                     temps += " --" + il.opcode + " \r\n";
                     try
                     {
-                        bw.Seek(ad, 0);
+                        bw.Seek(ad2, 0);
                         bw.Write(Convert.ToByte(il.word1.Substring(0, 8), 2));
                         bw.Write(Convert.ToByte(il.word1.Substring(8, 8), 2));
                         sw.WriteLine(Convert.ToString(ad / 2) + " : " + il.word1 + ";");
@@ -3719,6 +3725,7 @@ namespace Lion_assembler
                 if (il.type == InstructionType.DataWord || il.type == InstructionType.DataByte)
                 {
                     if (il.address > 8191) ad = il.address - 8192; else ad = il.address;
+                    ad2 = il.address - bad;
                     int rr = 0;
                     foreach (int ii in il.values)
                     {
@@ -3727,7 +3734,7 @@ namespace Lion_assembler
                         temps += "tmp(" + Convert.ToString(ad / 2) + "):=\"" + s + "\"; ";
                         try
                         {
-                            bw.Seek(ad, 0);
+                            bw.Seek(ad2, 0);
                             bw.Write(Convert.ToByte(s.Substring(0, 8), 2));
                             bw.Write(Convert.ToByte(s.Substring(8, 8), 2));
                             sw.WriteLine(Convert.ToString(ad / 2) + " : " + s + ";");
@@ -3735,7 +3742,7 @@ namespace Lion_assembler
                         catch (IOException e)
                         {
                         }
-                        ad = ad + 2;
+                        ad = ad + 2; ad2 += 2;
                         if (rr % 2 == 1) temps += "\r\n";
                         rr++;
                     }
@@ -3774,24 +3781,30 @@ namespace Lion_assembler
             {
                 if (LionAsmForm.Displv.Checked)
                 {
-                    foreach (string k in lblList.Keys)
+                    var orderedKeys1 = lblList.Keys.Cast<string>().OrderBy(c => c);
+                    LionAsmForm.errorbox.Text += "\r\n*** Labels ***\r\n";
+                    foreach (string k in orderedKeys1)
                     {
-                        LionAsmForm.errorbox.Text += k + ": " + Convert.ToString((int)lblList[k], 2).PadLeft(16, '0') + " \r\n";
+                        LionAsmForm.errorbox.Text += k.PadRight(16) + ": $" + Convert.ToString((int)lblList[k], 16).PadLeft(4, '0')
+                            + "  #" + Convert.ToString((int)lblList[k], 2).PadLeft(16, '0') + " \r\n";
                     }
-                    foreach (string p in varList.Keys)
+                    var orderedKeys2 = varList.Keys.Cast<string>().OrderBy(c => c);
+                    LionAsmForm.errorbox.Text += "\r\n*** Variables ***\r\n";
+                    foreach (string p in orderedKeys2)
                     {
-                        LionAsmForm.errorbox.Text += p + ": " + Convert.ToString((int)varList[p], 2).PadLeft(16, '0') + " \r\n";
+                        LionAsmForm.errorbox.Text += p.PadRight(16) + ": $" + Convert.ToString((int)varList[p], 16).PadLeft(4, '0')
+                            + "  #" + Convert.ToString((int)varList[p], 2).PadLeft(16, '0') + " \r\n";
                     }
                 }
                 LionAsmForm.VHDL.Text = "-- Copy to LionSystem VHDL Rom or Ram init function\r\n";
                 res = pass2();
                 if (!res)
                 {
-                    LionAsmForm.errorbox.Text += " Pass 2 failed. \r\n";
+                    LionAsmForm.errorbox.Text += "*** Pass 2 failed. \r\n";
                 }
-                else { LionAsmForm.errorbox.Text += " Pass 2 end. \r\n"; }
+                else { LionAsmForm.errorbox.Text += "*** Pass 2 end. \r\n"; }
             }
-            else { LionAsmForm.errorbox.Text += " Pass 1 failed. \r\n"; }
+            else { LionAsmForm.errorbox.Text += "*** Pass 1 failed. \r\n"; }
             LionAsmForm.errorbox.SelectionStart = LionAsmForm.errorbox.TextLength;
             LionAsmForm.errorbox.ScrollToCaret();
         }

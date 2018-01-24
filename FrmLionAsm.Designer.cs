@@ -202,8 +202,8 @@
             this.errorbox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.errorbox.BackColor = System.Drawing.SystemColors.Info;
-            this.errorbox.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(161)));
-            this.errorbox.Location = new System.Drawing.Point(0, 662);
+            this.errorbox.Font = new System.Drawing.Font("Courier New", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(161)));
+            this.errorbox.Location = new System.Drawing.Point(0, 631);
             this.errorbox.Multiline = true;
             this.errorbox.Name = "errorbox";
             this.errorbox.ReadOnly = true;
@@ -336,7 +336,7 @@
             this.fftxtSource.Location = new System.Drawing.Point(0, 33);
             this.fftxtSource.MaxLength = 0;
             this.fftxtSource.Name = "fftxtSource";
-            this.fftxtSource.Size = new System.Drawing.Size(640, 623);
+            this.fftxtSource.Size = new System.Drawing.Size(640, 600);
             this.fftxtSource.TabIndex = 0;
             this.fftxtSource.Text = "     ORG    8192";
             this.fftxtSource.WordWrap = false;
