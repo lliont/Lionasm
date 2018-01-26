@@ -93,7 +93,7 @@ namespace Lion_assembler
         string validchar2 = "ABCDEFGHIJKLMNOPQRSTVUWXYZ0123456789.():_-$#+-*/><=?\\%@' ";
         int p = 0, l = 0, error = 0;
         ushort address = 32;
-        InstructionLine lastline;
+        //InstructionLine lastline;
 
         public void fill_clist()
         {
@@ -109,6 +109,7 @@ namespace Lion_assembler
             colorList.Add("SWAP", Color.Blue);
             colorList.Add("MUL", Color.Blue);
             colorList.Add("CMP", Color.Blue);
+            colorList.Add("CMPHL", Color.Blue);
             colorList.Add("AND", Color.Blue);
             colorList.Add("OR", Color.Blue);
             colorList.Add("XOR", Color.Blue);
@@ -272,6 +273,7 @@ namespace Lion_assembler
             instList.Add("SUB.B", 2);
             //ilist.Add("MUL.B", 2);
             instList.Add("CMP.B", 2);
+            instList.Add("CMPHL", 2);
             instList.Add("AND.B", 2);
             instList.Add("OR.B", 2);
             instList.Add("XOR.B", 2);
@@ -2907,6 +2909,8 @@ namespace Lion_assembler
                     return gen3(il, "1010010");
                 case "CMPI.B":
                     return gen3(il, "0110000");
+                case "CMPHL":
+                    return gen1(il, "0110010");
                 case "SETX":
                     return gen5(il, "0010011");
                 case "JMPX":
@@ -3163,6 +3167,7 @@ namespace Lion_assembler
                                 v = (ushort)conv_int(t) * 256;
                                 address += 1;
                                 il.len += 1;
+                                il.merge = false;
                             }
                             else return false;
                         }
@@ -3223,6 +3228,7 @@ namespace Lion_assembler
                             v = (ushort)t[0] * 256;
                             address += 1; il.len += 1;
                             t = string.Empty;
+                            il.merge = false;
                         }
                         else break;
                     }
@@ -3412,6 +3418,7 @@ namespace Lion_assembler
                                 v = (ushort)conv_int(t) * 256;
                                 address += 1;
                                 il.len += 1;
+                                il.merge = false;
                             }
                             else return false;
                         }
@@ -3465,6 +3472,7 @@ namespace Lion_assembler
                             v = (ushort)t[0] * 256;
                             address += 1; il.len += 1;
                             t = string.Empty;
+                            il.merge = false;
                         }
                         else break;
                     }
@@ -3540,7 +3548,7 @@ namespace Lion_assembler
                 {
                     il.hexAddress = Convert.ToString(il.address, 16).ToUpper().PadLeft(4, '0');
                     il.hexValues = il.values != null ? il.values.Select(s => Convert.ToString(s, 16).ToUpper().PadLeft(4, '0')).ToList() : null;
-                    if (il.merge && instListArr.Count > 0)
+                    if (il.type==InstructionType.DataByte  && instListArr.Count > 0)
                     {
                         InstructionLine ill = (InstructionLine)instListArr[instListArr.Count - 1];
                         if (ill.merge)
@@ -3551,6 +3559,7 @@ namespace Lion_assembler
                                 if (i == 0)
                                 {
                                     ill.values[ill.values.Count - 1] = (int)ill.values[ill.values.Count - 1] + ii;
+                                    
                                     //carry = 0;
                                 }
                                 else
@@ -3559,19 +3568,13 @@ namespace Lion_assembler
                                 }
                                 i++;
                             }
-                            if (i % 2 == 0) ill.merge = true; else ill.merge = false;
+                            ill.merge = ! il.merge;
+                            //if (i % 2 == 0) ill.merge = true; else ill.merge = false;
                         }
-                        else
-                        {
-                            instListArr.Add(il);
-                            lastline = il;
-                        }
+                        else instListArr.Add(il);
                     }
-                    else
-                    {
-                        instListArr.Add(il);
-                        lastline = il;
-                    }
+                    else instListArr.Add(il);
+
                     //if (il.word1 != string.Empty)
                     //{
                     //    L.VHDL.Text += "tmp(" + Convert.ToString(il.address / 2) + "):=\"" + il.word1 + "\"; ";
