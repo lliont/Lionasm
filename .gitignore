@@ -2,4 +2,4 @@ obj/
 bin/
 *.bin
 *.mif
-.vs/Lionasm/v14/.suo
+*.suo
