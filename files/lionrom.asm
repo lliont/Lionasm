@@ -1,6 +1,11 @@
 ;  Lion System Rom
-;  v1.2
-;  (C) 2015 Theodoulos Liontakis
+;  (C) 2015-2018 Theodoulos Liontakis 
+
+VBASE		EQU		49152
+XDIM2		EQU		384    ; XDIM Screen Horizontal Dim. 
+YDIM		EQU		248    ; Screen Vertical Dimention
+XCC		EQU	64   ; Horizontal Lines
+YCC		EQU	31     ; Vertical Rows
 
 	  	ORG 		0    ; Rom 
 INT0_3      DA		HINT   ; hardware interrupts
@@ -9,9 +14,10 @@ INT0_3      DA		HINT   ; hardware interrupts
 		DA		INTEXIT  
 INT4        DA        	INTR4     ; interrupt vector 4 system calls
 INT5 		DA		INTR5	    ; fixed point routines
-INT6_14     DW          0,0,0,0,0,0,0,0,0
+INT6_14     DW          16,16,16,16,16,16,16,16,16
 INT15		DA		INTR15   ; trace interrupt
 
+BOOTC:	MOV		(SDFLAG),0
 		MOV		A1,49148
 		SETSP		A1
 		SETX		1983       ; Set default color 
@@ -19,74 +25,73 @@ INT15		DA		INTR15   ; trace interrupt
 COLINIT:	MOV.B		(A1),57
 		INC		A1
 		JMPX		COLINIT
-		SETX		32767    ;  memory test
-		MOV		A1,START
+		MOV		A2,32767
+		SETX		32766    ;  memory test
+		MOV		A1,16384
 MEMTST:     MOV.B		A2,(A1)
 		MOV.B		(A1),$FF
 		MOV.B		A0,(A1)
 		CMP.B		A0,$FF
 		MOV.B		(A1),A2
-		JZ		memok
+		JZ		MEMOK
 		PUSH		A1
 		MOVI		A0,5
 		MOV		A1,MEMNOTOK
 		MOVI		A2,4
 		INT		4
 		POP		A1
-		JMP		memnok
-memok:	INC		A1
+		JMP		MEMNOK
+MEMOK:	INC		A1
 		JMPX		MEMTST
-memnok:	SETX		1000
-sdretr:	MOVI		A0,11        ; sd card init
+MEMNOK:	SETX		80
+SDRETR:	MOVI		A0,11        ; sd card init
 		INT		4
 		CMP		A0,256
-		JNZ		NOSD
-		MOVI		A0,5
+		JZ		SDOKO
+		JMPX		SDRETR
+		JMP		SDNOT
+SDOKO:	MOVI		A0,5        ; sd card ok
 		MOV		A1,SDOK
-		MOVI		A2,5
-		INT		4
-		MOVI		A0,13
-		MOVI		A1,0
-		MOV		A2,SDCBUF1
-		INT		4
-            CMP		A0,256
-		JNZ		S_EXIT
-		MOV		(SDFLAG),256
-		MOVI		A0,5
+		MOV		A2,$0105
+		INT		4            ; print ok
+		MOVI		A0,3
+		INT	5                 ; get volume params
+		CMP		(SDFLAG),256
+		JNZ		SDNOT
+		MOV		A4,BOOTBIN
+		JSR		FINDFN   ; Find BOOT.BIN
+		CMPI		A0,0
+		JZ		SDNOT
+		PUSH		A0
+		MOV		A0,A1
+		JSR		PRNHEX
+		MOVI		A0,5           
 		MOV		A1,SDBOK
-		MOVI		A2,6
-		INT		4	
-		JMP		S_EXIT
-NOSD:		JMPX		sdretr
+		MOV		A2,$0106
+		INT		4	         ; print 
+		POP		A0
+		MOV		A3,START
+		MOV		A4,A0
+		JSR		FLOAD   ; Load boot file
+		STI	
+		JMP		START  ; address at RAM
+SDNOT:
 		MOVI		A0,5
 		MOV		A1,SDNOTOK
 		MOVI		A2,5
 		INT		4
-S_EXIT:	STI	
-		JMP		START  ; address at RAM
+		JMP		MEMNOK
 
 
-SDOK		TEXT		"SD Card OK"
-		DB	0
-SDBOK		TEXT		"Block 0 Loaded"
-		DB	0
-SDNOTOK	TEXT		"SD Card failed"
-		DB	0
-MEMNOTOK	TEXT		"Memory Error"
-		DB	0
-
-VBASE		EQU		49152
-XDIM2		EQU		384    ; XDIM Screen Horizontal Dim. 
-YDIM		EQU		248    ; Screen Vertical Dimention
-XCC		EQU		64     ; Horizontal Lines
-YCC		EQU		31     ; Vertical Rows
+;   End of boot code
+;--------------------------------------------------
 
 ;  INT4 FUNCTION TABLE  function in a0
 INT4T0	DA		SERIN    ; Serial port in    
 INT4T1	DA		SEROUT   ; Serial port out
 INT4T2	DA		PLOT     ; at X=A1,Y=A2 A4=1 set A4=0 clear
 INT4T3	DA		CLRSCR   ; CLEAR SCREEN
-INT4T4	DA		PUTC     ; Print char A2 at A1.H A1.L
+INT4T4	DA		PUTC     ; Print char A1 at x A2.H  y A2.L
 INT4T5	DA		PSTR     ; Print zero & cr terminated string
 INT4T6	DA		SCROLL   ; Scrolls screen 1 char (8 points) up
 INT4T7	DA		SKEYBIN  ; Serial Keyboard port in
@@ -94,8 +99,7 @@ INT4T8	DA		MULT     ; Multiplcation A1*A2 res in A2A1, a0<>0 overflow
 INT4T9	DA		DIV      ; integer Div A2 by A1 res in A1,A0
 INT4T10	DA		KEYB     ; converts to ascii the codes from serial keyboard
 INT4T11	DA		SPI_INIT ; initialize spi sd card
-INT4T12	DA		SPISEND  ; spi send/receive byte in A1 mode A2 1=CS low 3=CS high
-				         ; result in A0
+INT4T12	DA		SPISEND  ; spi send/rec byt in A1 mode A2 1=CS low 3=CS h res a0
 INT4T13	DA		READSEC  ; read in buffer at A2, n in A1
 INT4T14	DA		WRITESEC ; WRITE BUFFER at A2 TO A1 BLOCK
 INT4T15	DA		PIMG     ; plot 8xA4 image from (A5) to A1,A2
@@ -103,6 +107,10 @@ INT4T15	DA		PIMG     ; plot 8xA4 image from (A5) to A1,A2
 ;  INT5 FUNCTION TABLE  function in a0
 INT5T0	DA		FMULT	   ; Fixed point multiply A1*A2
 INT5T1	DA		FDIV	   ; Fixed point divide A2.(FRAC2)/A1.(FRAC1)
+INT5T2	DA		FILELD   ; Load file A4 points to filename, at A3
+INT5T3	DA		VMOUNT   ; Load First Volume, return A0=fat root 1st cluster
+INT5T4	DA		FILEDEL  ; Delete file A4 points to filename
+INT5T5	DA		FILESAV  ; Save memory range to file A4 points to filename
 
 ;Hardware interrupt
 HINT:		INC		(COUNTER)
@@ -111,12 +119,415 @@ INTR15:	RETI        ; trace interrupt
 INTR4:	SLL		A0,1
 		ADD		A0,INT4T0
 		JMP		(A0)
-INTEXIT:	RETI
 
 INTR5:	SLL		A0,1
 		ADD		A0,INT5T0
 		JMP		(A0)
+
+;---------INT5 A0=5 Save -----------------------------
+; A4 filename, a6 address, a7 size
+;-------------------------------------------
+
+FREEFAT:     ;find next free cluster in a0 and mark it
+	PUSH	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A4
+	MOVI	A4,0
+	MOVI	A3,0
+FRFT1:
+	MOVI	A0,13
+	MOV	A1,(FSTFAT)
+	ADD	A1,A4
+	MOV	A2,SDCBUF2
+	INT	4              ; Load FAT
+	JSR	DELAY
+FRFT3:	
+	CMP	(A2),0
+	JZ	FRFT2
+	ADDI	A2,2
+	MOV	A0,A3
+	ADDI	A3,1
+	AND	A0,$FF00
+	CMP	A0,255
+	JNZ	FRFT3
+	INC	A4
+	CMP	A4,238
+	JZ	FRFT4
+	JMP	FRFT1
+FRFT4: MOVI	A3,0
+	JMP	FRFT5	
+FRFT2: MOV	(A2),$F0F0 
+	MOVI	A0,14
+	MOV	A1,(FSTFAT)
+	ADD	A1,A4
+	MOV	A2,SDCBUF2
+	INT	4              ; Save FAT
+	JSR	DELAY
+FRFT5: MOV	A0,A3
+	POP	A4
+	POP	A3
+	POP	A2
+	POP	A1
+	RET
+
+;---------------------------
+SVDATA:
+	MOV	A3,A0
+SVD1:	MOVI	A4,0
+	MOVLH	A4,A3
+	MOV	A1,(FSTCLST)
+	ADD	A1,A3
+	SUBI	A1,2
+	MOVI	A0,14
+	MOV	A2,A6
+	INT	4
+	JSR	DELAY
+	CMP	A7,512
+	JBE	SVD2
+	ADD	A6,512
+	SUB	A7,512
+	JSR	FREEFAT
+	CMPI	A0,0
+	JZ	SVDE
+	AND	A3,$00FF
+	SLL	A3,1
+	ADD	A3,SDCBUF2   ;store next cluster
+	SWAP	A0
+	MOV	(A3),A0
+	SWAP	A0
+	MOV	A2,SDCBUF2
+	ADD	A4,(FSTFAT)
+	MOV	A1,A4
+	MOV	A4,A0
+	MOVI	A0,14
+	INT	4
+	JSR	DELAY	
+	MOV	A3,A4
+	JMP	SVD1	
+SVD2:	AND	A3,$00FF
+	SLL	A3,1
+	ADD	A3,SDCBUF2   ;store last cluster
+	MOV	(A3),$FFFF
+	MOV	A2,SDCBUF2
+	ADD	A4,(FSTFAT)
+	MOV	A1,A4
+	MOVI	A0,14
+	INT	4         ;w rite $FFFF and exit
+	JSR	DELAY
+	MOV	A0,256
+SVDE:
+	RET
+
+;----------------------------
+
+FILESAV:
+	PUSHX
+	PUSH	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A4
+	PUSH	A5	
+	PUSH	A6
+	PUSH	A7
+	JSR	FINDFN
+	CMPI	A0,0
+	JZ	FSV7
+	MOVI	A0,0
+	JMP	FSVE
+FSV7:	MOVI	A5,0
+
+FSV4:	MOV	A1,(FATROOT)
+	ADD	A1,A5
+	MOVI	A0,13
+	MOV	A2,SDCBUF1
+	INT	4              ; Load Root Folder 1st sector
+	JSR	DELAY
+	MOVI	A0,0
+	MOVI	A3,0
+FSV1:	
+	CMP.B (A2),0
+	JZ	FSV2
+	CMP.B	(A2),$E5
+	JNZ	FSV3
+FSV2:	                 ; Found free slot
+	SETX	10
+FSV5:	MOV	(A2),(A4)
+	INC	A2
+	INC	A4
+	JMPX	FSV5
+	MOV.B	(A2),32    ;set archive bit
+	ADD	A2,17
+	SWAP	A7	     ;store FILE SIZE
+	MOV	(A2),A7
+	SWAP	A7     
+	ADDI	A2,2
+	MOV	(A2),0  
+	SUBI	A2,4
+	JSR	FREEFAT     ; free
+	CMP	A0,0
+	JZ	FSVE
+	SWAP	A0	
+	MOV	(A2),A0
+	SWAP	A0
+	PUSH	A0
+	MOVI	A0,14
+	MOV	A1,(FATROOT)
+	ADD	A1,A5
+	MOV	A2,SDCBUF1
+	INT	4         ; save header
+	JSR	DELAY
+	POP	A0
+	JSR	SVDATA
+	JMP	FSVE
+FSV3:	
+	ADD	A2,32
+	ADD	A3,32
+	CMP	A3,512
+	JNZ	FSV1  ; search same sector
+	INC	A5
+	CMP	A5,32  ;if not last root dir sector 
+	JNZ	FSV4   ;load next sector and continue search
+FSVE:	
+	POP	A7
+	POP	A6
+	POP	A5
+	POP	A4
+	POP	A3
+	POP	A2
+	POP	A1
+	POPX
+	RETI
+
+;--------INT5 A0=4 DELETE FILE -----------------------
+
+FILEDEL:
+	PUSH	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A4
+	PUSH	A5	
+	JSR	FINDFN
+	CMPI	A0,0
+	JZ	FDELX
+	MOV.B	(A2),$E5  ; Delete file entry
+	MOV	A4,A0
+	MOVI	A0,14
+	MOV	A1,(FATROOT)
+	ADD	A1,A5
+	MOV	A2,SDCBUF1
+	INT	4          ; save file header
+FDL1:	
+	MOV	A5,A4
+	SRL	A5,8   ; DIVIDE BY 256
+	MOV	A1,(FSTFAT)
+	ADD	A1,A5
+	MOVI	A0,13
+	MOV	A2,SDCBUF2
+	INT	4              ; Load FAT
+	JSR	DELAY
+	AND	A4,$00FF  ; mod 256	
+	SLL	A4,1  
+	MOV	A5,SDCBUF2
+	ADD	A5,A4
+	MOV	A4,(A5)
+	MOV	(A5),0  ; free cluster
+	MOV	A0,14
+	INT	4        ; write fat back
+	JSR	DELAY
+	SWAP	A4
+	CMP	A4,$FFFF
+	JZ	FDELX
+	CMPI	A4,0
+	JNZ	FDL1
+FDELX:
+	POP	A5
+	POP	A4
+	POP	A3
+	POP	A2
+	POP	A1
+
+	RETI
+
+
+;-------- MOUNT VOUME ---------------------------
+
+VMOUNT:
+		PUSH		A1
+		PUSH		A2
+		MOVI		A0,13
+		MOVI		A1,0
+		MOV		A2,SDCBUF1
+		INT		4             ; read MBR
+		JSR		DELAY
+            CMP		A0,256
+		JNZ		VMEX
+		MOV		A2,SDCBUF1      
+		ADD		A2,$1C6
+		MOV		A0,(A2)        ; Get 1st partition boot sector 
+		SWAP		A0		   ; little endian
+		MOV		(FATBOOT),A0  
+		MOV		A1,A0           ; A1 fatboot
+		MOVI		A0,13
+		MOV		A2,SDCBUF1
+		INT		4              ; Load FAT boot sector
+		JSR		DELAY
+            CMP		A0,256
+		JNZ		VMEX
+		MOV		(SDFLAG),256
+		ADDI		A2,14
+		MOV		A0,(A2)   ; Reserved sectors
+		SWAP		A0
+		ADD		A1,A0
+		MOV		(FSTFAT),A1  ; save first fat cluster num
+		ADD		A2,8
+		MOV		A0,(A2)   ; secors per fat
+		SWAP		A0
+		SLL		A0,1        ; 2 fats
+		ADD		A1,A0	    ; Root Folder
+		MOV		(FATROOT),A1
+		ADD		A1,32     ; 32 bytes * 512 entries =32 sectors
+		MOV		(FSTCLST),A1
+		MOV		A0,(FATROOT)
+VMEX:		POP		A2
+		POP		A1
 		RETI
+
+
+
+;---------------------------------------------------
+; INT 5,A0=3 Load file
+FILELD:	JSR	FINDFN    
+		MOV	A4,A0
+		CMPI	A0,0
+		JZ	INTEXIT
+		JSR	FLOAD
+INTEXIT:	RETI
+;-------------------------------------------------
+
+DELAY:	PUSHX
+		SETX	32000
+LDDL: 	JMPX	LDDL    ;delay
+		POPX
+		RET
+
+FLOAD:	; A4 cluster, A3 Dest address
+		PUSH	A1
+		PUSH	A2
+		PUSH	A3
+		PUSH	A4
+		PUSH	A5
+		PUSH	A6
+FLD1:		MOV		A6,A4
+		SRL		A6,8   ; DIVIDE BY 256
+		MOV		A1,(FSTFAT)
+		ADD		A1,A6
+		MOVI		A0,13
+		MOV		A2,SDCBUF2
+		INT		4              ; Load FAT
+		JSR		DELAY
+		MOVI		A0,13          ;
+		MOV		A1,(FSTCLST)
+		AND		A4,$00FF  ; mod 256
+		ADD		A1,A4
+		SUBI		A1,2
+		MOV		A2,A3          ; Dest
+		INT 		4              ; Load sector 
+		JSR		DELAY
+		ADD		A3,512
+		SLL		A4,1  
+		MOV		A5,SDCBUF2
+		ADD		A5,A4
+		MOV		A4,(A5)
+		SWAP		A4
+		CMP		A4,$FFFF
+		JNZ		FLD1
+		POP	A6
+		POP	A5
+		POP	A4
+		POP	A3
+		POP	A2
+		POP	A1
+		RET 
+
+;Find filename in root directory
+; A4 pointer to filename, A0 return cluster relative to (FSTCLST)
+; file name in header at A2, directory cluster at A5 
+FINDFN:     PUSHX
+		PUSH	A3
+		PUSH	A4
+		MOVI	A5,0
+TFF4:		MOV	A1,(FATROOT)
+		ADD	A1,A5
+		MOVI	A0,13
+		MOV	A2,SDCBUF1
+		INT	4              ; Load Root Folder 1st sector
+		JSR	DELAY
+		MOVI	A0,0
+		MOVI	A3,0
+TFF1:		CMP.B (A2),0
+		JZ	TFF6
+		SETX	10
+		PUSH	A2
+		PUSH	A4
+TFF2:		CMP.B	(A2),(A4)
+		JNZ	TFF3
+		INC	A2
+		INC	A4
+		JMPX	TFF2
+		POP	A4
+		POP	A2
+		ADD	A2,26
+		MOV	A0,(A2)
+		SWAP	A0
+		ADDI	A2,2
+		MOV	A1,(A2)
+		SWAP	A1	;FILE SIZE       
+		SUB	A2,28
+		JMP	TFF5
+TFF3:		POP	A4
+		POP	A2
+		ADD	A2,32
+		ADD	A3,32
+		CMP	A3,512
+		JNZ	TFF1  ; search same sector
+		INC	A5
+		CMP	A5,32  ;if not last root dir sector 
+		JNZ	TFF4   ;load next sector and continue search
+TFF6:		MOVI	A0,0
+TFF5:		POP	A4
+		POP	A3
+		POPX
+		RET
+
+
+PRNHEX:	; print num in A0 in hex for debugging 
+		PUSHX
+		PUSH	A0
+		PUSH	A1
+		PUSH	A2
+		PUSH	A3
+		MOV	A3,A0
+		MOV	A2,$3204
+		SETX	3
+PHX1:		MOV	A1,A3
+		AND	A1,$000F
+		ADD	A1,48
+		CMP	A1,57
+		JBE	PHX2
+		ADDI	A1,7
+PHX2:		MOVI	A0,4
+		SUB	A2,$0100
+		INT	4
+		SRL	A3,4
+		JMPX	PHX1
+		POP	A3
+		POP	A2
+		POP	A1
+		POP	A0
+		POPX
+		RET 
+
 
 ;---------------------------------
 ; INT5 A0=1  fixed point 16.16 
@@ -330,7 +741,6 @@ WRITESEC:
 	MOV 	A1,$FF  ; send dummy with cs high
 	JSR	SPIS
 	MOVI	A2,1
-	OUT	19,1
 
 	MOV 	A1,$58  ; write SECTOR
 	JSR	SPIS
@@ -416,7 +826,7 @@ READSEC:
 	MOV 	A1,$FF  ; send dummy with cs high
 	JSR	SPIS
 	MOVI	A2,1
-	OUT	19,1
+	;OUT	19,1
 
 	MOV 	A1,$51  ; READ SECTOR
 	JSR	SPIS
@@ -501,7 +911,7 @@ SPI0: MOV	A1,255
 	JMPX	SPI0    ; SEND 80 CLK PULSES WITH CS HIGH
 	
 	MOVI	A2,1
-	OUT	19,0    ; cs=0
+	;OUT	19,0    ; cs=0
 
 
 	MOV 	A1,$40  ; INIT SPI MODE WITH CS LOW
@@ -605,7 +1015,7 @@ SPI4:	MOV	A1,$FF
 	MOV 	A1,$FF 
 	JSR	SPIS 
 
-	SETX	51          ; READ ANSWER until $FE is found
+	SETX	101          ; READ ANSWER until $FE is found
 SPI5:	MOV	A1,$FF
 	JSR	SPIS
 	CMP.B	A0,$FE
@@ -671,10 +1081,9 @@ SKEYBIN:	IN		A0,6  ;Read serial byte if availiable
 
 ;----------------------------------------
 PUTC:		STI
-		PUSHX        ;  PRINT Character in A1 at A2 (XY)
+		PUSHX                    ;  PRINT Character in A1 at A2 (XY)
 		PUSH		A4
-		PUSH		A3
-		;PUSH		A1
+		PUSH		A1
 		AND		A1,$00FF
 		CMP.B		A1,96  
 		JBE		LAB1
@@ -683,58 +1092,48 @@ PUTC:		STI
 		JLE		LAB1
 		ADDI		A1,6
 LAB1:		SUB.B		A1,32    
-		MULU.B	A1,6
+		MULU		A1,6
 		ADD		A1,CTABLE
 		MOV		A4,A1       ; character table address
 		MOVI		A0,0
 		MOV.B		A0,A2
 		MULU		A0,XDIM2
-		;SLL		A0,1
 		MOVI		A1,0
           	MOVLH 	A1,A2
 		MULU.B	A1,6
 		ADD		A0,A1
 		ADD		A0,VBASE   ; video base
-		MOV		A3,A0      ; Addres at videoram
 		SETX		5          ; 6 Times
-LP1:		MOV.B		(A3),(A4)
+LP1:		MOV.B		(A0),(A4)
 		INC		A4
-		INC		A3          ; next   
+		INC		A0          ; next   
 		JMPX		LP1
-		;POP		A1
-		POP		A3
+		POP		A1
 		POP		A4
 		POPX	
 		RETI
 ;----------------------------------------
 PSTR:		STI
-		MOVI.B	A0,0 ; PRINT A 0 OR 13 TERM. STRING POINTED BY A1 AT A2
+		MOVI		A0,0     ; PRINT A 0 OR 13 TERM. STRING POINTED BY A1 AT A2
 		MOV.B		A0,(A1)
 		CMPI.B	A0,0
 		JZ		STREXIT
 		CMPI.B	A0,13
-		JNZ         PSTR2
-		MOVI		A0,6
-		INT		4
-		JMP		STREXIT
+		JZ  		STREXIT
 PSTR2:	PUSH 		A1
 		MOV		A1,A0
 		MOVI		A0,4
 		INT		4
 		POP		A1
-		SWAP		A2      ;  X
+		ADD		A2,$0100
+		CMPHL		A2,XCC
+		JB		PSTR3
 		INC		A2
-		CMP.B		A2,XCC
-		JNZ		LAB3
-		MOVI.B	A2,0
-		SWAP		A2
-		INC		A2
+		AND		A2,$00FF
 		CMP.B		A2,YCC
-		JNZ		LAB3
-		MOVI		A0,6
-		INT		4
-LAB3:		SWAP		A2
-		INC		A1
+		JB		PSTR3
+		RETI
+PSTR3:	INC		A1
 		JMP		PSTR
 STREXIT:	RETI
 ;----------------------------------------
@@ -742,16 +1141,16 @@ STREXIT:	RETI
 SCROLL:	STI
 		PUSHX
 		PUSH		A1
-		SETX		11519       ;7499	
+		SETX		5759       ;7499	
 		MOV		A0,VBASE
 		MOV		A1,49536   ; 49152+384
-SC1:		MOV.B		(A0),(A1)  ;  Only byte wide access to video ram
-		INC		A0
-		INC		A1
+SC1:		MOV		(A0),(A1)  ;  Only byte wide access to video ram
+		ADDI		A0,2
+		ADDI		A1,2
 		JMPX		SC1
-		SETX		383
-SC2:		MOV.B		(A0),0
-		INC		A0
+		SETX		191
+SC2:		MOV		(A0),0
+		ADDI		A0,2
 		JMPX		SC2		
 		POP		A1
 		POPX
@@ -760,10 +1159,10 @@ SC2:		MOV.B		(A0),0
 
 CLRSCR:	STI
 		PUSHX
-		SETX		11904       ;7799	
+		SETX		5952	;7799	
 		MOV		A0,VBASE
-CLRS1:	MOV.B		(A0),0
-		INC		A0
+CLRS1:	MOV		(A0),0
+		ADDI		A0,2
 		JMPX		CLRS1
 		POPX
 		RETI
@@ -804,7 +1203,7 @@ PL2:		SRL		A1,1
 PIMG:		STI
 		PUSHX
 		PUSH		A1
-		PUSH		A2       ;Draw Image at A1,A2 from A5(A3 bytes),mode in A4
+		PUSH		A2       ;Draw Image at A1,A2 from A5(A3 bytes)
 		PUSH		A3
 		MOV		A0,A2
 		AND		A0,7
@@ -1036,12 +1435,30 @@ KEYBCD	DB    $29,$16,$71,$26,$25,$2E,$3D,$52,$46,$45,$3E,$79,$41,$4E,$49,$4A,$70
 		DB	$33,$43,$3B,$42,$4B,$3A,$31,$44,$4D,$15,$2D,$1B,$2C,$3C,$2A,$1D,$22,$35,$1A,$54
 		DB	$5D,$58,$36,$3,$0B,$83,$0A,0
 
+BOOTBIN     TEXT		"BOOT    BIN"
+		DB 	0
+SDOK		TEXT		"SD Card OK"
+		DB	0
+SDBOK		TEXT        "Loading BOOT.BIN"
+		DB	0
+SDNOTOK	TEXT		"No SDCard Boot"
+		DB	0
+MEMNOTOK	TEXT		"Memory Error"
+		DB	0
+
+
 		ORG     	8192   ;Ram
+
 SDCBUF1	DS	514
 SDCBUF2	DS	514
-SDFLAG	DS	2 ; =256 if sd init succeeded
-COUNTER	DS	2 ; Counter for general use (RND) increased by int 0 
-FRAC1		DS	2 ;
+FATBOOT	DS	2
+FATROOT	DS	2
+FSTCLST	DS	2
+FSTFAT	DS	2
+SDFLAG	DS	2
+COUNTER     DS	2 ; Counter for general use increased by hardware int 0 
+FRAC1		DS	2 ; for fixed point multiplication - division
 FRAC2		DS	2 ;
+
 START:	
 

@@ -1,7 +1,5 @@
 ;*       Tiny Basic port for Lion cpu/System
 ;*
-;*                       v1.2
-;*
 ;*         ported by Theodoulos Liontakis 2016
 ;*
 ;*          from  michael sullivan's 8086 port of
@@ -15,13 +13,19 @@
 ;*
 ;*  New commands and fixed point arithmetic added
 
-		ORG     8192   ;Ram reserved for rom routines
-SDCBUF1	DS	514
-SDCBUF2	DS	514
-SDFLAG	DW	0
-COUNTER     DW	0 ; Counter for general use increased by hardware int 0 
-FRAC1		DW	0 ; for fixed point multiplication - division
-FRAC2		DW	0 ;
+
+SDCBUF1	EQU	$2000  ;DS	514  Buffer 1 
+SDCBUF2	EQU	$2202  ;DS	514  Buffer 2
+FATBOOT	EQU	$2404  ;DS	2    Fat boot #sector 
+FATROOT	EQU	$2406  ;DS	2    Root directory #sector 
+FSTCLST	EQU	$2408  ;DS	2    First data #sector
+FSTFAT	EQU	$240a  ;DS	2    First Fat first #sector
+SDFLAG	EQU	$240c  ;DS	2    SD card initialized by rom=256
+COUNTER     EQU	$240e  ;DS	2    General use counter increased by int 0 
+FRAC1		EQU	$2410  ;DS	2    for fixed point multiplication-division
+FRAC2		EQU  	$2412  ;DS	2               >>
+
+ORG     	$2414  ;Ram
 
 ; RAM program ENTRY POINT
 ; A7 Reserved for decimal (was num2), in A6 fraction result of TSTNUM
@@ -282,18 +286,12 @@ tab1:
 	TEXT  "SAV"
 	DB	'E'+128
 	DA	SAVE
-	TEXT  "LCOD"
-	DB	'E'+128
-	DA	LCODE
-	TEXT  "SCOD"
-	DB	'E'+128
-	DA	SCODE
-	TEXT  "RCOD"
-	DB	'E'+128
-	DA	RCODE
 	TEXT "FIN"
 	DB	'D'+128
 	DA	FIND
+	TEXT	"DI"
+	DB	'R'+128
+	DA	DIR
 
 
 TAB2	TEXT	"PRIN"
@@ -355,6 +353,18 @@ TAB2	TEXT	"PRIN"
 	TEXT	"SCREE"
 	DB	'N'+128
 	DA	SCREEN
+	TEXT  "LCOD"
+	DB	'E'+128
+	DA	LCODE
+	TEXT  "SCOD"
+	DB	'E'+128
+	DA	SCODE
+	TEXT  "RCOD"
+	DB	'E'+128
+	DA	RCODE
+	TEXT  "DELET"
+	DB	'E'+128
+	DA	DELETE
 	TEXT	"STO"
 	DB	'P'+128
 	DA	STOP
@@ -409,12 +419,6 @@ TAB4	TEXT	"RN"
 	TEXT	"SDINI"
 	DB	'T'+128
 	DA	SDINIT
-	TEXT	"SREA"
-	DB	'D'+128
-	DA	SDREAD
-	TEXT	"SWRIT"
-	DB	'E'+128
-	DA	SWRITE
 	TEXT  "TIME"
 	DB	'R'+128
 	DA	TIMER
@@ -1255,181 +1259,237 @@ MYABS:
 
 ;-----  my ROUTINES
 
-CLUST_SIZE EQU	64
+CLUST_SIZE	EQU	64
 
-LOAD:
-	CMP	(SDFLAG),256
-	JNZ	QHOW
-	JSR	EXP
-	CMP	A1,50
-	JA	QWHAT
-	OR	A1,A1
-	JZ	QWHAT
-	PUSH	A3
-	PUSH	A2
-	PUSH	A1
-	JSR	CLRMEM
-	MULU.B A1,10
-	ADDI	A1,8
-	ADD	A1,SDCBUF1
-	MOV	A3,(A1)
-	MOV	A0,A3
-	ADD	A0,TXTBGN
-	MOV	(TXTUNF),A0
-	POP	A1
-	MULU.B A1,CLUST_SIZE
-	MOV	A2,TXTBGN
-LODLP:
-	SETX	31000
-LDDL: JMPX	LDDL    ;delay
-	INC	A1
-	MOV	A0,13
-	INT	4
-	ADD	A2,512
-	SUB	A3,512
-	JNC	LODLP
-	POP	A2
-	POP	A3
-	JMP	FINISH
 ;----------------------------
 LCODE:
+	PUSH	A5
+	PUSH	A4
+	MOVI	A5,1
+	MOV	A4,FNAME2
+	JMP	LCODI
+LOAD:	
+	PUSH	A5
+	PUSH	A4
+	MOVI	A5,0
+	MOV	A4,FNAME
+	
+LCODI: 
 	CMP	(SDFLAG),256
 	JNZ	QHOW
-	JSR	EXP
-	CMP	A1,50
-	JA	QWHAT
-	OR	A1,A1
-	JZ	QWHAT
-	MOV	A5,A1
-	MOVHL	A0,44
+	MOVHL	A0,34
 	JSR	IGNBLNK
 	JNZ	QWHAT
-	MOV   (UINT),1
-	JSR	EXP
-	MOV   (UINT),0
-	PUSH	A3
-	PUSH	A2
-	XCHG	A1,A5
+	PUSHX
 	PUSH	A1
-	MULU.B A1,10
-	ADDI	A1,8
-	ADD	A1,SDCBUF1
-	MOV	A3,(A1)
-	POP	A1
-	MULU.B A1,CLUST_SIZE
-	MOV	A2,A5
-LCLP:	SETX	31000
-	INC	A1	
-	CMP	A3,512
-	JA	LCDL
-	MOV	A5,A2
-	MOV	A2,SDCBUF2
-	MOVI	A0,13
-	INT	4
-	DEC	A3
-	SETX	A3
-LC1:	MOV.B	(A5),(A2)
-	INC	A5
-	INC	A2
-	JMPX	LC1
-	JMP	LCEND
-
-LCDL: JMPX	LCDL    ;delay
-	
-	MOVI	A0,13
-	INT	4
-	ADD	A2,512
-	SUB	A3,512
-	JNC	LCLP
-LCEND: POP	A2
+	SETX	7
+LD1:  MOV.B	A0,(A3)
+	CMP.B	A0,31
+	JBE	QWHAT
+	MOV.B	(A4),32
+	CMP.B	A0,34
+	JZ	LD2
+	INC	A3
+	MOV.B	(A4),A0
+LD2:	INC	A4
+	JMPX	LD1
+	MOVHL	A0,34   
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	CMPI	A5,0  ; load or lcode
+	JZ	LD4
+	MOVHL	A0,44     ;lcode
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	MOV	A4,A3
+	JSR	EXP
+	MOV	A4,FNAME2
+	JMP	LD6
+LD4:	MOV	A4,FNAME
+	MOV	A1,TXTBGN
+LD6:	PUSH	A3
+	PUSH	A5
+	MOV	A3,A1          ; load address
+	MOV	A0,2
+	INT	5              ; LOAD FILE
+	POP	A5
 	POP	A3
-	JMP FINISH
-;----------------------------------
-SAVE:	
-	CMP	(SDFLAG),256
-	JNZ	QHOW	
-	JSR	EXP
-	CMP	A1,50
-	JA	QWHAT
-	OR	A1,A1
-	JZ	QWHAT
-	PUSH	A3
-	PUSH	A2
-	PUSH	A1
-	MULU.B A1,10
-	ADDI	A1,8
-	ADD	A1,SDCBUF1
-	MOV	A2,TXTBGN
-	MOV	A3,(TXTUNF)
-	SUB	A3,A2
-	MOV	(A1),A3
-	MOV	A2,SDCBUF1
-	MOVI	A0,14
-	MOVI	A1,0
-	INT	4         ; UPDATE BLOCK 0
-	POP	A1
-	MULU.B A1,CLUST_SIZE
-	MOV	A2,TXTBGN
-SAVLP:
-	SETX	30000
-SVDL: JMPX	SVDL    ;delay
-	INC	A1
-	MOVI	A0,14
-	INT	4        ; WRITE NEXT CLUSTER BLOCK
-	ADD	A2,512
-	SUB	A3,512
-	JNC	SAVLP
-	POP	A2
-	POP	A3
-	JMP	FINISH
-;------------------------------
-SCODE:
-	CMP	(SDFLAG),256
-	JNZ	QHOW	
-	JSR	EXP
-	CMP	A1,50
-	JA	QWHAT
-	OR	A1,A1
-	JZ	QWHAT
-	MOV	A5,A1
-	MOVHL	A0,44
-	JSR	IGNBLNK
-	JNZ	QWHAT
-	MOV   (UINT),1
-	JSR	EXP
-	MOV	(UINT),0
-	PUSH	A1
-	MOVHL	A0,44
-	JSR	IGNBLNK
-	JNZ	QWHAT
-	MOV   (UINT),1
-	JSR	EXP
-	MOV   (UINT),0
+	CMPI	A0,0
+	JZ	QHOW
+	CMPI	A5,0
+	JNZ	LD3
+	ADD	A1,TXTBGN
+	MOV	(TXTUNF),A1
+LD3:	POP	A1
+	POPX
 	POP	A4
+	POP	A5
+	JMP	FINISH
+	
+;--------------------------
+DELAY:	PUSHX
+		SETX	40000
+LDDL: 	JMPX	LDDL    ;delay
+		POPX
+		RET
+
+DIR:
+	PUSHX
 	PUSH	A2
-	XCHG	A5,A1
-	PUSH	A1
-	MULU.B A1,10
-	ADDI	A1,8
-	ADD	A1,SDCBUF1
-	MOV	(A1),A5
+	PUSH	A4
+	PUSH	A5
+	MOVI	A0,13
+	JSR	CHROUT
+	MOVI	A5,0
+TFF4:	MOV	A1,(FATROOT)
+	ADD	A1,A5
+	MOVI	A0,13
 	MOV	A2,SDCBUF1
-	MOVI	A0,14
-	MOVI	A1,0
-	INT	4         ; UPDATE BLOCK 0
-	POP	A1
-	MULU.B A1,CLUST_SIZE
-	MOV	A2,A4
-SCLP:
-	SETX	30000
-SCDL: JMPX	SCDL    ;delay
-	INC	A1
-	MOVI	A0,14
-	INT	4        ; WRITE NEXT CLUSTER BLOCK
-	ADD	A2,512
-	SUB	A5,512
-	JNC	SCLP
+	INT	4              ; Load Root Folder 1st sector
+	CMPI	A5,0
+	JNZ	TFF3
+	MOV.B	(A2),$E5
+	ADD	A2,32
+	MOV.B	(A2),$E5
+	SUB	A2,32
+TFF3:	JSR	DELAY
+	MOVI	A4,0
+TFF1:	CMP.B	(A2),0     ; empty
+	JZ	TFF5
+	CMP.B	(A2),$E5   ; deleted entry
+	JZ	TFF6
+	CMP.B	(A2),47
+	JBE	TFF6
+	PUSH	A2
+	SETX	10
+TFF2: MOV.B	A0,(A2)
+	INC	A2
+	JSR	CHROUT
+	JMPX	TFF2
+	ADD	A2,17
+	MOV	A1,(A2)
+	SWAP	A1	;FILE SIZE
+	MOV	A0,32
+	JSR	CHROUT
+	PUSH	A4
+	MOV	A2,7
+	MOV	A0,A1	
+	JSR	PRTNUM
+	POP	A4
+	MOVI	A0,13
+	JSR	CHROUT
+	POP	A2       
+TFF6:	ADD	A2,32
+	ADD	A4,32
+	CMP	A4,512
+	JNZ	TFF1  ; search same sector
+	INC	A5
+	CMP	A5,32  ;if not last root dir sector 
+	JNZ	TFF4   ;load next sector and continue search
+TFF5:	POP	A5
+	POP	A4
 	POP	A2
+	POPX
+	JMP	FINISH
+
+
+;------------------------------
+
+SCODE:
+	PUSH	A5
+	PUSH	A4
+	MOVI	A5,1
+	MOV	A4,FNAME2
+	JMP	SCODI
+SAVE:	
+	PUSH	A5
+	PUSH	A4
+	MOVI	A5,0
+	MOV	A4,FNAME
+	
+SCODI: 
+	CMP	(SDFLAG),256
+	JNZ	QHOW
+	MOVHL	A0,34
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	PUSHX
+	PUSH	A1
+	PUSH	A6
+	PUSH	A7
+	SETX	7
+SD1:  MOV.B	A0,(A3)
+	CMP.B	A0,31
+	JBE	QWHAT
+	MOV.B	(A4),32
+	CMP.B	A0,34
+	JZ	SD2
+	INC	A3
+	MOV.B	(A4),A0
+SD2:	INC	A4
+	JMPX	SD1
+	MOVHL	A0,34   
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	CMPI	A5,0  ; save or scode
+	JZ	SD4
+	MOVHL	A0,44     ;scode
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	MOV	A4,A3
+	JSR	EXP
+	PUSH	A1
+	MOVHL	A0,44     ;scode
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	JSR	EXP
+	MOV	A7,A1
+	POP	A1
+	MOV	A4,FNAME2
+	JMP	SD6
+SD4:	MOV	A4,FNAME
+	MOV	A1,TXTBGN
+	MOV	A7,(TXTUNF)
+	SUB	A7,TXTBGN
+SD6:	PUSH	A3
+	PUSH	A5
+	MOV	A6,A1          ; save address
+	MOVI	A0,5
+	INT	5              ; save FILE
+	POP	A5
+	POP	A3
+	CMPI	A0,0
+	JZ	QHOW
+SD3:	POP	A7
+	POP	A6
+	POP	A1
+	POPX
+	POP	A4
+	POP	A5
+	JMP	FINISH
+
+
+;-----------------------------
+DELETE:
+	CMP	(SDFLAG),256
+	JNZ	QHOW
+	MOVHL	A0,34
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	MOV	A4,A3
+	SETX	10
+DEL1: CMP.B	(A3),34
+	JZ	DEL2
+	CMP.B	(A3),13
+	JZ	DEL2
+	INC	A3
+	JMPX	DEL1
+DEL2:	MOVHL	A0,34
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	MOVI	A0,4
+	INT	5
+	MOV	A4,A3
 	JMP	FINISH
 
 ;-------------------------------
@@ -1793,35 +1853,30 @@ SDINIT:
 	MOVI	A0,11
 	INT	4
 	MOV	A1,A0
-	MOV	(SDFLAG),A0
-	MOVI	A1,0
-	MOVI	A0,13
-	PUSH	A2
-	MOV	A2,SDCBUF1
-	INT	4
-	MOV	A1,A0
-	POP	A2
+	MOVI	A0,3
+	INT	5
+	MOV	A0,(SDFLAG)
 	RET
 
-SDREAD:
-	JSR	PARN
-	MOVI	A0,13
-	PUSH	A2
-	MOV	A2,SDCBUF2
-	INT	4
-	MOV	A1,A0
-	POP	A2
-	RET
+;SDREAD:
+;	JSR	PARN
+;	MOVI	A0,13
+;	PUSH	A2
+;	MOV	A2,SDCBUF2
+;	INT	4
+;	MOV	A1,A0
+;	POP	A2
+;	RET
 
-SWRITE:
-	JSR	PARN
-	MOVI	A0,14
-	PUSH	A2
-	MOV	A2,SDCBUF2
-	INT	4
-	MOV	A1,A0
-	POP	A2
-	RET
+;SWRITE:
+;	JSR	PARN
+;	MOVI	A0,14
+;	PUSH	A2
+;	MOV	A2,SDCBUF2
+;	INT	4
+;	MOV	A1,A0
+;	POP	A2
+;	RET
 
 CLRMEM:	PUSH	A1
 		PUSH	A0
@@ -2222,10 +2277,6 @@ ign1:
 	inc	a3
 	jmp	ign1
 ign2:
-	;SWAP	A0
-	;cmphl	a0
-	;SWAP	A0
-	
 	swap	a0
 	cmp.b	(a3),a0
 	swap  a0
@@ -2330,7 +2381,6 @@ INPIO:
 	RET
 ;-----------------------------------------------------
 ; DATA
-
 SINP11	DW	$0001
 SINP12	DW	$45F3
 SINP21	DW	$0000
@@ -2341,7 +2391,9 @@ DUMMY		DW	0
 XX		DB	0
 YY		DB	0
 
-FNAME       TEXT	"         "
+FNAME       TEXT	"        BAS"
+		DB	13
+FNAME2      TEXT	"        BIN"
 		DB	13
 TITLE		TEXT	"Tiny Basic for Lion System 2016"
 		DB	13
@@ -2352,7 +2404,7 @@ OK		TEXT	"OK"
 what		TEXT    "what?"
 		DB	$0d
 sorry		TEXT    "sorry"
-		DB    $0d
+		DB    $0d,0
 
 SER		DB	0
 RAND		DW	$0007
@@ -2367,7 +2419,7 @@ LOPLN		DW	0
 LOPPT		DW	0
 
 TXTUNF	DA    TXTBGN
-TXTBGN	DS	28000   ; 24K program space
+TXTBGN	DS	24000   ; program space
 TXTEND	DS	2
 
 BUFFER	DS	102
@@ -2375,7 +2427,7 @@ BUFEND:
 
 VARBGN	DS	120
 
-STKLMT	DS	2000
+STKLMT	DS	2048
 STACK:	
 
 
