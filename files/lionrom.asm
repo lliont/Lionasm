@@ -172,7 +172,7 @@ FRFT5: MOV	A0,A3
 ;---------------------------
 SVDATA:
 	MOV	A3,A0
-SVD1:	MOVLH	A4,A3
+SVD1:	MOV	A4,A3
 	SRL	A4,8   ; divide 256
 	MOV	A1,(FSTCLST)
 	ADD	A1,A3
