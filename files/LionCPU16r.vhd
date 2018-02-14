@@ -269,7 +269,8 @@ IF Reset = '1' THEN
 			when "0000111" =>              -- OUT n,Reg	
 				case TT is
 				when 0 =>
-					IO<='1';	AD<=X; AS<='0';   RW<='0';	 Do<=Y1;
+					if fetch then AD<=X; else AD<=X1; end if;
+					IO<='1'; AS<='0';   RW<='0';	 Do<=Y1;
 				when 1 =>
 					DS<='0'; 
 				when 2 =>
@@ -302,7 +303,15 @@ IF Reset = '1' THEN
 						SR(3) <= M(15);
 						if M(15 downto 0) = ZERO16 then SR(2) <= '1'; else SR(2) <='0'; end if;
 					else
-						SR(1) <=  '0'; --neg & zero & overflow & carry
+						if not fetch then
+							SR(1) <=  '0';
+						else
+							if M(31 downto 16)=ZERO16 then	
+								SR(1) <=  '0'; --neg & zero & overflow & carry
+							else
+								SR(1)<='1';
+							end if;
+						end if;
 						SR(3) <= M(31);
 						if (M(15 downto 0) OR M(31 downto 16)) = ZERO16 then SR(2) <= '1'; else SR(2) <='0'; end if;
 					end if;
@@ -314,8 +323,6 @@ IF Reset = '1' THEN
 					tmp:=M(31 downto 16); set_reg(r2,tmp,'0','0');
 					rest2:=true;
 				end case;
-				
---			when "0001011" =>
  
 			when "0001100" =>           -- MOV.B <Reg>,(Reg,NUM,[reg],[n])
 				case TT is
@@ -425,6 +432,15 @@ IF Reset = '1' THEN
 			when "0011000" =>              -- BCLR  R,n
 					tmp:=X1;	tmp(bt):='0'; set_reg(r1,tmp,'0','0'); 
 					rest2:=true;
+			when "0001011" =>              -- BTST  R,R
+					if X1(to_integer(unsigned(Y1(3 downto 0))))= '0' then SR(2)<='1'; else SR(2)<='0';  end if;
+					rest2:=true;
+			when "1010001" =>              -- BSET  R,R
+					tmp:=X1;	tmp(to_integer(unsigned(Y1(3 downto 0)))):='1';	set_reg(r1,tmp,'0','0'); 
+					rest2:=true;
+			when "0011110" =>              -- BCLR  R,R
+					tmp:=X1;	tmp(to_integer(unsigned(Y1(3 downto 0)))):='0'; set_reg(r1,tmp,'0','0'); 
+					rest2:=true;						
 			when "0011001" =>              --SRA Reg
 					tmp:= std_logic_vector(shift_right(signed (X1),bt));
 					set_reg(r1,tmp); 
@@ -445,9 +461,6 @@ IF Reset = '1' THEN
 					tmp:= std_logic_vector(shift_left(unsigned (X1),bt));
 					set_reg(r1,tmp);  
 					rest2:=true;
-					
---			when "0011101" , 0011110 =>              -- was ROL,ROR Reg
-
 			
 			when "0011111" =>  -- xchg r1,r2
 				case TT is
@@ -615,7 +628,8 @@ IF Reset = '1' THEN
 					sub<='0';
 					set_flags;
 					rest2:=true;
-				end case;            
+					half<='0';
+				end case;      			
 			--when "0110011" =>             
 			--when "0110100" =>         
 			
@@ -759,7 +773,7 @@ IF Reset = '1' THEN
 					AS<='0'; 
 				when 7 =>
 				when others =>
-					PC<=Di; SR(5)<='0';
+					PC<=Di; SR(5)<='0'; 
 					AS<='1'; 
 					--if IR(5)='0' and IR(4)='0' then SR(7)<='1';  end if;
 					rest2:=true; 
@@ -880,9 +894,7 @@ IF Reset = '1' THEN
 					tmp(7 downto 0):=  std_logic_vector(shift_left(unsigned (X1(7 downto 0)),bt));
 					set_reg(r1,tmp,'1');  
 					SR(0)<=X1(8-bt);
-					rest2:=true;
-					
---			when "1010001" => 
+					rest2:=true; 
 
 			when "1010010" =>              --CMPI Reg,(0-15)
 				case TT is

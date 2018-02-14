@@ -269,7 +269,7 @@ Ii<="00" when Inter='1' and rising_edge(clock) else
 		"00" when rising_edge(clock);
 		
 --LED(7)<=Inter;
-LED(6)<=INT;
+--LED(6)<=INT;
 --LED(5)<=RD;
 LED(4)<=HOLD;
 LED(3)<=II(0);

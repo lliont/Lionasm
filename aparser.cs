@@ -1011,7 +1011,7 @@ namespace Lion_assembler
                         break;
                     //case OperandType.MemoryNamedDirect:
                     //case OperandType.MemoryNamedIndirect:
-                       break;
+                       //break;
                     default:
                         return false;
                 }
@@ -1673,46 +1673,46 @@ namespace Lion_assembler
                         return false;
                 }
             }
-            else
-                if (il.op1t == OperandType.MemoryIndirect)
-                {
-                    r1 = is_reg(il.op1);
-                    switch (il.op2t)
-                    {
-                        case OperandType.MemoryDirect:
-                            il.len = 2; s1 = Convert.ToString(0, 2).PadLeft(3, '0'); r2 = conv_int(il.op2);
-                            r1 = conv_int(il.op1.Substring(1, il.op1.Length - 2));
-                            if (r2 > 15 || r2 < 0) { error = -7; return false; }
-                            if (il.opcode == "ROR") r2 = 16 - r2;
-                            s2 = Convert.ToString(r2, 2).PadLeft(4, '0');
-                            il.word1 = op + s1 + s2 + "11";
-                            il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
-                            il.word2 = il.word2.Substring(il.word2.Length - 16);
-                            break;
-                        default:
-                            return false;
-                    }
-                }
-                else
-                    if (il.op1t == OperandType.MemoryNamedIndirect)
-                    {
-                        r1 = is_reg(il.op1);
-                        switch (il.op2t)
-                        {
-                            case OperandType.MemoryDirect:
-                                il.len = 2; s1 = Convert.ToString(0, 2).PadLeft(3, '0'); r2 = conv_int(il.op2);
-                                r1 = conv_int(il.op1.Substring(1, il.op1.Length - 2));
-                                if (r2 > 15 || r2 < 0) { error = -7; return false; }
-                                if (il.opcode == "ROR") r2 = 16 - r2;
-                                s2 = Convert.ToString(r2, 2).PadLeft(4, '0');
-                                il.word1 = op + s1 + s2 + "11";
-                                //il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
-                                //il.word2 = il.word2.Substring(il.word2.Length - 16);
-                                break;
-                            default:
-                                return false;
-                        }
-                    }
+            //else
+            //    if (il.op1t == OperandType.MemoryIndirect)
+            //    {
+            //        r1 = is_reg(il.op1);
+            //        switch (il.op2t)
+            //        {
+            //            case OperandType.MemoryDirect:
+            //                il.len = 2; s1 = Convert.ToString(0, 2).PadLeft(3, '0'); r2 = conv_int(il.op2);
+            //                r1 = conv_int(il.op1.Substring(1, il.op1.Length - 2));
+            //                if (r2 > 15 || r2 < 0) { error = -7; return false; }
+            //                if (il.opcode == "ROR") r2 = 16 - r2;
+            //                s2 = Convert.ToString(r2, 2).PadLeft(4, '0');
+            //                il.word1 = op + s1 + s2 + "11";
+            //                il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
+            //                il.word2 = il.word2.Substring(il.word2.Length - 16);
+            //                break;
+            //            default:
+            //                return false;
+            //        }
+            //    }
+            //    else
+            //        if (il.op1t == OperandType.MemoryNamedIndirect)
+            //        {
+            //            r1 = is_reg(il.op1);
+            //            switch (il.op2t)
+            //            {
+            //                case OperandType.MemoryDirect:
+            //                    il.len = 2; s1 = Convert.ToString(0, 2).PadLeft(3, '0'); r2 = conv_int(il.op2);
+            //                    r1 = conv_int(il.op1.Substring(1, il.op1.Length - 2));
+            //                    if (r2 > 15 || r2 < 0) { error = -7; return false; }
+            //                    if (il.opcode == "ROR") r2 = 16 - r2;
+            //                    s2 = Convert.ToString(r2, 2).PadLeft(4, '0');
+            //                    il.word1 = op + s1 + s2 + "11";
+            //                    //il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
+            //                    //il.word2 = il.word2.Substring(il.word2.Length - 16);
+            //                    break;
+            //                default:
+            //                    return false;
+            //            }
+            //        }
                     //else if (il.op1t == OperandType.OperandType9)
                     //{
                     //    r1 = is_reg(il.op1);
@@ -2273,7 +2273,6 @@ namespace Lion_assembler
             return true;
         }
 
-
         private bool dec(InstructionLine il, char bwb)  // one param always a register bwb
         {
             int r1 = 0; string s1;
@@ -2424,16 +2423,16 @@ namespace Lion_assembler
             il.op1t = parameter_type(il.op1);
             il.op2t = parameter_type(il.op2);
             if (il.op1t == OperandType.Undefined || il.op2t == OperandType.Undefined) return false;
-            //if (il.op1t == OperandType.RegisterADirect)
-            //{
-            //    r1 = is_reg(il.op1);
-            //    switch (il.op2t)
-            //    {
-            //        case OperandType.RegisterADirect:
-            //            r2 = is_reg(il.op2);
-            //            il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
-            //            il.word1 = "0000111" + s1 + "0" + s2 + "00";
-            //            break;
+            if (il.op1t == OperandType.RegisterADirect)
+            {
+                r1 = is_reg(il.op1);
+                switch (il.op2t)
+                {
+                    case OperandType.RegisterADirect:
+                        r2 = is_reg(il.op2);
+                        il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
+                        il.word1 = "0000111" + s1 + "0" + s2 + "00";
+                        break;
             //        case OperandType.RegisterAIndirect:
             //            r2 = is_reg_ref(il.op2);
             //            il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
@@ -2477,12 +2476,11 @@ namespace Lion_assembler
             //        //case OperandType.MemoryNamedDirect:
             //        //case OperandType.MemoryNamedIndirect:
             //        //    break;
-            //        default:
-            //            return false;
-            //    }
-            //}
-            //else 
-          if (il.op1t == OperandType.MemoryDirect)
+                    default:
+                        return false;
+                }
+            }
+          else  if (il.op1t == OperandType.MemoryDirect)
             {
                 r1 = conv_int(il.op1);
                 switch (il.op2t)
@@ -3785,14 +3783,16 @@ namespace Lion_assembler
                     foreach (string k in orderedKeys1)
                     {
                         LionAsmForm.errorbox.Text += k.PadRight(16) + ": $" + Convert.ToString((int)lblList[k], 16).PadLeft(4, '0')
-                            + "  #" + Convert.ToString((int)lblList[k], 2).PadLeft(16, '0') + " \r\n";
+                            + "  #" + Convert.ToString((int)lblList[k], 2).PadLeft(16, '0') + "  " +
+                            Convert.ToString((int)lblList[k], 10).PadLeft(5, '0') + " \r\n";
                     }
                     var orderedKeys2 = varList.Keys.Cast<string>().OrderBy(c => c);
                     LionAsmForm.errorbox.Text += "\r\n*** Variables ***\r\n";
                     foreach (string p in orderedKeys2)
                     {
                         LionAsmForm.errorbox.Text += p.PadRight(16) + ": $" + Convert.ToString((int)varList[p], 16).PadLeft(4, '0')
-                            + "  #" + Convert.ToString((int)varList[p], 2).PadLeft(16, '0') + " \r\n";
+                            + "  #" + Convert.ToString((int)varList[p], 2).PadLeft(16, '0') + "  " +
+                            Convert.ToString((int)varList[p], 10).PadLeft(5, '0') + " \r\n"; 
                     }
                 }
                 LionAsmForm.VHDL.Text = "-- Copy to LionSystem VHDL Rom or Ram init function\r\n";

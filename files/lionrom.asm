@@ -14,7 +14,7 @@ INT0_3      DA		HINT   ; hardware interrupts
 		DA		INTEXIT  
 INT4        DA        	INTR4     ; interrupt vector 4 system calls
 INT5 		DA		INTR5	    ; fixed point routines
-INT6_14     DW          16,16,16,16,16,16,16,16,16
+INT6_14     DW          32,32,32,32,32,32,32,32,32
 INT15		DA		INTR15   ; trace interrupt
 
 BOOTC:	MOV		(SDFLAG),0
@@ -146,10 +146,8 @@ FRFT3:
 	CMP	(A2),0
 	JZ	FRFT2
 	ADDI	A2,2
-	MOV	A0,A3
-	ADDI	A3,1
-	AND	A0,$FF00
-	CMP	A0,255
+	INC	A3
+	CMPI.B A3,0
 	JNZ	FRFT3
 	INC	A4
 	CMP	A4,238
@@ -174,8 +172,8 @@ FRFT5: MOV	A0,A3
 ;---------------------------
 SVDATA:
 	MOV	A3,A0
-SVD1:	MOVI	A4,0
-	MOVLH	A4,A3
+SVD1:	MOVLH	A4,A3
+	SRL	A4,8   ; divide 256
 	MOV	A1,(FSTCLST)
 	ADD	A1,A3
 	SUBI	A1,2
@@ -213,7 +211,7 @@ SVD2:	AND	A3,$00FF
 	ADD	A4,(FSTFAT)
 	MOV	A1,A4
 	MOVI	A0,14
-	INT	4         ;w rite $FFFF and exit
+	INT	4         ;write $FFFF and exit
 	JSR	DELAY
 	MOV	A0,256
 SVDE:
@@ -265,7 +263,7 @@ FSV5:	MOV	(A2),(A4)
 	MOV	(A2),0  
 	SUBI	A2,4
 	JSR	FREEFAT     ; free
-	CMP	A0,0
+	CMPI	A0,0
 	JZ	FSVE
 	SWAP	A0	
 	MOV	(A2),A0
@@ -332,7 +330,7 @@ FDL1:
 	ADD	A5,A4
 	MOV	A4,(A5)
 	MOV	(A5),0  ; free cluster
-	MOV	A0,14
+	MOVI	A0,14
 	INT	4        ; write fat back
 	JSR	DELAY
 	SWAP	A4
@@ -353,45 +351,45 @@ FDELX:
 ;-------- MOUNT VOUME ---------------------------
 
 VMOUNT:
-		PUSH		A1
-		PUSH		A2
-		MOVI		A0,13
-		MOVI		A1,0
-		MOV		A2,SDCBUF1
-		INT		4             ; read MBR
-		JSR		DELAY
-            CMP		A0,256
-		JNZ		VMEX
-		MOV		A2,SDCBUF1      
-		ADD		A2,$1C6
-		MOV		A0,(A2)        ; Get 1st partition boot sector 
-		SWAP		A0		   ; little endian
-		MOV		(FATBOOT),A0  
-		MOV		A1,A0           ; A1 fatboot
-		MOVI		A0,13
-		MOV		A2,SDCBUF1
-		INT		4              ; Load FAT boot sector
-		JSR		DELAY
-            CMP		A0,256
-		JNZ		VMEX
-		MOV		(SDFLAG),256
-		ADDI		A2,14
-		MOV		A0,(A2)   ; Reserved sectors
-		SWAP		A0
-		ADD		A1,A0
-		MOV		(FSTFAT),A1  ; save first fat cluster num
-		ADD		A2,8
-		MOV		A0,(A2)   ; secors per fat
-		SWAP		A0
-		SLL		A0,1        ; 2 fats
-		ADD		A1,A0	    ; Root Folder
-		MOV		(FATROOT),A1
-		ADD		A1,32     ; 32 bytes * 512 entries =32 sectors
-		MOV		(FSTCLST),A1
-		MOV		A0,(FATROOT)
-VMEX:		POP		A2
-		POP		A1
-		RETI
+	PUSH	A1
+	PUSH	A2
+	MOVI	A0,13
+	MOVI	A1,0
+	MOV	A2,SDCBUF1
+	INT	4             ; read MBR
+	JSR	DELAY
+      CMP	A0,256
+	JNZ	VMEX
+	MOV	A2,SDCBUF1      
+	ADD	A2,$1C6
+	MOV	A0,(A2)        ; Get 1st partition boot sector 
+	SWAP	A0		   ; little endian
+	MOV	(FATBOOT),A0  
+	MOV	A1,A0           ; A1 fatboot
+	MOVI	A0,13
+	MOV	A2,SDCBUF1
+	INT	4              ; Load FAT boot sector
+	JSR	DELAY
+      CMP	A0,256
+	JNZ	VMEX
+	MOV	(SDFLAG),256
+	ADDI	A2,14
+	MOV	A0,(A2)   ; Reserved sectors
+	SWAP	A0
+	ADD	A1,A0
+	MOV	(FSTFAT),A1  ; save first fat cluster num
+	ADD	A2,8
+	MOV	A0,(A2)   ; secors per fat
+	SWAP	A0
+	SLL	A0,1        ; 2 fats
+	ADD	A1,A0	    ; Root Folder
+	MOV	(FATROOT),A1
+	ADD	A1,32     ; 32 bytes * 512 entries =32 sectors
+	MOV	(FSTCLST),A1
+	MOV	A0,(FATROOT)
+VMEX:	POP	A2
+	POP	A1
+	RETI
 
 
 
@@ -405,50 +403,51 @@ FILELD:	JSR	FINDFN
 INTEXIT:	RETI
 ;-------------------------------------------------
 
-DELAY:	PUSHX
-		SETX	32000
-LDDL: 	JMPX	LDDL    ;delay
-		POPX
-		RET
+DELAY: PUSHX
+	SETX	62000
+LDDL: NOP
+	JMPX	LDDL    ;delay
+	POPX
+	RET
 
 FLOAD:	; A4 cluster, A3 Dest address
-		PUSH	A1
-		PUSH	A2
-		PUSH	A3
-		PUSH	A4
-		PUSH	A5
-		PUSH	A6
-FLD1:		MOV		A6,A4
-		SRL		A6,8   ; DIVIDE BY 256
-		MOV		A1,(FSTFAT)
-		ADD		A1,A6
-		MOVI		A0,13
-		MOV		A2,SDCBUF2
-		INT		4              ; Load FAT
-		JSR		DELAY
-		MOVI		A0,13          ;
-		MOV		A1,(FSTCLST)
-		AND		A4,$00FF  ; mod 256
-		ADD		A1,A4
-		SUBI		A1,2
-		MOV		A2,A3          ; Dest
-		INT 		4              ; Load sector 
-		JSR		DELAY
-		ADD		A3,512
-		SLL		A4,1  
-		MOV		A5,SDCBUF2
-		ADD		A5,A4
-		MOV		A4,(A5)
-		SWAP		A4
-		CMP		A4,$FFFF
-		JNZ		FLD1
-		POP	A6
-		POP	A5
-		POP	A4
-		POP	A3
-		POP	A2
-		POP	A1
-		RET 
+	PUSH	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A4
+	PUSH	A5
+	PUSH	A6
+FLD1:	MOV	A6,A4
+	SRL	A6,8   ; DIVIDE BY 256
+	MOV	A1,(FSTFAT)
+	ADD	A1,A6
+	MOVI	A0,13
+	MOV	A2,SDCBUF2
+	INT	4              ; Load FAT
+	JSR	DELAY
+	MOVI	A0,13          ;
+	MOV	A1,(FSTCLST)
+	AND	A4,$00FF  ; mod 256
+	ADD	A1,A4
+	SUBI	A1,2
+	MOV	A2,A3          ; Dest
+	INT 	4              ; Load sector 
+	JSR	DELAY
+	ADD	A3,512
+	SLL	A4,1  
+	MOV	A5,SDCBUF2
+	ADD	A5,A4
+	MOV	A4,(A5)
+	SWAP	A4
+	CMP	A4,$FFFF
+	JNZ	FLD1
+	POP	A6
+	POP	A5
+	POP	A4
+	POP	A3
+	POP	A2
+	POP	A1
+	RET 
 
 ;Find filename in root directory
 ; A4 pointer to filename, A0 return cluster relative to (FSTCLST)
@@ -1103,10 +1102,10 @@ LAB1:		SUB.B		A1,32
 		MULU.B	A1,6
 		ADD		A0,A1
 		ADD		A0,VBASE   ; video base
-		SETX		5          ; 6 Times
-LP1:		MOV.B		(A0),(A4)
-		INC		A4
-		INC		A0          ; next   
+		SETX		2          ; 6 bytes
+LP1:		MOV		(A0),(A4)
+		ADDI		A4,2
+		ADDI		A0,2          ; next   
 		JMPX		LP1
 		POP		A1
 		POP		A4
