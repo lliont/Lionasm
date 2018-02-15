@@ -52,8 +52,12 @@ namespace Lion_assembler
                 {
                     fname = theObject.ToString() + ".xml";
                 }
+                if (!Directory.Exists(Path.GetDirectoryName(fname)))
+                {
+                    fname = Path.Combine(System.Windows.Forms.Application.StartupPath, fname);
+                }
                 XmlSerializer x = new XmlSerializer(theObject.GetType());
-                using (XmlTextWriter xmlwr = new XmlTextWriter(System.Windows.Forms.Application.StartupPath + @"\" + fname, Encoding.UTF8))
+                using (XmlTextWriter xmlwr = new XmlTextWriter(fname, Encoding.UTF8))
                 {
                     xmlwr.Formatting = Formatting.Indented;
                     var ns = new XmlSerializerNamespaces();
