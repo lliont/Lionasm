@@ -1,13 +1,12 @@
 Lionasm
 -------
 
-an assembler for Lion Computer
+An assembler for Lion 16-bit FPGA based CPU.
 
 
-
-
-Lion Computer is a homebrew 16-bit computer made by Theodoulos Liontakis.
+Lion CPU and Lion Computer, which is a homebrew 16-bit computer based on this cpu, are made by Theodoulos Liontakis.
 
 Project Page:  
 http://users.sch.gr/tliontakis/index.php/my-projects/13-vhdl-cpu
 
+This free software can be used and distributed under coditions of the GNU License.
