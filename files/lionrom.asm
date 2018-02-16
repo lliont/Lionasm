@@ -141,7 +141,6 @@ FRFT1:
 	ADD	A1,A4
 	MOV	A2,SDCBUF2
 	INT	4              ; Load FAT
-	JSR	DELAY
 FRFT3:	
 	CMP	(A2),0
 	JZ	FRFT2
@@ -151,18 +150,20 @@ FRFT3:
 	JNZ	FRFT3
 	INC	A4
 	CMP	A4,238
-	JZ	FRFT4
+	JA	FRFT4
 	JMP	FRFT1
-FRFT4: MOVI	A3,0
+FRFT4: 
+	MOVI	A3,0
 	JMP	FRFT5	
-FRFT2: MOV	(A2),$F0F0 
+FRFT2: 
+	MOV	(A2),$F0F0 
 	MOVI	A0,14
 	MOV	A1,(FSTFAT)
 	ADD	A1,A4
 	MOV	A2,SDCBUF2
 	INT	4              ; Save FAT
-	JSR	DELAY
-FRFT5: MOV	A0,A3
+FRFT5: 
+	MOV	A0,A3
 	POP	A4
 	POP	A3
 	POP	A2
@@ -173,50 +174,67 @@ FRFT5: MOV	A0,A3
 SVDATA:
 	MOV	A3,A0
 SVD1:	MOV	A4,A3
-	SRL	A4,8   ; divide 256
+	SRL	A4,8            ; divide 256
 	MOV	A1,(FSTCLST)
 	ADD	A1,A3
 	SUBI	A1,2
 	MOVI	A0,14
 	MOV	A2,A6
 	INT	4
-	JSR	DELAY
 	CMP	A7,512
 	JBE	SVD2
 	ADD	A6,512
 	SUB	A7,512
 	JSR	FREEFAT
-	CMPI	A0,0
+	CMPI	A0,0         ; Is it full
 	JZ	SVDE
+
+	CMPHL A0,A4        ; same fat offset
+	JZ	NORELD
+
+	PUSH	A0
+	MOV	A1,(FSTFAT)
+	ADD	A1,A4
+	MOVI	A0,13
+	MOV	A2,SDCBUF2
+	INT	4
+	POP	A0
+NORELD:
 	AND	A3,$00FF
 	SLL	A3,1
 	ADD	A3,SDCBUF2   ;store next cluster
 	SWAP	A0
 	MOV	(A3),A0
 	SWAP	A0
+	PUSH	A0
+
 	MOV	A2,SDCBUF2
-	ADD	A4,(FSTFAT)
-	MOV	A1,A4
-	MOV	A4,A0
+	MOV	A1,(FSTFAT)
+	ADD	A1,A4
 	MOVI	A0,14
 	INT	4
-	JSR	DELAY	
-	MOV	A3,A4
-	JMP	SVD1	
-SVD2:	AND	A3,$00FF
+
+	POP	A3
+	JMP	SVD1
+SVD2:	
+	MOV	A1,(FSTFAT)
+	ADD	A1,A4
+	MOVI	A0,13
+	MOV	A2,SDCBUF2
+	INT	4
+
+	AND	A3,$00FF
 	SLL	A3,1
 	ADD	A3,SDCBUF2   ;store last cluster
 	MOV	(A3),$FFFF
 	MOV	A2,SDCBUF2
-	ADD	A4,(FSTFAT)
-	MOV	A1,A4
+	MOV	A1,(FSTFAT)
+	ADD	A1,A4
 	MOVI	A0,14
 	INT	4         ;write $FFFF and exit
-	JSR	DELAY
 	MOV	A0,256
 SVDE:
 	RET
-
 ;----------------------------
 
 FILESAV:
@@ -240,7 +258,6 @@ FSV4:	MOV	A1,(FATROOT)
 	MOVI	A0,13
 	MOV	A2,SDCBUF1
 	INT	4              ; Load Root Folder 1st sector
-	JSR	DELAY
 	MOVI	A0,0
 	MOVI	A3,0
 FSV1:	
@@ -274,7 +291,6 @@ FSV5:	MOV	(A2),(A4)
 	ADD	A1,A5
 	MOV	A2,SDCBUF1
 	INT	4         ; save header
-	JSR	DELAY
 	POP	A0
 	JSR	SVDATA
 	JMP	FSVE
@@ -323,7 +339,6 @@ FDL1:
 	MOVI	A0,13
 	MOV	A2,SDCBUF2
 	INT	4              ; Load FAT
-	JSR	DELAY
 	AND	A4,$00FF  ; mod 256	
 	SLL	A4,1  
 	MOV	A5,SDCBUF2
@@ -332,7 +347,6 @@ FDL1:
 	MOV	(A5),0  ; free cluster
 	MOVI	A0,14
 	INT	4        ; write fat back
-	JSR	DELAY
 	SWAP	A4
 	CMP	A4,$FFFF
 	JZ	FDELX
@@ -369,7 +383,6 @@ VMOUNT:
 	MOVI	A0,13
 	MOV	A2,SDCBUF1
 	INT	4              ; Load FAT boot sector
-	JSR	DELAY
       CMP	A0,256
 	JNZ	VMEX
 	MOV	(SDFLAG),256
@@ -404,9 +417,8 @@ INTEXIT:	RETI
 ;-------------------------------------------------
 
 DELAY: PUSHX
-	SETX	62000
-LDDL: NOP
-	JMPX	LDDL    ;delay
+	SETX	60000
+LDDL: JMPX	LDDL    ;delay
 	POPX
 	RET
 
@@ -424,16 +436,14 @@ FLD1:	MOV	A6,A4
 	MOVI	A0,13
 	MOV	A2,SDCBUF2
 	INT	4              ; Load FAT
-	JSR	DELAY
 	MOVI	A0,13          ;
 	MOV	A1,(FSTCLST)
-	AND	A4,$00FF  ; mod 256
 	ADD	A1,A4
 	SUBI	A1,2
 	MOV	A2,A3          ; Dest
 	INT 	4              ; Load sector 
-	JSR	DELAY
 	ADD	A3,512
+	AND	A4,$00FF  ; mod 256
 	SLL	A4,1  
 	MOV	A5,SDCBUF2
 	ADD	A5,A4
@@ -461,7 +471,6 @@ TFF4:		MOV	A1,(FATROOT)
 		MOVI	A0,13
 		MOV	A2,SDCBUF1
 		INT	4              ; Load Root Folder 1st sector
-		JSR	DELAY
 		MOVI	A0,0
 		MOVI	A3,0
 TFF1:		CMP.B (A2),0
@@ -724,6 +733,19 @@ FMULEND:	MOV		(FRAC1),A4
 ;--------------------------------------
 WRITESEC:
 	PUSHX
+	SETX	2
+WRSCR:
+	MOVI	A0,14
+	JSR	WSEC
+	JSR 	DELAY
+	CMP	A0,256
+	JRZ	4
+	JMPX	WRSCR
+	POPX	
+	RETI
+
+WSEC:
+	PUSHX
 	PUSH	A1
 	PUSH	A2
 	PUSH	A3
@@ -756,7 +778,8 @@ WRITESEC:
 
 	MOV	A1,$FF   ; delay
 	JSR	SPIS
-	 
+
+
 	MOV	A1,$FE    ; SEND START OF DATA
 	JSR	SPIS	
 
@@ -803,11 +826,23 @@ WRIF: POP	A4
 	POP	A2
 	POP	A1
 	POPX
-	RETI
+	RET
 
 ;-----------------------------------------
 
 READSEC:
+	PUSHX
+	SETX	2
+RDSCR:
+	MOVI	A0,13
+	JSR	READSC
+	JSR	DELAY
+	CMP	A0,256
+	JRZ	4
+	JMPX	RDSCR
+	POPX
+	RETI
+READSC:
 	PUSHX
 	PUSH	A1
 	PUSH	A2
@@ -869,7 +904,7 @@ RDIF: POP	A4
 	POP	A2
 	POP	A1
 	POPX
-	RETI
+	RET
 
 ;-----------------------------------------
 SPISEND:
