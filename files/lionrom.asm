@@ -111,6 +111,7 @@ INT5T2	DA		FILELD   ; Load file A4 points to filename, at A3
 INT5T3	DA		VMOUNT   ; Load First Volume, return A0=fat root 1st cluster
 INT5T4	DA		FILEDEL  ; Delete file A4 points to filename
 INT5T5	DA		FILESAV  ; Save memory range to file A4 points to filename
+INT5T6	DA		UDIV     ; Unsigned int Div A2 by A1 res in A1,A0
 
 ;Hardware interrupt
 HINT:		INC		(COUNTER)
@@ -1350,7 +1351,9 @@ DIV:		STI
 		PUSH		A4
 		MOV		A3,A1
 		MOV		A1,32767
-		OR		A3,A3
+		CMPI		A3,0
+		JZ		DIVE
+		CMP		A3,$8000
 		JZ		DIVE
 		MOVI		A1,0
 		XOR		A0,A2
@@ -1424,6 +1427,72 @@ DIVE:		POP		A4
 		POP		A3
 		POPX
 		RETI
+
+;-------------------------------------------------------------
+; unsigned Div A2 by A1 res in A1,A0
+
+UDIV:		STI
+		PUSHX
+		PUSH		A3
+		PUSH		A4
+		MOV		A3,A1
+		MOV		A1,65535
+		CMPI		A3,0
+		JZ		UDIVE
+UDIV3:	MOV		A1,A2
+		CMP		A3,A1
+		JBE		UDIV4
+		MOV		A0,A1  ; id divider > divident res=0 rem=divident
+		MOVI		A1,0
+		JMP		UDIVE
+UDIV4:	MOV		A0,A2 ; main algorithm
+		MOVI		A1,0
+UDIV5:	BTST		A0,15  ; left align
+		JNZ		UDIV6
+		INC		A1
+		SLL		A0,1
+		JMP		UDIV5
+UDIV6:	PUSH 		A1     ; store no of shifts
+		MOVI		A4,0
+		MOV		A1,A3
+UDIV7:	BTST		A1,15  ; left align 
+		JNZ		UDIV12
+		SLL		A1,1
+		INC		A4
+		JMP		UDIV7
+UDIV12:	MOV		A2,A0  
+		MOV		A3,A1  
+		MOV		A1,A4
+		POP		A0  ; Get no of shifts
+		MOV		A4,A0
+		SUB		A1,A0
+		PUSH		A1   ; shifts differance
+		MOV		A0,A2  
+		MOV		A1,A3  
+UDIV10:	OR		A4,A4
+		JZ		UDIV9
+		SRL		A1,1
+		SRL		A0,1
+		DEC		A4
+		JMP		UDIV10
+UDIV9:	MOV		A2,A0  ; new dividend = remainder
+		MOV		A3,A1  ; new divisor
+		POP		A1
+		SETX		A1
+		MOVI		A1,0       ; quotient
+UDIV11:	SLL		A1,1       
+		CMP		A0,A3  ; compare remainder with divisor
+		JC		UDIV8		
+		BSET		A1,1
+		SUB		A0,A3
+UDIV8:	SRL		A3,1
+		JMPX		UDIV11
+		SRL		A1,1
+UDIVE:	POP		A4
+		POP		A3
+		POPX
+		RETI
+
 
 ROMEND:
 ; Charcter table Font
