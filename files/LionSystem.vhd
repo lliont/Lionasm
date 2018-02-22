@@ -47,7 +47,7 @@ Component VideoRGB is
 	port
 	(
 		sclk : IN std_logic;
-		VClock,R,G,B,VSYN,HSYN : OUT std_logic;
+		VClock,R,G,B,VSYN,HSYN,VSINT : OUT std_logic;
 		reset : IN std_logic;
 		addr : OUT natural range 0 to 16383;
 		Q : IN std_logic_vector(7 downto 0)
@@ -127,6 +127,7 @@ Component Sound is
 		Aud: OUT std_logic;
 		reset, clk, wr : IN std_logic;
 		Q : IN std_logic_vector(15 downto 0);
+		count: OUT std_logic_vector(15 downto 0);
 		Inter: OUT std_logic
 	);
 end Component;
@@ -165,8 +166,8 @@ end COMPONENT;
 
 Signal qi1,vq : std_logic_vector (7 downto 0);
 Signal di,do,AD,qa,qro,aq : std_logic_vector(15 downto 0);
-Signal qi,q16 : std_logic_vector(15 downto 0);
-Signal w1, w2, Int_in, AS, DS, RW, IO, HOLDA, WAud, inter : std_logic;
+Signal qi,q16,count : std_logic_vector(15 downto 0);
+Signal w1, w2, Int_in, AS, DS, RW, IO, HOLDA, WAud, inter,vint : std_logic;
 Signal Ii : std_logic_vector(1 downto 0);
 Signal qi2 : std_logic_vector(7 downto 0);
 Signal ad1 :  natural range 0 to 16383;
@@ -184,13 +185,13 @@ VRAM: mixed_width_true_dual_port_ram
 	GENERIC MAP (DATA_WIDTH1  => 8,	ADDRESS_WIDTH1 => 14,	ADDRESS_WIDTH2 => 13)
 	PORT MAP ( w2, w1, clock, ad1, ad2, qi1, qi, vq, q16  );
 VIDEO: videoRGB
-	PORT MAP ( Clock, vclock,R,G,B,VSYN, HSYN, reset, ad1, vq);
+	PORT MAP ( Clock, vclock,R,G,B,VSYN, HSYN, vint, reset, ad1, vq);
 Serial: UART
 	PORT MAP ( Tx, Rx, Clock, reset, sr, sw, sdready, sready, sdi, sdo );
 SERKEYB: SKEYB
 	PORT MAP (Rx2, Clock, reset, sr2, sdready2, sdo2);
 SoundC: Sound
-	PORT MAP (AUDIO, reset, Clock, Waud, aq, Inter);
+	PORT MAP (AUDIO, reset, Clock, Waud, aq, count, Inter);
 IRAM: single_port_ram
 	PORT MAP ( clock, addr1, Do, RW, DS, QA ) ;
 IROM: single_port_rom
@@ -236,7 +237,7 @@ sw<=Do(0) when addr=2 and IO='1' and AS='0' and DS='0' and RW='0' and falling_ed
 spi_w<=Do(0) when addr=19 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 SPICS<=Do(1) when addr=19 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 spi_in<=Do(7 downto 0) when addr=18 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
-					
+
  --Sound IO decoding 
 aq<=Do when IO='1' and AD="0000000000001000" and falling_edge(clock);
 Waud<='0' when AD="0000000000001000" and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
@@ -252,6 +253,8 @@ di<="00000000"&sdo when falling_edge(clock) AND AD="0000000000000100" and IO='1'
                          and RW='1' and AS='0' else	
 	"000000000000000" & spi_rdy  when falling_edge(clock)          -- spi status
 								and RW='1' AND AD="000000000010001" and IO='1' and AS='0' else
+	count  when falling_edge(clock)          -- spi status
+								and RW='1' AND AD="000000000010100" and IO='1' and AS='0' else
 	qro when addr<8192 and RW='1' and IO='0' and AS='0' and falling_edge(clock) else  --rom
 	qa when addr>=8192 and addr<16384 and RW='1' and IO='0' and AS='0' and falling_edge(clock) else   --ram
 	q16(7 downto 0)&q16(15 downto 8) when AD(15 downto 14)="11" and RW='1' and IO='0' and AS='0' and falling_edge(clock) else  --read video ram 
@@ -263,6 +266,7 @@ Mdecod1 <= '0' when (AD(15 downto 14)="10" or AD(15 downto 14)="01") and AS='0' 
 --Int_in <= '1' whe n sdready='1' or Int='1' else '0'; 
 --Ii <= "11" when sdready='1' else I;
 
+--Int_in <= (Int or VINT) when rising_edge(clock) and reset='0' else '0' when rising_edge(clock) and reset='1';
 Int_in <= (Int or Inter) when rising_edge(clock) and reset='0' else '0' when rising_edge(clock) and reset='1';
 Ii<="00" when Inter='1' and rising_edge(clock) else 
 		Ii	when int='1' and  rising_edge(clock) else

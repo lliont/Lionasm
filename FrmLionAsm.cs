@@ -293,7 +293,7 @@ namespace Lion_assembler
             else res = DialogResult.Yes;
             if (res == DialogResult.Yes)
             {
-                openFileDialog1.FileName = fname;
+                openFileDialog1.FileName = Path.GetFileName(fname);
                 d = openFileDialog1.ShowDialog();
                 if (d == DialogResult.OK)
                 {
@@ -359,7 +359,7 @@ namespace Lion_assembler
         {
             //SAVE
             DialogResult d;
-            saveFileDialog1.FileName = fname;
+            saveFileDialog1.FileName = Path.GetFileName(fname); 
             d = saveFileDialog1.ShowDialog();
             if (d == DialogResult.OK)
             {

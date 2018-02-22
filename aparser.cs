@@ -1654,6 +1654,24 @@ namespace Lion_assembler
                 r1 = is_reg(il.op1);
                 switch (il.op2t)
                 {
+                    case OperandType.RegisterADirect:
+                        r2 = is_reg(il.op2);
+                        il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
+                        switch (il.opcode)
+                        {
+                            case "BTST":
+                                il.word1 = "0001011" + s1 + "0" + s2 + "00";
+                                break;
+                            case "BSET":
+                                il.word1 = "1010001" + s1 + "0" + s2 + "00";
+                                break;
+                            case "BCLR":
+                                il.word1 = "0011110" + s1 + "0" + s2 + "00";
+                                break;
+                            default:
+                                return false;
+                        }
+                        break;
                     case OperandType.MemoryDirect:
                         il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); r2 = conv_int(il.op2);
                         if (r2 > 15 || r2 < 0) { error = -7; return false; }

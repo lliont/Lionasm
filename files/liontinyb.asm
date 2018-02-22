@@ -1707,7 +1707,8 @@ PEEK:
 	RET
 
 TIMER:
-	MOV	A1,(COUNTER)
+	;MOV	A1,(COUNTER)
+	IN	A1,20
 	BCLR	A1,15
 	RET
 
@@ -2160,50 +2161,14 @@ QT5:
 
 	;---------  DISPLAY NUMBER -----
 
-PRNHEX:	; print num in A0 in hex for debugging 
-		PUSHX
-		PUSH	A0
-		PUSH	A1
-		PUSH	A2
-		PUSH	A3
-		MOV	A3,A0
-		MOV	A2,(XX)
-		ADD	A2,$0400
-		MOV	(XX),A2
-		SETX	3
-PHX1:		MOV	A1,A3
-		AND	A1,$000F
-		ADD	A1,48
-		CMP	A1,57
-		JBE	PHX2
-		ADDI	A1,7
-PHX2:		MOVI	A0,4
-		SUB	A2,$0100
-		INT	4
-		SRL	A3,4
-		JMPX	PHX1
-		MOV	A0,'H'
-		JSR 	CHROUT
-		POP	A3
-		POP	A2
-		POP	A1
-		POP	A0
-		POPX
-		RET 
-
 PRTUNUM:  ; UNSIGNED 
-	;CMP	A1,$8000
-	;JNZ	PRTN
-	;MOV	A0,A1
-	;JSR	PRNHEX
-	;RET
-PRTN:	PUSH	A3
+	PUSH	A3
 	MOVI	A3,10	
 	PUSH	A3
 	MOVHH	A2,A3
 	MOV	A4,A2
 PUN2:
-	JSR	UDIVIDE 
+	JSR	UDIVIDE ; unsigned div A1 by A3 res in A2,A1
 	OR	A2,A2
 	JZ	PUN3
 	PUSH	A1
@@ -2249,7 +2214,7 @@ PRTNUM:	            ;signed
 PN1:
 	MOV	A4,A2
 PN2:
-	JSR	DIVIDE     ; integer Div A2 by A1 res in A1,A0
+	JSR	DIVIDE     ; integer div A1 by A3 res in A2,A1
 	OR	A2,A2
 	JZ	PN3
 	PUSH	A1
@@ -2386,21 +2351,20 @@ FINISH:
 
 ;--------------------------------
 
-STOSW: ;PUSH	SR
+STOSW: 
 	swap	a0
 	mov.b	(a4),a0
 	inc	a4
 	swap	a0
 	mov.b	(a4),a0
 	inc	a4
-stowe: ;POP	SR
 	RET
-LODSW: ;PUSH	SR
-	movhl	a0,(a4)
+LODSW: 
+	mov.b	a0,(a4)
+	swap	a0
 	inc	a4
 	mov.b	a0,(a4)
 	inc	a4
-lodwe: ;POP	SR
 	RET
 ;----------ADDED
 

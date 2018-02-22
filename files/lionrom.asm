@@ -734,7 +734,7 @@ FMULEND:	MOV		(FRAC1),A4
 ;--------------------------------------
 WRITESEC:
 	PUSHX
-	SETX	2
+	SETX	3
 WRSCR:
 	MOVI	A0,14
 	JSR	WSEC
@@ -833,7 +833,7 @@ WRIF: POP	A4
 
 READSEC:
 	PUSHX
-	SETX	2
+	SETX	3
 RDSCR:
 	MOVI	A0,13
 	JSR	READSC
@@ -1210,7 +1210,6 @@ PLOT:		STI
 		AND		A0,7
 		SRL		A2,3
 		MULU		A2,XDIM2
-		;SLL		A2,1
 		ADD		A2,A1
 		ADD		A2,VBASE 
 		MOV.B		A1,(A2)

@@ -416,8 +416,8 @@ IF Reset = '1' THEN
 					else
 						tmp:=Y1;
 					end if;
+					if IDX/=ZERO16 then PC<=tmp; end if;
 					IDX<=IDX-1;
-					if IDX>ZERO16 then PC<=tmp; end if;
 					rest2:=true;
 			when "0010101" =>              -- MOVX RegA
 					tmp:=IDX;

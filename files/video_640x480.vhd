@@ -11,7 +11,7 @@ entity VideoRGB is
 	port
 	(
 		sclk: IN std_logic;
-		VClock,R,G,B,VSYN,HSYN: OUT std_logic;
+		VClock,R,G,B,VSYN,HSYN, VSINT: OUT std_logic;
 		reset : IN std_logic;
 		addr : OUT natural range 0 to 16383;
 		Q : IN std_logic_vector(7 downto 0)
@@ -38,7 +38,7 @@ variable FG,BG: std_logic_vector(2 downto 0);
 begin
 	if (reset='1') then
 		dcounter<="00"; pixel<=0; Vclock<='0'; m8<="0000"; l8<=0; addr2<=0; p6<=0; prc<=0;
-		lines<=0;  R<='0'; G<='0'; B<='0'; HSYN<='1'; VSYN<='1'; addr3<=12000;
+		lines<=0;  R<='0'; G<='0'; B<='0'; HSYN<='1'; VSYN<='1'; VSINT<='0'; addr3<=12000;
 	elsif  sClk'EVENT AND sClk = '0' then
 		dcounter <= dcounter + 1;
 		if dcounter = "01" then 
@@ -79,6 +79,11 @@ begin
 				B<='0'; R<='0'; G<='0';
 				if lines<2 then
 					VSYN<='0';
+					if pixel<2 then 
+						VSINT<='1';
+					else	
+						VSINT<='0';
+					end if;
 				else
 					VSYN<='1';
 				end if;
@@ -130,6 +135,7 @@ entity Sound is
 		Aud: OUT std_logic;
 		reset, clk, wr : IN std_logic;
 		Q : IN std_logic_vector(15 downto 0);
+		count: OUT std_logic_vector(15 downto 0);
 		Inter: OUT std_logic
 	);
 end Sound;
@@ -150,7 +156,7 @@ f<=Q when wr='0' ;
 process (clk,reset,wr)	
 	begin
 		if (reset='1') then
-		   Aud<='0'; c3<=0;  inter<='0'; i<=0;
+		   Aud<='0'; c3<=0;  inter<='0'; i<=0; count<=(others=>'0');
 		elsif  Clk'EVENT AND Clk = '1' then
 			if wr='0' then 
 				CASE f(15 downto 14) is
@@ -179,9 +185,9 @@ process (clk,reset,wr)
 						c2<=(others => '0');			
 					end if;
 				end if;
-				if i=49 then inter<='1'; i<=0; else i<=i+1; end if;
+				if i=49 then inter<='1'; i<=0; count<=count+'1'; else i<=i+1; end if;
 			else
-				if c1="0000001101" then
+				if c1="0000001000" then
 					inter<='0';
 				end if;
 			end if;
