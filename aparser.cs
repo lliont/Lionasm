@@ -124,6 +124,7 @@ namespace Lion_assembler
             colorList.Add("JZ", Color.Blue);
             colorList.Add("JNZ", Color.Blue);
             colorList.Add("JO", Color.Blue);
+            colorList.Add("JNO", Color.Blue);
             colorList.Add("JC", Color.Blue);
             colorList.Add("JNC", Color.Blue);
             colorList.Add("JN", Color.Blue);
@@ -233,6 +234,7 @@ namespace Lion_assembler
             instList.Add("JZ", 1);
             instList.Add("JNZ", 1);
             instList.Add("JO", 1);
+            instList.Add("JNO", 1);
             instList.Add("JC", 1);
             instList.Add("JNC", 1);
             instList.Add("JN", 1);
