@@ -19,7 +19,6 @@ namespace Lion_assembler
         private void MakeColorSyntaxForAll()
         {
             //  Store current cursor position
-
             exith = true;
             Flickerfreertf._Paint = false;
             int CurrentSelectionStart = fftxtSource.SelectionStart;
@@ -29,34 +28,21 @@ namespace Lion_assembler
             fftxtSource.SelectAll();
             fftxtSource.SelectionColor = Color.Black;
             int l = pos;
+            char ch;
             Color c;
             string ctok = string.Empty;
             while (l < pos2)
             {
-                if ("ABCDEFGHIJKLMNOPQRSTVUWXYZ01234567890_.".IndexOf(fftxtSource.Text.ToUpper()[l]) != -1)
+                //if ("ABCDEFGHIJKLMNOPQRSTVUWXYZ01234567890_.".IndexOf(fftxtSource.Text.ToUpper()[l]) != -1)
+                ch = fftxtSource.Text.ToUpper()[l];
+                if (ch == '.' || ch == '.' || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9'))
                 {
-                    ctok = ctok + fftxtSource.Text[l];
+                    ctok = ctok + ch;
                     l++;
                 }
                 else
                 {
-                    if (ctok != string.Empty)
-                    {
-                        ctok = ctok.ToUpper();
-                        if (par.colorList.ContainsKey(ctok.ToUpper()))
-                        {
-                            c = (Color)par.colorList[ctok];
-                            fftxtSource.Select(l - ctok.Length, ctok.Length);
-                            fftxtSource.SelectionColor = c;
-                            //fftxtSource.ClearUndo();
-                        }
-                        ctok = string.Empty;
-                    }
-                    if (fftxtSource.Text[l] == '\'')
-                    {
-                        l++;
-                        while (l < pos2 && fftxtSource.Text[l] != '\'' && fftxtSource.Text[l] != '\n') l++;
-                    }
+                    //ctok = ctok.ToUpper();
                     if (fftxtSource.Text[l] == ';')
                     {
                         int ss = l;
@@ -65,13 +51,41 @@ namespace Lion_assembler
                         while (l < pos2 && fftxtSource.Text[l] != '\n') l++;
                         fftxtSource.SelectionLength = l - ss;
                         fftxtSource.SelectionColor = Color.Green;
+                    } else
+                    if (ctok != string.Empty)
+                    {
+                        if (par.colorList.ContainsKey(ctok))
+                        {   
+                            c = (Color)par.colorList[ctok];
+                            fftxtSource.Select(l - ctok.Length, ctok.Length);
+                            fftxtSource.SelectionColor = c;
+                        }
+                        ctok = string.Empty;
+                    } else
+                    if (fftxtSource.Text[l] == '\'')
+                    {
+                        int ss = l;
+                        fftxtSource.SelectionStart = ss;
+                        l++;
+                        while (l < pos2 && fftxtSource.Text[l] != '\'' && fftxtSource.Text[l] != '\n') l++;
+                        fftxtSource.SelectionLength = l - ss+1;
+                        fftxtSource.SelectionColor = Color.DarkRed;
                     }
+                    else
+                        if (fftxtSource.Text[l] == '\"')
+                        {
+                            int ss = l;
+                            fftxtSource.SelectionStart = ss;
+                            l++;
+                            while (l < pos2 && fftxtSource.Text[l] != '\"' && fftxtSource.Text[l] != '\n') l++;
+                            fftxtSource.SelectionLength = l - ss+1;
+                            fftxtSource.SelectionColor = Color.DarkRed;
+                        }
                     l++;
                 }
             }
             if (ctok != string.Empty)
             {
-                ctok = ctok.ToUpper();
                 if (par.colorList.ContainsKey(ctok))
                 {
                     c = (Color)par.colorList[ctok];
@@ -121,37 +135,65 @@ namespace Lion_assembler
             else fftxtSource.SelectionColor = Color.Black;
             int l = pos;
             Color c;
+            char ch;
             string ctok = string.Empty;
             while (l < pos2)
             {
-                if ("ABCDEFGHIJKLMNOPQRSTVUWXYZ0123456789._".IndexOf(fftxtSource.Text.ToUpper()[l]) != -1)
+                //if ("ABCDEFGHIJKLMNOPQRSTVUWXYZ01234567890_.".IndexOf(fftxtSource.Text.ToUpper()[l]) != -1)
+                ch = fftxtSource.Text.ToUpper()[l];
+                if (ch == '.' || ch == '.' || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9'))
                 {
-                    ctok = ctok + fftxtSource.Text[l];
+                    ctok = ctok + ch;
+                    l++;
                 }
                 else
                 {
-                    if (ctok != string.Empty)
+                    //ctok = ctok.ToUpper();
+                    if (fftxtSource.Text[l] == ';')
                     {
-                        ctok = ctok.ToUpper();
-                        if (par.colorList.ContainsKey(ctok))
-                        {
-                            c = (Color)par.colorList[ctok];
-                            fftxtSource.Select(l - ctok.Length, ctok.Length);
-                            fftxtSource.SelectionColor = c;
-                        }
-                        ctok = string.Empty;
-                    }
-                    if (fftxtSource.Text[l] == '\'')
-                    {
+                        int ss = l;
+                        fftxtSource.SelectionStart = ss;
                         l++;
-                        while (l < pos2 && fftxtSource.Text[l] != '\'') l++;
+                        while (l < pos2 && fftxtSource.Text[l] != '\n') l++;
+                        fftxtSource.SelectionLength = l - ss;
+                        fftxtSource.SelectionColor = Color.Green;
                     }
+                    else
+                        if (ctok != string.Empty)
+                        {
+                            if (par.colorList.ContainsKey(ctok))
+                            {
+                                c = (Color)par.colorList[ctok];
+                                fftxtSource.Select(l - ctok.Length, ctok.Length);
+                                fftxtSource.SelectionColor = c;
+                            }
+                            ctok = string.Empty;
+                        }
+                        else
+                            if (fftxtSource.Text[l] == '\'')
+                            {
+                                int ss = l;
+                                fftxtSource.SelectionStart = ss;
+                                l++;
+                                while (l < pos2 && fftxtSource.Text[l] != '\'' && fftxtSource.Text[l] != '\n') l++;
+                                fftxtSource.SelectionLength = l - ss+1;
+                                fftxtSource.SelectionColor = Color.DarkRed;
+                            }
+                            else
+                                if (fftxtSource.Text[l] == '\"')
+                                {
+                                    int ss = l;
+                                    fftxtSource.SelectionStart = ss;
+                                    l++;
+                                    while (l < pos2 && fftxtSource.Text[l] != '\"' && fftxtSource.Text[l] != '\n') l++;
+                                    fftxtSource.SelectionLength = l - ss+1;
+                                    fftxtSource.SelectionColor = Color.DarkRed;
+                                }
+                    l++;
                 }
-                l++;
             }
             if (ctok != string.Empty)
             {
-                ctok = ctok.ToUpper();
                 if (par.colorList.ContainsKey(ctok))
                 {
                     c = (Color)par.colorList[ctok];

@@ -87,6 +87,7 @@ begin
 
 DOo<=DO; DSo<=DS; ASo<=AS; RWo<=RW;
 
+
 Process (Reset,Clock)
 variable rest,rest2,fetch,fetch1,fetch2,fetch3,rel:boolean:=false;
 variable tmp,tmp2:Std_logic_vector(15 downto 0);
@@ -132,8 +133,11 @@ IF Reset = '1' THEN
 				fetch3:=IR(15)='1' and IR(14)='1' and IR(13)='0';
 				if IR(0)='1' then
 					FF<="001";
+					AD<=PC; AS<='0'; 
 				else 
-					if IR(1)='1' then	FF<="011"; else	
+					if IR(1)='1' then	
+						FF<="011"; 
+					else	
 						if rel then FF<="100"; else FF<="110"; end if;
 					end if;
 				end if;
@@ -141,10 +145,11 @@ IF Reset = '1' THEN
 			end case;
 		when "001" =>              -- Fetch next word into X
 			case TT is
+			--when 0 =>
+				--fetch1:=true;
+				--AD<=PC; AS<='0';  
 			when 0 =>
 				fetch1:=true;
-				AD<=PC; AS<='0';  
-			when 1 =>
 				PC<=PC+1;
 			when others =>
 				X<=Di; PC<=PC+1;
@@ -152,7 +157,9 @@ IF Reset = '1' THEN
 				if fetch3 then 
 					FF<="010";
 				else	
-					if IR(1)='1' then	FF<="011"; else	
+					if IR(1)='1' then	
+						FF<="011"; 
+					else	
 						if rel then FF<="100"; else FF<="110"; end if;
 					end if;
 				end if;
@@ -165,9 +172,7 @@ IF Reset = '1' THEN
 			when 1 =>
 				PC<=PC+1;
 			when others =>
-				Y<=Di; PC<=PC+1;
-			--when others =>
-				AS<='1'; 
+				Y<=Di; PC<=PC+1; AS<='1'; 
 				if IR(1)='1' then	FF<="011"; else FF<="110";	end if;
 				rest:=true;
 			end case;

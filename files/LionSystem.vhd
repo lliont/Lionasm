@@ -50,7 +50,8 @@ Component VideoRGB is
 		VClock,R,G,B,VSYN,HSYN,VSINT : OUT std_logic;
 		reset : IN std_logic;
 		addr : OUT natural range 0 to 16383;
-		Q : IN std_logic_vector(7 downto 0)
+		Q : IN std_logic_vector(7 downto 0);
+		w2: OUT std_logic
 	);
 end Component;
 
@@ -87,10 +88,10 @@ Component mixed_width_true_dual_port_ram is
 
 	port (
 	we1   : in std_logic;
-		we2   : in std_logic;
+	we2   : in std_logic;
 	clk   : in std_logic;
 	addr1 : in natural range 0 to (2 ** ADDRESS_WIDTH1 - 1);
-		addr2 : in natural range 0 to (2 ** ADDRESS_WIDTH2 - 1);
+	addr2 : in natural range 0 to (2 ** ADDRESS_WIDTH2 - 1);
 	data_in1 : in  std_logic_vector(DATA_WIDTH1 - 1 downto 0);
 	data_in2 : in  std_logic_vector(DATA_WIDTH1 * (2 ** (ADDRESS_WIDTH1 - ADDRESS_WIDTH2)) - 1 downto 0);                
 	data_out1   : out std_logic_vector(DATA_WIDTH1 - 1 downto 0);
@@ -185,7 +186,7 @@ VRAM: mixed_width_true_dual_port_ram
 	GENERIC MAP (DATA_WIDTH1  => 8,	ADDRESS_WIDTH1 => 14,	ADDRESS_WIDTH2 => 13)
 	PORT MAP ( w2, w1, clock, ad1, ad2, qi1, qi, vq, q16  );
 VIDEO: videoRGB
-	PORT MAP ( Clock, vclock,R,G,B,VSYN, HSYN, vint, reset, ad1, vq);
+	PORT MAP ( Clock, vclock,R,G,B,VSYN, HSYN, vint, reset, ad1, vq, w2);
 Serial: UART
 	PORT MAP ( Tx, Rx, Clock, reset, sr, sw, sdready, sready, sdi, sdo );
 SERKEYB: SKEYB
@@ -216,7 +217,7 @@ ad2<=to_integer(unsigned(AD(13 downto 1))) when AS='0';
 process (clock,reset,AS,DS,RW)
 begin 
 if reset='1' then
-	w1<='0'; w2<='0'; 
+	w1<='0'; 
 elsif clock'EVENT AND clock = '1' AND AS='0' and DS='0' then 
 	if AD(15 downto 14)="11" then --61440
 		w1<=not RW;
@@ -309,10 +310,10 @@ entity mixed_width_true_dual_port_ram is
 
 	port (
 	we1   : in std_logic;
-		we2   : in std_logic;
+	we2   : in std_logic;
 	clk   : in std_logic;
 	addr1 : in natural range 0 to (2 ** ADDRESS_WIDTH1 - 1);
-		addr2 : in natural range 0 to (2 ** ADDRESS_WIDTH2 - 1);
+	addr2 : in natural range 0 to (2 ** ADDRESS_WIDTH2 - 1);
 	data_in1 : in  std_logic_vector(DATA_WIDTH1 - 1 downto 0);
 	data_in2 : in  std_logic_vector(DATA_WIDTH1 * (2 ** (ADDRESS_WIDTH1 - ADDRESS_WIDTH2)) - 1 downto 0);                
 	data_out1   : out std_logic_vector(DATA_WIDTH1 - 1 downto 0);

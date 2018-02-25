@@ -14,7 +14,8 @@ entity VideoRGB is
 		VClock,R,G,B,VSYN,HSYN, VSINT: OUT std_logic;
 		reset : IN std_logic;
 		addr : OUT natural range 0 to 16383;
-		Q : IN std_logic_vector(7 downto 0)
+		Q : IN std_logic_vector(7 downto 0);
+		w2: OUT std_logic
 	);
 end VideoRGB;
 
@@ -28,7 +29,11 @@ Signal pix,l: natural range 0 to 16383;
 signal l8: natural range 0 to 63;
 signal m8: std_logic_vector(3 downto 0);
 
+constant sadd: natural range 0 to 16383 := 13988;
+
 begin
+
+
 process (reset, sclk)
 variable pc: boolean;
 --variable ad: natural range 0 to 65535;
@@ -38,7 +43,7 @@ variable FG,BG: std_logic_vector(2 downto 0);
 begin
 	if (reset='1') then
 		dcounter<="00"; pixel<=0; Vclock<='0'; m8<="0000"; l8<=0; addr2<=0; p6<=0; prc<=0;
-		lines<=0;  R<='0'; G<='0'; B<='0'; HSYN<='1'; VSYN<='1'; VSINT<='0'; addr3<=12000;
+		lines<=0;  R<='0'; G<='0'; B<='0'; HSYN<='1'; VSYN<='1'; VSINT<='0'; addr3<=12000; w2<='0';
 	elsif  sClk'EVENT AND sClk = '0' then
 		dcounter <= dcounter + 1;
 		if dcounter = "01" then 
