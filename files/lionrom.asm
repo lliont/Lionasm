@@ -55,11 +55,11 @@ SDOKO:	MOVI		A0,5        ; sd card ok
 		MOV		A2,$0105
 		INT		4            ; print ok
 		MOVI		A0,3
-		INT	5                 ; get volume params
+		INT		5             ; get volume params
 		CMP		(SDFLAG),256
 		JNZ		SDNOT
 		MOV		A4,BOOTBIN
-		JSR		FINDFN   ; Find BOOT.BIN
+		JSR		FINDFN        ; Find BOOT.BIN
 		CMPI		A0,0
 		JZ		SDNOT
 		PUSH		A0
@@ -517,7 +517,7 @@ PRNHEX:	; print num in A0 in hex for debugging
 		PUSH	A2
 		PUSH	A3
 		MOV	A3,A0
-		MOV	A2,$3204
+		MOV	A2,$3205
 		SETX	3
 PHX1:		MOV	A1,A3
 		AND	A1,$000F
@@ -577,7 +577,7 @@ FDC1:		BTST		A2,15
 		JMPx		FDC1
 FDC2:		
 		MOVX		A0
-		CMP		A0,8
+		CMPI		A0,8
 		JBE		FDC3
 		SETX		7
 		BTST		A3,0
@@ -628,8 +628,8 @@ FD_COND2:
 		JMPX		FD_INTER
 		
 		POP		A0          ; shift left as needed
-		ADDI		A0,3
-		SUBI		A0,1
+		ADDI		A0,2
+		;SUBI		A0,1
 		JN		FDC6
 		SETX		A0
 FDLP:		SLL		A2,1
@@ -734,7 +734,7 @@ FMULEND:	MOV		(FRAC1),A4
 ;--------------------------------------
 WRITESEC:
 	PUSHX
-	SETX	3
+	SETX	4
 WRSCR:
 	MOVI	A0,14
 	JSR	WSEC
@@ -833,7 +833,7 @@ WRIF: POP	A4
 
 READSEC:
 	PUSHX
-	SETX	3
+	SETX	4
 RDSCR:
 	MOVI	A0,13
 	JSR	READSC
@@ -1203,35 +1203,30 @@ CLRS1:	MOV		(A0),0
 		RETI
 ;----------------------------------------
 PLOT:		STI
-		PUSHX
 		PUSH		A1
 		PUSH		A2        ; PLOT at A1,A2 mode in A4
 		MOV		A0,A2
+		NOT		A0
 		AND		A0,7
 		SRL		A2,3
 		MULU		A2,XDIM2
 		ADD		A2,A1
 		ADD		A2,VBASE 
 		MOV.B		A1,(A2)
-		SETX		A0
-PL1:		SLL		A1,1
-		JMPX		PL1
 		OR		A4,A4
 		JNZ		PL3
-		BCLR		A1,8
+		BCLR		A1,A0   ; mode 0  clear
 		JMP		PL4
 PL3:		CMPI		A4,2
 		JNZ		PL5
-		XOR		A1,$100
+		BTST		A1,A0  ; mode 2  not
+		JZ		PL5
+		BCLR		A1,A0
 		JMP		PL4
-PL5:		BSET		A1,8
-PL4:		SETX		A0
-PL2:		SRL		A1,1
-		JMPX		PL2
-		MOV.B		(A2),A1
+PL5:		BSET		A1,A0    ; mode 1  set
+PL4:		MOV.B		(A2),A1
 		POP		A2
 		POP		A1
-		POPX
 		RETI
 ;----------------------------------------
 PIMG:		STI
@@ -1243,7 +1238,6 @@ PIMG:		STI
 		AND		A0,7
 		SRL		A2,3
 		MULU		A2,XDIM2
-		;SLL		A2,1
 		ADD		A2,A1
 		ADD		A2,VBASE 
 		

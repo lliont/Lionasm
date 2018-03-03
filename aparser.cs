@@ -201,14 +201,14 @@ namespace Lion_assembler
             colorList.Add("MOVR", Color.Blue);
             colorList.Add("GADR", Color.Blue);
             colorList.Add("MOVR.B", Color.Blue);
-            colorList.Add("END", Color.Magenta);
-            colorList.Add("ORG", Color.Magenta);
-            colorList.Add("DB", Color.Magenta);
-            colorList.Add("DW", Color.Magenta);
-            colorList.Add("DS", Color.Magenta);
-            colorList.Add("EQU", Color.Magenta);
-            colorList.Add("TEXT", Color.Magenta);
-            colorList.Add("DA", Color.Magenta);
+            colorList.Add("END", Color.DarkMagenta);
+            colorList.Add("ORG", Color.DarkMagenta);
+            colorList.Add("DB", Color.DarkMagenta);
+            colorList.Add("DW", Color.DarkMagenta);
+            colorList.Add("DS", Color.DarkMagenta);
+            colorList.Add("EQU", Color.DarkMagenta);
+            colorList.Add("TEXT", Color.DarkMagenta);
+            colorList.Add("DA", Color.DarkMagenta);
         }
 
         public void fill_ilist()
@@ -1758,98 +1758,6 @@ namespace Lion_assembler
             else return false;
             return true;
         }
-
-        //private bool gen3(iline il, string op, char bwb)  // two params second 0-15
-        //{
-        //    int r1 = 0, r2 = 0; string s1, s2;
-        //    il.op1t = parameter_type(il.op1);
-        //    il.op2t = parameter_type(il.op2);
-        //    if (il.op1t==OperandType.OperandTypeUndefined || il.op2t==OperandType.OperandTypeUndefined) return false;
-        //    if (il.op1t == OperandType.OperandType1)
-        //    {
-        //        r1 = is_reg(il.op1);
-        //        switch (il.op2t)
-        //        {
-        //            case OperandType.OperandType3:
-        //                il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); r2 = conv_int(il.op2);
-        //                if (r2 > 15 || r2 < 0) { error = -7; return false; }
-        //                s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
-        //                il.word1 = op + s1 +bwb+ s2 + "00";
-        //                break;
-        //            case OperandType.OperandType8:
-        //                il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0');
-        //                if (il.op2t == OperandType.OperandType8) r2 = (int)constlist[il.op2];
-        //                if (r2 > 15 || r2 < 0) { error = -7; return false; }
-        //                s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
-        //                il.word1 = op + s1 +bwb+ s2 + "00";
-        //                break;
-        //            default:
-        //                return false;
-        //        }
-        //    }
-        //    else
-        //        if (il.op1t == OperandType.OperandType4)
-        //        {
-        //            r1 = is_reg(il.op1);
-        //            switch (il.op2t)
-        //            {
-        //                case OperandType.OperandType3:
-        //                    il.len = 2; s1 = Convert.ToString(0, 2).PadLeft(3, '0'); r2 = conv_int(il.op2);
-        //                    r1 = conv_int(il.op1.Substring(1, il.op1.Length - 2));
-        //                    if (r2 > 15 || r2 < 0) { error = -7; return false; }
-        //                    s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
-        //                    il.word1 = op + s1 +bwb+ s2 + "11";
-        //                    il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
-        //                    il.word2 = il.word2.Substring(il.word2.Length - 16);
-        //                    break;
-        //                default:
-        //                    return false;
-        //            }
-        //        }
-        //        else
-        //            if (il.op1t == OperandType.OperandType11)
-        //            {
-        //                r1 = is_reg(il.op1);
-        //                switch (il.op2t)
-        //                {
-        //                    case OperandType.OperandType3:
-        //                        il.len = 2; s1 = Convert.ToString(0, 2).PadLeft(3, '0'); r2 = conv_int(il.op2);
-        //                        r1 = conv_int(il.op1.Substring(1, il.op1.Length - 2));
-        //                        if (r2 > 15 || r2 < 0) { error = -7; return false; }
-        //                        s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
-        //                        il.word1 = op + s1+bwb + s2 + "11";
-        //                        //il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
-        //                        //il.word2 = il.word2.Substring(il.word2.Length - 16);
-        //                        break;
-        //                    default:
-        //                        return false;
-        //                }
-        //            }
-        //            //else if (il.op1t == OperandType.OperandType9)
-        //            //{
-        //            //    r1 = is_reg(il.op1);
-        //            //    switch (il.op2t)
-        //            //    {
-        //            //        case OperandType.OperandType3:
-        //            //            il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); r2 = conv_int(il.op2);
-        //            //            if (r2 > 15 || r2 < 0) { error = -7; return false; }
-        //            //            s2 = Convert.ToString(r2, 2).PadLeft(4, '0');
-        //            //            il.word1 = "1001100" + s1 + s2 + "00";
-        //            //            break;
-        //            //        case OperandType.OperandType8:
-        //            //            il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0');
-        //            //            if (il.op2t == OperandType.OperandType8) r2 = (int)constlist[il.op2];
-        //            //            if (r2 > 15 || r2 < 0) { error = -7; return false; }
-        //            //            s2 = Convert.ToString(r2, 2).PadLeft(4, '0');
-        //            //            il.word1 = "1001100" + s1 + s2 + "00";
-        //            //            break;
-        //            //        default:
-        //            //            return false;
-        //            //    }
-        //            //}
-        //            else return false;
-        //    return true;
-        //}   
 
         private bool gen4(InstructionLine il, string op)  // two params regs
         {
@@ -3645,6 +3553,8 @@ namespace Lion_assembler
             }
             catch (IOException e)
             {
+                LionAsmForm.errorbox.Text += "Can't create Binary File! \r\n";
+                LionAsmForm.errorbox.Text += e.Message+"\r\n";
             }
 
             //create the mif file
@@ -3736,6 +3646,7 @@ namespace Lion_assembler
                     }
                     catch (IOException e)
                     {
+                        //LionAsmForm.errorbox.Text += "Can't write Binary File! \r\n";
                     }
                 }
                 if (il.type == InstructionType.DataWord || il.type == InstructionType.DataByte)
@@ -3775,7 +3686,7 @@ namespace Lion_assembler
 
         public void parse()
         {
-            bool res; int i, cp;
+            bool res; int i;
             instListArr.Clear();
             constList.Clear();
             varList.Clear();

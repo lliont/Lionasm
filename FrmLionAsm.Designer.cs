@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmLionAsm));
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -58,7 +59,7 @@
             this.btnCopy = new System.Windows.Forms.Button();
             this.btnAssemble = new System.Windows.Forms.Button();
             this.btnPaint = new System.Windows.Forms.Button();
-            this.fftxtSource = new Glos.Flickerfreertf();
+            this.fftxtSource = new Lion_assembler.Flickerfreertf();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -92,35 +93,35 @@
             // openToolStripMenuItem
             // 
             this.openToolStripMenuItem.Name = "openToolStripMenuItem";
-            this.openToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.openToolStripMenuItem.Size = new System.Drawing.Size(103, 22);
             this.openToolStripMenuItem.Text = "New";
             this.openToolStripMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click);
             // 
             // openToolStripMenuItem1
             // 
             this.openToolStripMenuItem1.Name = "openToolStripMenuItem1";
-            this.openToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
+            this.openToolStripMenuItem1.Size = new System.Drawing.Size(103, 22);
             this.openToolStripMenuItem1.Text = "Open";
             this.openToolStripMenuItem1.Click += new System.EventHandler(this.openToolStripMenuItem1_Click);
             // 
             // closeToolStripMenuItem
             // 
             this.closeToolStripMenuItem.Name = "closeToolStripMenuItem";
-            this.closeToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.closeToolStripMenuItem.Size = new System.Drawing.Size(103, 22);
             this.closeToolStripMenuItem.Text = "Save";
             this.closeToolStripMenuItem.Click += new System.EventHandler(this.closeToolStripMenuItem_Click);
             // 
             // printToolStripMenuItem
             // 
             this.printToolStripMenuItem.Name = "printToolStripMenuItem";
-            this.printToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.printToolStripMenuItem.Size = new System.Drawing.Size(103, 22);
             this.printToolStripMenuItem.Text = "Print";
             this.printToolStripMenuItem.Click += new System.EventHandler(this.printToolStripMenuItem_Click);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(103, 22);
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
@@ -274,37 +275,39 @@
             // 
             // btnU
             // 
-            this.btnU.Location = new System.Drawing.Point(477, 8);
+            this.btnU.Location = new System.Drawing.Point(426, 5);
             this.btnU.Name = "btnU";
             this.btnU.Size = new System.Drawing.Size(25, 21);
             this.btnU.TabIndex = 8;
             this.btnU.Text = "U";
             this.btnU.UseVisualStyleBackColor = true;
+            this.btnU.Visible = false;
             this.btnU.Click += new System.EventHandler(this.btnU_Click);
             // 
             // btnR
             // 
-            this.btnR.Location = new System.Drawing.Point(508, 8);
+            this.btnR.Location = new System.Drawing.Point(457, 5);
             this.btnR.Name = "btnR";
             this.btnR.Size = new System.Drawing.Size(25, 21);
             this.btnR.TabIndex = 9;
             this.btnR.Text = "R";
             this.btnR.UseVisualStyleBackColor = true;
+            this.btnR.Visible = false;
             this.btnR.Click += new System.EventHandler(this.btnR_Click);
             // 
             // btnCopy
             // 
-            this.btnCopy.Location = new System.Drawing.Point(658, 5);
+            this.btnCopy.Location = new System.Drawing.Point(646, 5);
             this.btnCopy.Name = "btnCopy";
-            this.btnCopy.Size = new System.Drawing.Size(47, 21);
+            this.btnCopy.Size = new System.Drawing.Size(71, 21);
             this.btnCopy.TabIndex = 10;
-            this.btnCopy.Text = "Copy";
+            this.btnCopy.Text = "Copy VHDL";
             this.btnCopy.UseVisualStyleBackColor = true;
             this.btnCopy.Click += new System.EventHandler(this.btnCopy_Click);
             // 
             // btnAssemble
             // 
-            this.btnAssemble.Location = new System.Drawing.Point(586, 5);
+            this.btnAssemble.Location = new System.Drawing.Point(488, 5);
             this.btnAssemble.Name = "btnAssemble";
             this.btnAssemble.Size = new System.Drawing.Size(60, 21);
             this.btnAssemble.TabIndex = 11;
@@ -314,11 +317,11 @@
             // 
             // btnPaint
             // 
-            this.btnPaint.Location = new System.Drawing.Point(796, 5);
+            this.btnPaint.Location = new System.Drawing.Point(554, 5);
             this.btnPaint.Name = "btnPaint";
-            this.btnPaint.Size = new System.Drawing.Size(60, 21);
+            this.btnPaint.Size = new System.Drawing.Size(74, 21);
             this.btnPaint.TabIndex = 12;
-            this.btnPaint.Text = "Paint";
+            this.btnPaint.Text = "Paint Source";
             this.btnPaint.UseVisualStyleBackColor = true;
             this.btnPaint.Click += new System.EventHandler(this.btnPaint_Click);
             // 
@@ -333,12 +336,12 @@
             this.fftxtSource.DetectUrls = false;
             this.fftxtSource.EnableAutoDragDrop = true;
             this.fftxtSource.Font = new System.Drawing.Font("Courier New", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(161)));
-            this.fftxtSource.Location = new System.Drawing.Point(0, 33);
+            this.fftxtSource.Location = new System.Drawing.Point(0, 32);
             this.fftxtSource.MaxLength = 0;
             this.fftxtSource.Name = "fftxtSource";
             this.fftxtSource.Size = new System.Drawing.Size(640, 600);
             this.fftxtSource.TabIndex = 0;
-            this.fftxtSource.Text = "     ORG    8192";
+            this.fftxtSource.Text = resources.GetString("fftxtSource.Text");
             this.fftxtSource.WordWrap = false;
             this.fftxtSource.SelectionChanged += new System.EventHandler(this.source_SelectionChanged);
             this.fftxtSource.TextChanged += new System.EventHandler(this.source_TextChanged);
@@ -382,7 +385,7 @@
 
         #endregion
 
-        public Glos.Flickerfreertf fftxtSource;
+        public Lion_assembler.Flickerfreertf fftxtSource;
         private System.Windows.Forms.MenuStrip menuStrip1;
         private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openToolStripMenuItem;

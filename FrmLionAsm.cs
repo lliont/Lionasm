@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Drawing.Printing;
 using System.IO;
-using Glos;
+using Lion_assembler;
 
 namespace Lion_assembler
 {
@@ -60,6 +60,11 @@ namespace Lion_assembler
                             fftxtSource.Select(l - ctok.Length, ctok.Length);
                             fftxtSource.SelectionColor = c;
                         }
+                        //else if (ctok.Length == 2 && ctok[0] == 'A' && ctok[1] > 47 && ctok[1] < 56)
+                        //{
+                        //    fftxtSource.Select(l - ctok.Length, ctok.Length);
+                        //    fftxtSource.SelectionColor = Color.DarkViolet ;
+                        //}
                         ctok = string.Empty;
                     } else
                     if (fftxtSource.Text[l] == '\'')
@@ -166,7 +171,12 @@ namespace Lion_assembler
                                 c = (Color)par.colorList[ctok];
                                 fftxtSource.Select(l - ctok.Length, ctok.Length);
                                 fftxtSource.SelectionColor = c;
-                            }
+                            } 
+                            //else if (ctok.Length == 2 && ctok[0] == 'A' && ctok[1] > 47 && ctok[1] < 56)
+                            //    {
+                            //        fftxtSource.Select(l - ctok.Length, ctok.Length);
+                            //        fftxtSource.SelectionColor = Color.DeepSkyBlue;
+                            //    }
                             ctok = string.Empty;
                         }
                         else
@@ -279,9 +289,11 @@ namespace Lion_assembler
         {
 
             InitializeComponent();
+
             if (args.Length > 0)
             {
                 fname = args[0];
+                changed = true;
                 if (args.Length > 0)
                 {
                     fname = args[0]; string line, bufs;
@@ -296,24 +308,9 @@ namespace Lion_assembler
                             temp = temp + line + "\r\n";
                         }
                         bufs = temp.Substring(0, temp.Length - 2);
-                        //fftxtSource.Text = fftxtSource.Text.Replace("\t", "      ");
                     }
                     fftxtSource.Text = bufs;
-                    //frmLionAsm.ActiveForm.Text = "frmLionAsm - " + fname;
-                    //try
-                    //{
-                    //    fftxtSource.SuspendLayout();
-                    //}
-                    //catch { }
-                    //MakeColorSyntaxForAll();
-                    //try
-                    //{
-                    //    fftxtSource.ResumeLayout();
-                    //}
-                    //catch
-                    //{
-                    //}
-                    changed = false;
+                    changed = true;
                 }
             }
         }
@@ -321,6 +318,8 @@ namespace Lion_assembler
         private void Lionasm_Load(object sender, EventArgs e)
         {
             par = new aparser(this);
+            if (!changed) MakeColorSyntaxForAll();
+            changed = false;
         }
 
 

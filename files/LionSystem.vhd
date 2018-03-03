@@ -50,8 +50,7 @@ Component VideoRGB is
 		VClock,R,G,B,VSYN,HSYN,VSINT : OUT std_logic;
 		reset : IN std_logic;
 		addr : OUT natural range 0 to 16383;
-		Q : IN std_logic_vector(7 downto 0);
-		w2: OUT std_logic
+		Q : IN std_logic_vector(7 downto 0)
 	);
 end Component;
 
@@ -122,14 +121,25 @@ Component SKEYB is
 	);
 end Component;
 
-Component Sound is
+Component SoundI is
 	port
 	(
 		Aud: OUT std_logic;
 		reset, clk, wr : IN std_logic;
 		Q : IN std_logic_vector(15 downto 0);
 		count: OUT std_logic_vector(15 downto 0);
+		play: OUT  std_logic;
 		Inter: OUT std_logic
+	);
+end Component;
+
+Component Sound is
+	port
+	(
+		Aud: OUT std_logic;
+		reset, clk, wr : IN std_logic;
+		Q : IN std_logic_vector(15 downto 0);
+		play: OUT  std_logic
 	);
 end Component;
 
@@ -166,9 +176,9 @@ COMPONENT SPI is
 end COMPONENT;
 
 Signal qi1,vq : std_logic_vector (7 downto 0);
-Signal di,do,AD,qa,qro,aq : std_logic_vector(15 downto 0);
+Signal di,do,AD,qa,qro,aq,aq2 : std_logic_vector(15 downto 0);
 Signal qi,q16,count : std_logic_vector(15 downto 0);
-Signal w1, w2, Int_in, AS, DS, RW, IO, HOLDA, WAud, inter,vint : std_logic;
+Signal w1, w2, Int_in, AS, DS, RW, IO, HOLDA, WAud, WAud2,inter,vint : std_logic;
 Signal Ii : std_logic_vector(1 downto 0);
 Signal qi2 : std_logic_vector(7 downto 0);
 Signal ad1 :  natural range 0 to 16383;
@@ -177,7 +187,7 @@ Signal sr,sw,sdready,sready,sr2,sdready2: std_Logic;
 Signal sdi,sdo,sdo2 : std_logic_vector (7 downto 0);
 SIGNAL addr,addr1 : natural range 0 to 65535;
 SIGNAL Spi_in,Spi_out: STD_LOGIC_VECTOR (7 downto 0);
-Signal Spi_w,spi_rdy : std_logic;
+Signal Spi_w,spi_rdy, play, play2, AUDIO1 ,AUDIO2 : std_logic;
 
 begin
 CPU: LionCPU16 
@@ -186,13 +196,15 @@ VRAM: mixed_width_true_dual_port_ram
 	GENERIC MAP (DATA_WIDTH1  => 8,	ADDRESS_WIDTH1 => 14,	ADDRESS_WIDTH2 => 13)
 	PORT MAP ( w2, w1, clock, ad1, ad2, qi1, qi, vq, q16  );
 VIDEO: videoRGB
-	PORT MAP ( Clock, vclock,R,G,B,VSYN, HSYN, vint, reset, ad1, vq, w2);
+	PORT MAP ( Clock, vclock,R,G,B,VSYN, HSYN, vint, reset, ad1, vq);
 Serial: UART
 	PORT MAP ( Tx, Rx, Clock, reset, sr, sw, sdready, sready, sdi, sdo );
 SERKEYB: SKEYB
 	PORT MAP (Rx2, Clock, reset, sr2, sdready2, sdo2);
+SoundIC: SoundI
+	PORT MAP (AUDIO1, reset, Clock, Waud, aq, count, play, Inter);
 SoundC: Sound
-	PORT MAP (AUDIO, reset, Clock, Waud, aq, count, Inter);
+	PORT MAP (AUDIO2, reset, Clock, Waud2, aq2, play2);
 IRAM: single_port_ram
 	PORT MAP ( clock, addr1, Do, RW, DS, QA ) ;
 IROM: single_port_rom
@@ -211,13 +223,13 @@ ADo<= AD when AS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 addr<=to_integer(unsigned(AD)) when AS='0';
 addr1<=to_integer(unsigned(AD(15 downto 1))) when AS='0';
 ad2<=to_integer(unsigned(AD(13 downto 1))) when AS='0';
---vq<=qo; 
+AUDIO<= AUDIO1 OR AUDIO2;
 
 -- Video Ram 
 process (clock,reset,AS,DS,RW)
 begin 
 if reset='1' then
-	w1<='0'; 
+	w1<='0'; w2<='0';
 elsif clock'EVENT AND clock = '1' AND AS='0' and DS='0' then 
 	if AD(15 downto 14)="11" then --61440
 		w1<=not RW;
@@ -241,7 +253,9 @@ spi_in<=Do(7 downto 0) when addr=18 and IO='1' and AS='0' and DS='0' and RW='0' 
 
  --Sound IO decoding 
 aq<=Do when IO='1' and AD="0000000000001000" and falling_edge(clock);
+aq2<=Do when IO='1' and AD="0000000000001010" and falling_edge(clock);
 Waud<='0' when AD="0000000000001000" and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
+Waud2<='0' when AD="0000000000001010" and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
 
 -- Read decoder
 di<="00000000"&sdo when falling_edge(clock) AND AD="0000000000000100" and IO='1' -- serial 
@@ -254,6 +268,8 @@ di<="00000000"&sdo when falling_edge(clock) AND AD="0000000000000100" and IO='1'
                          and RW='1' and AS='0' else	
 	"000000000000000" & spi_rdy  when falling_edge(clock)          -- spi status
 								and RW='1' AND AD="000000000010001" and IO='1' and AS='0' else
+	"00000000000000"& play2 & play  when falling_edge(clock)          -- spi status
+								and RW='1' AND AD="000000000001001" and IO='1' and AS='0' else
 	count  when falling_edge(clock)          -- spi status
 								and RW='1' AND AD="000000000010100" and IO='1' and AS='0' else
 	qro when addr<8192 and RW='1' and IO='0' and AS='0' and falling_edge(clock) else  --rom

@@ -415,7 +415,7 @@ IF Reset = '1' THEN
 					end if;
 					IDX<=tmp;
 					rest2:=true;
-			when "0010100" =>              --JMPX = JMPI
+			when "0010100" =>              --JMPX 
 					if fetch then
 						tmp:=X;
 					else
@@ -466,7 +466,6 @@ IF Reset = '1' THEN
 					tmp:= std_logic_vector(shift_left(unsigned (X1),bt));
 					set_reg(r1,tmp);  
 					rest2:=true;
-			
 			when "0011111" =>  -- xchg r1,r2
 				case TT is
 				when 0 =>
@@ -637,7 +636,6 @@ IF Reset = '1' THEN
 				end case;      			
 			--when "0110011" =>             
 			--when "0110100" =>         
-			
 			when "0110101" =>              -- JSR Reg  /NUM / <reg>/<n>
 				case TT is
 				when 0 =>
@@ -1076,6 +1074,7 @@ IF Reset = '1' THEN
 		else
 			TT<=TT+1;
 		end if;
+	ELSIF	Clock'EVENT AND Clock = '0'  THEN
 	END IF ;
 end Process;
 
