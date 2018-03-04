@@ -11,7 +11,7 @@ entity VideoRGB is
 	port
 	(
 		sclk: IN std_logic;
-		VClock,R,G,B,VSYN,HSYN, VSINT: OUT std_logic;
+		R,G,B,VSYN,HSYN, VSINT: OUT std_logic;
 		reset : IN std_logic;
 		addr : OUT natural range 0 to 16383;
 		Q : IN std_logic_vector(7 downto 0)
@@ -28,10 +28,11 @@ Signal pix,l: natural range 0 to 16383;
 signal m8: natural range 0 to 15;
 
 constant sadd: natural:= 13988;
-constant l1:natural:=49;
-constant l2:natural:=296;
-constant p1:natural:=143;
-constant p2:natural:=526;
+constant l1:natural range 0 to 1023:=49;
+constant l2:natural range 0 to 1023:=296;
+constant p1:natural range 0 to 1023:=143;
+constant p2:natural range 0 to 1023:=526;
+constant maxd:natural range 0 to 1023:=8;
 
 begin
 
@@ -55,12 +56,11 @@ variable pixi,lin: natural range 0 to 1023;
 
 begin
 	if (reset='1') then
-		dcounter<="00"; pixel<=0; Vclock<='0'; m8<=0; addr2<=0; p6<=0; prc<=0; --p8<=0;
+		dcounter<="00"; pixel<=0; m8<=0; addr2<=0; p6<=0; prc<=0; --p8<=0;
 		lines<=0;  R<='0'; G<='0'; B<='0'; HSYN<='1'; VSYN<='1'; VSINT<='0'; addr3<=12000; 
 	elsif  sClk'EVENT AND sClk = '0' then
 		dcounter <= dcounter + 1;
 		if dcounter = "01" then 
-			Vclock<=not Vclock;
 			dcounter<="00";
 			pc:=true; 
 		else
@@ -85,6 +85,7 @@ begin
 				pixel<=pixel+1;
 			end if;
 
+			if p6=0 and pixel>141 then addr<=addr3+prc; end if;
 			if pixel<96 then HSYN<='0'; else HSYN<='1'; end if;
 			
 			-- sprites  ---------------------
@@ -152,24 +153,22 @@ begin
 				if pixel=60 then SDX(7):=Q; end if;
 				if pixel=61 then SDY(7):=Q; end if;
 				if pixel=62 then SCOLOR(7):=Q; end if;
-				if pixel=63 then SEN(7):=Q;	end if;
+				if pixel=63 then SEN(7):=Q; end if;
 			end if;
 			
 			if (lines>=l1 and lines<=l2) then
-				if pixel=d2(0) then SLData(0):=Q; end if;
-				if pixel=d2(1)+8 then SLData(1):=Q; end if;
-				if pixel=d2(2)+16 then SLData(2):=Q; end if;
-				if pixel=d2(3)+24 then SLData(3):=Q; end if;
-				if pixel=d2(4)+32 then SLData(4):=Q; end if;
-				if pixel=d2(5)+40 then SLData(5):=Q; end if;
-				if pixel=d2(6)+48 then SLData(6):=Q; end if;
-				if pixel=d2(7)+56 then SLData(7):=Q; end if;
+				if pixel-1=d2(0) then SLData(0):=Q; end if;
+				if pixel-1=d2(1)+8 then SLData(1):=Q; end if;
+				if pixel-1=d2(2)+16 then SLData(2):=Q; end if;
+				if pixel-1=d2(3)+24 then SLData(3):=Q; end if;
+				if pixel-1=d2(4)+32 then SLData(4):=Q; end if;
+				if pixel-1=d2(5)+40 then SLData(5):=Q; end if;
+				if pixel-1=d2(6)+48 then SLData(6):=Q; end if;
+				if pixel-1=d2(7)+56 then SLData(7):=Q; end if;
 			end if;
 			
-			
 			-- sprites -----------------------
-			
-			if p6=0 and pixel>141 then addr<=addr3+prc; end if;
+		
 			 
 			if (lines>=l1 and lines<=l2 and pixel>=p1 and pixel<=p2) then
 				if Q(7-m8)='1' then QQQ:=true; else QQQ:=false; end if;
@@ -200,7 +199,7 @@ begin
 					if bl(7) and (SLData(7)(d1(7))='1') then QQ(7):=true; end if;
 				end if;
 
-				IF QQ(0)    then R<=SCOLOR(0)(2); G<=SCOLOR(0)(1); B<=SCOLOR(0)(0); 
+				if    QQ(0) then R<=SCOLOR(0)(2); G<=SCOLOR(0)(1); B<=SCOLOR(0)(0); 
 				elsif QQ(1) then R<=SCOLOR(1)(2); G<=SCOLOR(1)(1); B<=SCOLOR(1)(0); 
 				elsif QQ(2) then R<=SCOLOR(2)(2); G<=SCOLOR(2)(1); B<=SCOLOR(2)(0);
 				elsif QQ(3) then R<=SCOLOR(3)(2); G<=SCOLOR(3)(1); B<=SCOLOR(3)(0); 
@@ -211,7 +210,7 @@ begin
 				elsif QQQ then R<=FG(2); G<=FG(1); B<=FG(0);
 				else  R<=BG(2); G<=BG(1); B<=BG(0); end if;
 
-				else  -- vsync  0.01 us = 1 pixels
+			else  -- vsync  0.01 us = 1 pixels
 				B<='0'; R<='0'; G<='0';
 				if lines<2 then
 					VSYN<='0';
@@ -224,10 +223,15 @@ begin
 					VSYN<='1';
 				end if;
 			end if;
-		else   ------ pc false ------
-			
+		else   ------ pc false ---------------------------------------
+		
+			if (lines>=l1) and (lines<=l2) and (pixel>=p1) and (pixel<=p2) then
+				pix<=pix+1;  -- (pixel-85) * 8
+				addr<= pix + addr2; 
+			end if;
+
 			-- sprites
-			if lines=1 then addr<=14000+pixel; 
+			if (lines=1) and (pixel<p1) then addr<=14000+pixel; 
 			elsif (pixel<128) then addr<=14600+pixel; end if;
 			
 			if (pixel>=p1) and (lines>=l1) then
@@ -249,17 +253,17 @@ begin
 				d1(7):=pixi-to_integer(unsigned(SX(7))); 
 				d2(7):=lin-to_integer(unsigned(SY(7)));
 				
-				bl(0):=(d1(0)<8) and (d2(0)<=8);
-				bl(1):=(d1(1)<8) and (d2(1)<=8);
-				bl(2):=(d1(2)<8) and (d2(2)<=8);
-				bl(3):=(d1(3)<8) and (d2(3)<=8);
-				bl(4):=(d1(4)<8) and (d2(4)<=8);
-				bl(5):=(d1(5)<8) and (d2(5)<=8);
-				bl(6):=(d1(6)<8) and (d2(6)<=8);
-				bl(7):=(d1(7)<8) and (d2(7)<=8);
+				bl(0):=(d1(0)<maxd) and (d2(0)<maxd);
+				bl(1):=(d1(1)<maxd) and (d2(1)<maxd);
+				bl(2):=(d1(2)<maxd) and (d2(2)<maxd);
+				bl(3):=(d1(3)<maxd) and (d2(3)<maxd);
+				bl(4):=(d1(4)<maxd) and (d2(4)<maxd);
+				bl(5):=(d1(5)<maxd) and (d2(5)<maxd);
+				bl(6):=(d1(6)<maxd) and (d2(6)<maxd);
+				bl(7):=(d1(7)<maxd) and (d2(7)<maxd);
 			end if;
 			-- sprites 
-				
+
 			if pixel=799 then
 				if lines<=l1 then 
 					addr3<=12000; p6<=0; prc<=0; --p8<=0;
@@ -282,12 +286,8 @@ begin
 				BG(1):=Q(1);
 				BG(0):=Q(0);
 			end if;
-			if (lines>=l1 and lines<=l2 and pixel>=p1 and pixel<=p2) then
-				pix<=pix+1;  -- (pixel-85) * 8
-				addr<= pix + addr2; 
-			end if;
+			
 		end if;
-		
 	end if; --reset
 end process;
 

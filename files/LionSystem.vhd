@@ -16,7 +16,7 @@ entity LionSystem is
 		IOo, Holdao : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
 		IA : OUT std_logic_vector(1 downto 0);
-		Vclock,R,G,B,VSYN,HSYN : OUT std_Logic;
+		R,G,B,VSYN,HSYN : OUT std_Logic;
 		Tx  : OUT std_logic ;
 		Rx, Rx2  : IN std_logic ;
 		Mdecod1: OUT std_logic;
@@ -47,7 +47,7 @@ Component VideoRGB is
 	port
 	(
 		sclk : IN std_logic;
-		VClock,R,G,B,VSYN,HSYN,VSINT : OUT std_logic;
+		R,G,B,VSYN,HSYN,VSINT : OUT std_logic;
 		reset : IN std_logic;
 		addr : OUT natural range 0 to 16383;
 		Q : IN std_logic_vector(7 downto 0)
@@ -196,7 +196,7 @@ VRAM: mixed_width_true_dual_port_ram
 	GENERIC MAP (DATA_WIDTH1  => 8,	ADDRESS_WIDTH1 => 14,	ADDRESS_WIDTH2 => 13)
 	PORT MAP ( w2, w1, clock, ad1, ad2, qi1, qi, vq, q16  );
 VIDEO: videoRGB
-	PORT MAP ( Clock, vclock,R,G,B,VSYN, HSYN, vint, reset, ad1, vq);
+	PORT MAP ( Clock,R,G,B,VSYN, HSYN, vint, reset, ad1, vq);
 Serial: UART
 	PORT MAP ( Tx, Rx, Clock, reset, sr, sw, sdready, sready, sdi, sdo );
 SERKEYB: SKEYB
