@@ -87,14 +87,14 @@ SDNOT:
 ;--------------------------------------------------
 
 ;  INT4 FUNCTION TABLE  function in a0
-INT4T0	DA		SERIN    ; Serial port in    
-INT4T1	DA		SEROUT   ; Serial port out
+INT4T0	DA		SERIN    ; Serial port in A1  A0(0)=1 
+INT4T1	DA		SEROUT   ; Serial port out A1  
 INT4T2	DA		PLOT     ; at X=A1,Y=A2 A4=1 set A4=0 clear
 INT4T3	DA		CLRSCR   ; CLEAR SCREEN
 INT4T4	DA		PUTC     ; Print char A1 at x A2.H  y A2.L
 INT4T5	DA		PSTR     ; Print zero & cr terminated string
 INT4T6	DA		SCROLL   ; Scrolls screen 1 char (8 points) up
-INT4T7	DA		SKEYBIN  ; Serial Keyboard port in
+INT4T7	DA		SKEYBIN  ; Serial Keyboard port in A1 A0(2)=1
 INT4T8	DA		MULT     ; Multiplcation A1*A2 res in A2A1, a0<>0 overflow 
 INT4T9	DA		DIV      ; integer Div A2 by A1 res in A1,A0
 INT4T10	DA		KEYB     ; converts to ascii the codes from serial keyboard

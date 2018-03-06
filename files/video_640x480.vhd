@@ -12,9 +12,9 @@ entity VideoRGB is
 	(
 		sclk: IN std_logic;
 		R,G,B,VSYN,HSYN, VSINT: OUT std_logic;
-		reset : IN std_logic;
-		addr : OUT natural range 0 to 16383;
-		Q : IN std_logic_vector(7 downto 0)
+		reset, pbuffer, dbuffer : IN std_logic;
+		addr : OUT natural range 0 to 8191;
+		Q : IN std_logic_vector(15 downto 0)
 	);
 end VideoRGB;
 
@@ -27,12 +27,15 @@ Signal addr2,addr3: natural range 0 to 16383;
 Signal pix,l: natural range 0 to 16383;
 signal m8: natural range 0 to 15;
 
-constant sadd: natural:= 13988;
+constant sp1: natural:= 14000;
+constant sp2: natural:= 14064;
+constant sd1: natural:= 14200;
+constant sd2: natural:= 14456;
 constant l1:natural range 0 to 1023:=49;
 constant l2:natural range 0 to 1023:=296;
 constant p1:natural range 0 to 1023:=143;
 constant p2:natural range 0 to 1023:=526;
-constant maxd:natural range 0 to 1023:=8;
+constant maxd:natural range 0 to 1023:=16;
 
 begin
 
@@ -40,15 +43,17 @@ process (reset, sclk)
 variable pc: boolean;
 --variable ad: natural range 0 to 65535;
 
-type sprite_line_data is array (0 to 7) of std_logic_vector(7 downto 0);
+type sprite_line_data is array (0 to 7) of std_logic_vector(15 downto 0);
 type sprite_dim is array (0 to 7) of std_logic_vector(8 downto 0);
 type bool is array (0 to 7) of boolean;
 type dist is array (0 to 7) of natural range 0 to 1023;
 type col is array (0 to 7) of natural range 0 to 7;
+type sprite_param is array (0 to 7) of std_logic_vector(7 downto 0);
 
 variable FG,BG: std_logic_vector(2 downto 0);
 variable SX,SY: sprite_dim;
-variable sldata,sen,scolor,sdx,sdy: sprite_line_data; 
+variable sldata: sprite_line_data; 
+variable sen,scolor,sdx,sdy: sprite_param;
 variable QQQ:boolean;
 variable d1,d2:dist;
 variable	bl,QQ: bool;
@@ -77,7 +82,7 @@ begin
 					if lines=l1-1 then 
 						m8<=0; addr2<=0; l<=0;
 					else
-						if m8=7 then l<=l+8; m8<=0; addr2<=addr2+384; else m8<=m8+1; end if;
+						if m8=7 then l<=l+8; m8<=0; addr2<=addr2+384/2; else m8<=m8+1; end if;
 					end if;
 					lines<=lines+1;
 				end if;
@@ -85,93 +90,65 @@ begin
 				pixel<=pixel+1;
 			end if;
 
-			if p6=0 and pixel>141 then addr<=addr3+prc; end if;
+			if p6=0 and pixel>141 then addr<=addr3+prc/2; end if;
 			if pixel<96 then HSYN<='0'; else HSYN<='1'; end if;
 			
 			-- sprites  ---------------------
 			if lines=1 then
-				if pixel=0 then SX(0)(8):=Q(0); end if;
-				if pixel=1 then SX(0)(7 downto 0):=Q; end if;
-				if pixel=2 then SY(0)(8):=Q(0); end if;
-				if pixel=3 then SY(0)(7 downto 0):=Q; end if;
-				if pixel=4 then SDX(0):=Q; end if;
-				if pixel=5 then SDY(0):=Q; end if;
-				if pixel=6 then SCOLOR(0):=Q; end if;
-				if pixel=7 then SEN(0):=Q;	end if;
-				if pixel=8 then SX(1)(8):=Q(0); end if;
-				if pixel=9 then SX(1)(7 downto 0):=Q; end if;
-				if pixel=10 then SY(1)(8):=Q(0); end if;
-				if pixel=11 then SY(1)(7 downto 0):=Q; end if;
-				if pixel=12 then SDX(1):=Q; end if;
-				if pixel=13 then SDY(1):=Q; end if;
-				if pixel=14 then SCOLOR(1):=Q; end if;
-				if pixel=15 then SEN(1):=Q;	end if;
-				if pixel=16 then SX(2)(8):=Q(0); end if;
-				if pixel=17 then SX(2)(7 downto 0):=Q; end if;
-				if pixel=18 then SY(2)(8):=Q(0); end if;
-				if pixel=19 then SY(2)(7 downto 0):=Q; end if;
-				if pixel=20 then SDX(2):=Q; end if;
-				if pixel=21 then SDY(2):=Q; end if;
-				if pixel=22 then SCOLOR(2):=Q; end if;
-				if pixel=23 then SEN(2):=Q;	end if;
-				if pixel=24 then SX(3)(8):=Q(0); end if;
-				if pixel=25 then SX(3)(7 downto 0):=Q; end if;
-				if pixel=26 then SY(3)(8):=Q(0); end if;
-				if pixel=27 then SY(3)(7 downto 0):=Q; end if;
-				if pixel=28 then SDX(3):=Q; end if;
-				if pixel=29 then SDY(3):=Q; end if;
-				if pixel=30 then SCOLOR(3):=Q; end if;
-				if pixel=31 then SEN(3):=Q;	end if;
-				if pixel=32 then SX(4)(8):=Q(0); end if;
-				if pixel=33 then SX(4)(7 downto 0):=Q; end if;
-				if pixel=34 then SY(4)(8):=Q(0); end if;
-				if pixel=35 then SY(4)(7 downto 0):=Q; end if;
-				if pixel=36 then SDX(4):=Q; end if;
-				if pixel=37 then SDY(4):=Q; end if;
-				if pixel=38 then SCOLOR(4):=Q; end if;
-				if pixel=39 then SEN(4):=Q;	end if;
-				if pixel=40 then SX(5)(8):=Q(0); end if;
-				if pixel=41 then SX(5)(7 downto 0):=Q; end if;
-				if pixel=42 then SY(5)(8):=Q(0); end if;
-				if pixel=43 then SY(5)(7 downto 0):=Q; end if;
-				if pixel=44 then SDX(5):=Q; end if;
-				if pixel=45 then SDY(5):=Q; end if;
-				if pixel=46 then SCOLOR(5):=Q; end if;
-				if pixel=47 then SEN(5):=Q;	end if;
-				if pixel=48 then SX(6)(8):=Q(0); end if;
-				if pixel=49 then SX(6)(7 downto 0):=Q; end if;
-				if pixel=50 then SY(6)(8):=Q(0); end if;
-				if pixel=51 then SY(6)(7 downto 0):=Q; end if;
-				if pixel=52 then SDX(6):=Q; end if;
-				if pixel=53 then SDY(6):=Q; end if;
-				if pixel=54 then SCOLOR(6):=Q; end if;
-				if pixel=55 then SEN(6):=Q;	end if;
-				if pixel=56 then SX(7)(8):=Q(0); end if;
-				if pixel=57 then SX(7)(7 downto 0):=Q; end if;
-				if pixel=58 then SY(7)(8):=Q(0); end if;
-				if pixel=59 then SY(7)(7 downto 0):=Q; end if;
-				if pixel=60 then SDX(7):=Q; end if;
-				if pixel=61 then SDY(7):=Q; end if;
-				if pixel=62 then SCOLOR(7):=Q; end if;
-				if pixel=63 then SEN(7):=Q; end if;
+				if pixel=0 then SX(0):=Q(0)&Q(15 downto 8); end if;
+				if pixel=1 then SY(0):=Q(0)&Q(15 downto 8); end if;
+				if pixel=2 then SDX(0):=Q(7 downto 0); SDY(0):=Q(15 downto 8); end if;
+				if pixel=3 then SCOLOR(0):=Q(7 downto 0); SEN(0):=Q(15 downto 8); end if;
+				if pixel=4 then SX(1):=Q(0)&Q(15 downto 8); end if;
+				if pixel=5 then SY(1):=Q(0)&Q(15 downto 8); end if;
+				if pixel=6 then SDX(1):=Q(7 downto 0); SDY(1):=Q(15 downto 8); end if;
+				if pixel=7 then SCOLOR(1):=Q(7 downto 0); SEN(1):=Q(15 downto 8);  end if;
+				if pixel=8 then SX(2):=Q(0)&Q(15 downto 8); end if;
+				if pixel=9 then SY(2):=Q(0)&Q(15 downto 8); end if;
+				if pixel=10 then SDX(2):=Q(7 downto 0); SDY(2):=Q(15 downto 8); end if;
+				if pixel=11 then SCOLOR(2):=Q(7 downto 0); SEN(2):=Q(15 downto 8);  end if;
+				if pixel=12 then SX(3):=Q(0)&Q(15 downto 8); end if;
+				if pixel=13 then SY(3):=Q(0)&Q(15 downto 8); end if;
+				if pixel=14 then SDX(3):=Q(7 downto 0); SDY(3):=Q(15 downto 8); end if;
+				if pixel=15 then SCOLOR(3):=Q(7 downto 0); SEN(3):=Q(15 downto 8);  end if;
+				if pixel=16 then SX(4):=Q(0)&Q(15 downto 8); end if;
+				if pixel=17 then SY(4):=Q(0)&Q(15 downto 8); end if;
+				if pixel=18 then SDX(4):=Q(7 downto 0); SDY(4):=Q(15 downto 8); end if;
+				if pixel=19 then SCOLOR(4):=Q(7 downto 0); SEN(4):=Q(15 downto 8);  end if;
+				if pixel=20 then SX(5):=Q(0)&Q(15 downto 8); end if;
+				if pixel=21 then SY(5):=Q(0)&Q(15 downto 8); end if;
+				if pixel=22 then SDX(5):=Q(7 downto 0); SDY(5):=Q(15 downto 8); end if;
+				if pixel=23 then SCOLOR(5):=Q(7 downto 0); SEN(5):=Q(15 downto 8);  end if;
+				if pixel=24 then SX(6):=Q(0)&Q(15 downto 8); end if;
+				if pixel=25 then SY(6):=Q(0)&Q(15 downto 8); end if;
+				if pixel=26 then SDX(6):=Q(7 downto 0); SDY(6):=Q(15 downto 8); end if;
+				if pixel=27 then SCOLOR(6):=Q(7 downto 0); SEN(6):=Q(15 downto 8);  end if;
+				if pixel=28 then SX(7):=Q(0)&Q(15 downto 8); end if;
+				if pixel=29 then SY(7):=Q(0)&Q(15 downto 8); end if;
+				if pixel=30 then SDX(7):=Q(7 downto 0); SDY(7):=Q(15 downto 8); end if;
+				if pixel=31 then SCOLOR(7):=Q(7 downto 0); SEN(7):=Q(15 downto 8);  end if;
 			end if;
 			
 			if (lines>=l1 and lines<=l2) then
-				if pixel-1=d2(0) then SLData(0):=Q; end if;
-				if pixel-1=d2(1)+8 then SLData(1):=Q; end if;
-				if pixel-1=d2(2)+16 then SLData(2):=Q; end if;
-				if pixel-1=d2(3)+24 then SLData(3):=Q; end if;
-				if pixel-1=d2(4)+32 then SLData(4):=Q; end if;
-				if pixel-1=d2(5)+40 then SLData(5):=Q; end if;
-				if pixel-1=d2(6)+48 then SLData(6):=Q; end if;
-				if pixel-1=d2(7)+56 then SLData(7):=Q; end if;
+				if pixel=d2(0) then SLData(0):=Q; end if;
+				if pixel=d2(1)+16 then SLData(1):=Q; end if;
+				if pixel=d2(2)+32 then SLData(2):=Q; end if;
+				if pixel=d2(3)+48 then SLData(3):=Q; end if;
+				if pixel=d2(4)+64 then SLData(4):=Q; end if;
+				if pixel=d2(5)+80 then SLData(5):=Q; end if;
+				if pixel=d2(6)+96 then SLData(6):=Q; end if;
+				if pixel=d2(7)+112 then SLData(7):=Q; end if;
 			end if;
 			
 			-- sprites -----------------------
 		
 			 
 			if (lines>=l1 and lines<=l2 and pixel>=p1 and pixel<=p2) then
-				if Q(7-m8)='1' then QQQ:=true; else QQQ:=false; end if;
+				if pix mod 2 =0 then
+					if Q(15-m8)='1' then QQQ:=true; else QQQ:=false; end if;
+				else 
+					if Q(7-m8)='1' then QQQ:=true; else QQQ:=false; end if;
+				end if;
 
 				QQ:=(others=>false);
 				if (SEN(0)(0)='1') then
@@ -227,15 +204,17 @@ begin
 		
 			if (lines>=l1) and (lines<=l2) and (pixel>=p1) and (pixel<=p2) then
 				pix<=pix+1;  -- (pixel-85) * 8
-				addr<= pix + addr2; 
+				addr<= pix/2 + addr2; 
 			end if;
 
 			-- sprites
-			if (lines=1) and (pixel<p1) then addr<=14000+pixel; 
-			elsif (pixel<128) then addr<=14600+pixel; end if;
-			
-			if (pixel>=p1) and (lines>=l1) then
-				lin:=lines-l1; pixi:=pixel-p1;
+			if (lines=1) and (pixel<p1) then 
+				if pbuffer='0' then addr<=(sp1/2+pixel); else addr<=(sp2/2+pixel); end if;
+			elsif (pixel<128) then 
+				if dbuffer='0' then addr<=(sd1/2+pixel); else addr<=(sd2/2+pixel); end if; 
+			end if;
+			lin:=lines-l1; pixi:=pixel-p1;
+			if (pixi>0) and (lin>0) then
 				d1(0):=pixi-to_integer(unsigned(SX(0))); 
 				d2(0):=lin-to_integer(unsigned(SY(0)));
 				d1(1):=pixi-to_integer(unsigned(SX(1))); 
@@ -266,9 +245,9 @@ begin
 
 			if pixel=799 then
 				if lines<=l1 then 
-					addr3<=12000; p6<=0; prc<=0; --p8<=0;
+					addr3<=12000/2; p6<=0; prc<=0; --p8<=0;
 				else
-					if m8=7 then addr3<=addr3+64; end if;
+					if m8=7 then addr3<=addr3+64/2; end if;
 				end if;
 				prc<=0;
 			else
@@ -279,12 +258,21 @@ begin
 			end if;
 			 
 			if p6=0 then 
-				FG(2):=Q(5); 
-				FG(1):=Q(4);
-				FG(0):=Q(3);
-				BG(2):=Q(2);
-				BG(1):=Q(1);
-				BG(0):=Q(0);
+				if prc mod 2=1 then
+					FG(2):=Q(13); 
+					FG(1):=Q(12);
+					FG(0):=Q(11);
+					BG(2):=Q(10);
+					BG(1):=Q(9);
+					BG(0):=Q(8);
+				else 
+					FG(2):=Q(5); 
+					FG(1):=Q(4);
+					FG(0):=Q(3);
+					BG(2):=Q(2);
+					BG(1):=Q(1);
+					BG(0):=Q(0);
+				end if;
 			end if;
 			
 		end if;

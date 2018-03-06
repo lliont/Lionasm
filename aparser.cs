@@ -3602,7 +3602,7 @@ namespace Lion_assembler
                     if (varList.ContainsKey(s)) { i = (int)varList[s]; f = true; }
                     if (f)
                     {
-                        if ((il.relative && il.op2t == OperandType.MemoryNamedDirect) || il.opcode == "MOVR")
+                        if ((il.relative && il.op2t == OperandType.MemoryNamedDirect) || il.opcode == "MOVR" || il.opcode == "MOVR.B")
                         {
                             if (il.len != 3) il.word2 = Convert.ToString((Int16)i - il.address - il.len * 2, 2).PadLeft(16, '0');
                             else il.word3 = Convert.ToString((Int16)i - il.address - il.len * 2, 2).PadLeft(16, '0');

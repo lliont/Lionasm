@@ -48,11 +48,12 @@ Component VideoRGB is
 	(
 		sclk : IN std_logic;
 		R,G,B,VSYN,HSYN,VSINT : OUT std_logic;
-		reset : IN std_logic;
-		addr : OUT natural range 0 to 16383;
-		Q : IN std_logic_vector(7 downto 0)
+		reset, pbuffer, dbuffer : IN std_logic;
+		addr : OUT natural range 0 to 8191;
+		Q : IN std_logic_vector(15 downto 0)
 	);
 end Component;
+
 
 
 Component true_dual_port_ram_single_clock is
@@ -175,7 +176,7 @@ COMPONENT SPI is
 	);
 end COMPONENT;
 
-Signal qi1,vq : std_logic_vector (7 downto 0);
+Signal qi1,vq : std_logic_vector (15 downto 0);
 Signal di,do,AD,qa,qro,aq,aq2 : std_logic_vector(15 downto 0);
 Signal qi,q16,count : std_logic_vector(15 downto 0);
 Signal w1, w2, Int_in, AS, DS, RW, IO, HOLDA, WAud, WAud2,inter,vint : std_logic;
@@ -183,20 +184,20 @@ Signal Ii : std_logic_vector(1 downto 0);
 Signal qi2 : std_logic_vector(7 downto 0);
 Signal ad1 :  natural range 0 to 16383;
 Signal ad2 :  natural range 0 to 16383;
-Signal sr,sw,sdready,sready,sr2,sdready2: std_Logic;
+Signal sr,sw,sdready,sready,sr2,sdready2, vs: std_Logic;
 Signal sdi,sdo,sdo2 : std_logic_vector (7 downto 0);
 SIGNAL addr,addr1 : natural range 0 to 65535;
 SIGNAL Spi_in,Spi_out: STD_LOGIC_VECTOR (7 downto 0);
-Signal Spi_w,spi_rdy, play, play2, AUDIO1 ,AUDIO2 : std_logic;
+Signal Spi_w,spi_rdy, play, play2, AUDIO1 ,AUDIO2, spb, sdb : std_logic;
 
 begin
 CPU: LionCPU16 
 	PORT MAP ( Di, Do, AD, RW,AS,DS,RD,Reset,Clock,Int_in,Hold,IO,Holda,Ii,IA ) ; 
-VRAM: mixed_width_true_dual_port_ram
-	GENERIC MAP (DATA_WIDTH1  => 8,	ADDRESS_WIDTH1 => 14,	ADDRESS_WIDTH2 => 13)
-	PORT MAP ( w2, w1, clock, ad1, ad2, qi1, qi, vq, q16  );
+VRAM: true_dual_port_ram_single_clock
+	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 13)
+	PORT MAP ( clock, ad1, ad2, qi1, qi, w2, w1,    vq, q16  );
 VIDEO: videoRGB
-	PORT MAP ( Clock,R,G,B,VSYN, HSYN, vint, reset, ad1, vq);
+	PORT MAP ( Clock,R,G,B,VSYN, HSYN, vint, reset, spb, sdb, ad1, vq);
 Serial: UART
 	PORT MAP ( Tx, Rx, Clock, reset, sr, sw, sdready, sready, sdi, sdo );
 SERKEYB: SKEYB
@@ -224,7 +225,7 @@ addr<=to_integer(unsigned(AD)) when AS='0';
 addr1<=to_integer(unsigned(AD(15 downto 1))) when AS='0';
 ad2<=to_integer(unsigned(AD(13 downto 1))) when AS='0';
 AUDIO<= AUDIO1 OR AUDIO2;
-
+vs<=VSYN;
 -- Video Ram 
 process (clock,reset,AS,DS,RW)
 begin 
@@ -250,7 +251,9 @@ sw<=Do(0) when addr=2 and IO='1' and AS='0' and DS='0' and RW='0' and falling_ed
 spi_w<=Do(0) when addr=19 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 SPICS<=Do(1) when addr=19 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 spi_in<=Do(7 downto 0) when addr=18 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
-
+spb<=Do(1) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
+sdb<=Do(0) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
+--spb<=not spb when rising_edge(vs) ;
  --Sound IO decoding 
 aq<=Do when IO='1' and AD="0000000000001000" and falling_edge(clock);
 aq2<=Do when IO='1' and AD="0000000000001010" and falling_edge(clock);
@@ -299,6 +302,82 @@ LED(2)<=II(1);
 --LED(0)<=Reset;
 	
 end Behavior;
+
+
+-- Quartus II VHDL Template
+-- True Dual-Port RAM with single clock
+--
+-- Read-during-write on port A or B returns newly written data
+-- 
+-- Read-during-write between A and B returns either new or old data depending
+-- on the order in which the simulator executes the process statements.
+-- Quartus II will consider this read-during-write scenario as a 
+-- don't care condition to optimize the performance of the RAM.  If you
+-- need a read-during-write between ports to return the old data, you
+-- must instantiate the altsyncram Megafunction directly.
+
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity true_dual_port_ram_single_clock is
+
+	generic 
+	(
+		DATA_WIDTH : natural := 8;
+		ADDR_WIDTH : natural := 6
+	);
+
+	port 
+	(
+		clk		: in std_logic;
+		addr_a	: in natural range 0 to 2**ADDR_WIDTH - 1;
+		addr_b	: in natural range 0 to 2**ADDR_WIDTH - 1;
+		data_a	: in std_logic_vector((DATA_WIDTH-1) downto 0);
+		data_b	: in std_logic_vector((DATA_WIDTH-1) downto 0);
+		we_a	: in std_logic := '1';
+		we_b	: in std_logic := '1';
+		q_a		: out std_logic_vector((DATA_WIDTH -1) downto 0);
+		q_b		: out std_logic_vector((DATA_WIDTH -1) downto 0)
+	);
+
+end true_dual_port_ram_single_clock;
+
+architecture rtl of true_dual_port_ram_single_clock is
+
+	-- Build a 2-D array type for the RAM
+	subtype word_t is std_logic_vector((DATA_WIDTH-1) downto 0);
+	type memory_t is array(2**ADDR_WIDTH-1 downto 0) of word_t;
+
+	-- Declare the RAM 
+	shared variable ram : memory_t;
+
+begin
+
+
+	-- Port A
+	process(clk)
+	begin
+	if(rising_edge(clk)) then 
+		if(we_a = '1') then
+			ram(addr_a) := data_a;
+		end if;
+		q_a <= ram(addr_a);
+	end if;
+	end process;
+
+	-- Port B 
+	process(clk)
+	begin
+	if(rising_edge(clk)) then 
+		if(we_b = '1') then
+			ram(addr_b) := data_b;
+		end if;
+  	    q_b <= ram(addr_b);
+	end if;
+	end process;
+
+end rtl;
+
 
 
 -- Quartus II VHDL Template
