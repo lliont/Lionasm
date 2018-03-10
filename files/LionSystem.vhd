@@ -15,6 +15,7 @@ entity LionSystem is
 		RD,Reset,Clock,Int,HOLD: IN Std_Logic;
 		IOo, Holdao : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
+		IACK: OUT std_logic;
 		IA : OUT std_logic_vector(1 downto 0);
 		R,G,B,VSYN,HSYN : OUT std_Logic;
 		Tx  : OUT std_logic ;
@@ -23,7 +24,8 @@ entity LionSystem is
 		AUDIO: OUT std_logic;
 		SCLK,MOSI,SPICS: OUT std_logic;
 		MISO: IN std_logic;
-		LED: OUT std_logic_vector(7 downto 0)
+		LED: OUT std_logic_vector(7 downto 0);
+		JOYST1: IN std_logic_vector(4 downto 0)
 	);
 end LionSystem;
 
@@ -39,6 +41,7 @@ Component LionCPU16 is
 		RD, Reset, Clock, Int, HOLD: IN Std_Logic;
 		IO, HOLDA : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
+		IACK: OUT std_logic;
 		IA : OUT std_logic_vector(1 downto 0)
 	);
 end Component;
@@ -48,7 +51,7 @@ Component VideoRGB is
 	(
 		sclk : IN std_logic;
 		R,G,B,VSYN,HSYN,VSINT : OUT std_logic;
-		reset, pbuffer, dbuffer : IN std_logic;
+		reset, pbuffer, dbuffer, addxy : IN std_logic;
 		addr : OUT natural range 0 to 8191;
 		Q : IN std_logic_vector(15 downto 0)
 	);
@@ -130,7 +133,8 @@ Component SoundI is
 		Q : IN std_logic_vector(15 downto 0);
 		count: OUT std_logic_vector(15 downto 0);
 		play: OUT  std_logic;
-		Inter: OUT std_logic
+		Inter: OUT std_logic;
+		IAC: IN std_logic
 	);
 end Component;
 
@@ -184,26 +188,26 @@ Signal Ii : std_logic_vector(1 downto 0);
 Signal qi2 : std_logic_vector(7 downto 0);
 Signal ad1 :  natural range 0 to 16383;
 Signal ad2 :  natural range 0 to 16383;
-Signal sr,sw,sdready,sready,sr2,sdready2, vs: std_Logic;
+Signal sr,sw,sdready,sready,sr2,sdready2, vs, IAC: std_Logic;
 Signal sdi,sdo,sdo2 : std_logic_vector (7 downto 0);
 SIGNAL addr,addr1 : natural range 0 to 65535;
 SIGNAL Spi_in,Spi_out: STD_LOGIC_VECTOR (7 downto 0);
-Signal Spi_w,spi_rdy, play, play2, AUDIO1 ,AUDIO2, spb, sdb : std_logic;
+Signal Spi_w,spi_rdy, play, play2, AUDIO1 ,AUDIO2, spb, sdb, adxy : std_logic;
 
 begin
 CPU: LionCPU16 
-	PORT MAP ( Di, Do, AD, RW,AS,DS,RD,Reset,Clock,Int_in,Hold,IO,Holda,Ii,IA ) ; 
+	PORT MAP ( Di, Do, AD, RW,AS,DS,RD,Reset,Clock,Int_in,Hold,IO,Holda,Ii,Iac,IA ) ; 
 VRAM: true_dual_port_ram_single_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 13)
 	PORT MAP ( clock, ad1, ad2, qi1, qi, w2, w1,    vq, q16  );
 VIDEO: videoRGB
-	PORT MAP ( Clock,R,G,B,VSYN, HSYN, vint, reset, spb, sdb, ad1, vq);
+	PORT MAP ( Clock,R,G,B,VSYN, HSYN, vint, reset, spb, sdb, adxy, ad1, vq);
 Serial: UART
 	PORT MAP ( Tx, Rx, Clock, reset, sr, sw, sdready, sready, sdi, sdo );
 SERKEYB: SKEYB
 	PORT MAP (Rx2, Clock, reset, sr2, sdready2, sdo2);
 SoundIC: SoundI
-	PORT MAP (AUDIO1, reset, Clock, Waud, aq, count, play, Inter);
+	PORT MAP (AUDIO1, reset, Clock, Waud, aq, count, play, Inter, IAC);
 SoundC: Sound
 	PORT MAP (AUDIO2, reset, Clock, Waud2, aq2, play2);
 IRAM: single_port_ram
@@ -226,6 +230,7 @@ addr1<=to_integer(unsigned(AD(15 downto 1))) when AS='0';
 ad2<=to_integer(unsigned(AD(13 downto 1))) when AS='0';
 AUDIO<= AUDIO1 OR AUDIO2;
 vs<=VSYN;
+IACK<=IAC;
 -- Video Ram 
 process (clock,reset,AS,DS,RW)
 begin 
@@ -253,6 +258,7 @@ SPICS<=Do(1) when addr=19 and IO='1' and AS='0' and DS='0' and RW='0' and fallin
 spi_in<=Do(7 downto 0) when addr=18 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 spb<=Do(1) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 sdb<=Do(0) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
+adxy<=Do(2) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 --spb<=not spb when rising_edge(vs) ;
  --Sound IO decoding 
 aq<=Do when IO='1' and AD="0000000000001000" and falling_edge(clock);
@@ -270,11 +276,13 @@ di<="00000000"&sdo when falling_edge(clock) AND AD="0000000000000100" and IO='1'
 	"00000000"&spi_out when falling_edge(clock) AND AD="000000000010000" and IO='1'  --spi 
                          and RW='1' and AS='0' else	
 	"000000000000000" & spi_rdy  when falling_edge(clock)          -- spi status
-								and RW='1' AND AD="000000000010001" and IO='1' and AS='0' else
+								and RW='1' AND AD="000000000010001" and IO='1' and AS='0' else   -- 17
 	"00000000000000"& play2 & play  when falling_edge(clock)          -- spi status
-								and RW='1' AND AD="000000000001001" and IO='1' and AS='0' else
+								and RW='1' AND AD="000000000001001" and IO='1' and AS='0' else   -- 9
+	"00000000000"& JOYST1  when falling_edge(clock)          -- spi status
+								and RW='1' AND AD="000000000010110" and IO='1' and AS='0' else   -- 22
 	count  when falling_edge(clock)          -- spi status
-								and RW='1' AND AD="000000000010100" and IO='1' and AS='0' else
+								and RW='1' AND AD="000000000010100" and IO='1' and AS='0' else   -- 20
 	qro when addr<8192 and RW='1' and IO='0' and AS='0' and falling_edge(clock) else  --rom
 	qa when addr>=8192 and addr<16384 and RW='1' and IO='0' and AS='0' and falling_edge(clock) else   --ram
 	q16(7 downto 0)&q16(15 downto 8) when AD(15 downto 14)="11" and RW='1' and IO='0' and AS='0' and falling_edge(clock) else  --read video ram 
@@ -295,9 +303,9 @@ Ii<="00" when Inter='1' and rising_edge(clock) else
 --LED(7)<=Inter;
 --LED(6)<=INT;
 --LED(5)<=RD;
-LED(4)<=HOLD;
-LED(3)<=II(0);
-LED(2)<=II(1);
+--LED(4)<=HOLD;
+--LED(3)<=II(0);
+--LED(2)<=II(1);
 --LED(1)<=AUDIO;
 --LED(0)<=Reset;
 	
@@ -377,90 +385,6 @@ begin
 	end process;
 
 end rtl;
-
-
-
--- Quartus II VHDL Template
---
--- True Dual-Port RAM with single clock and different data width on the two ports
---
--- The first datawidth and the widths of the addresses are specified
--- The second data width is equal to DATA_WIDTH1 * RATIO, where RATIO = (1 << (ADDRESS_WIDTH1 - ADDRESS_WIDTH2)
--- RATIO must have value that is supported by the memory blocks in your target
--- device.  Otherwise, no RAM will be inferred.  
---
--- Read-during-write behavior returns old data for all combinations of read and
--- write on both ports
-
-
-library ieee;
-use ieee.std_logic_1164.all;
-
-entity mixed_width_true_dual_port_ram is
-    
-	generic (
-		DATA_WIDTH1    : natural :=  8;
-		ADDRESS_WIDTH1 : natural :=  10;                
-		ADDRESS_WIDTH2 : natural :=  8);
-
-	port (
-	we1   : in std_logic;
-	we2   : in std_logic;
-	clk   : in std_logic;
-	addr1 : in natural range 0 to (2 ** ADDRESS_WIDTH1 - 1);
-	addr2 : in natural range 0 to (2 ** ADDRESS_WIDTH2 - 1);
-	data_in1 : in  std_logic_vector(DATA_WIDTH1 - 1 downto 0);
-	data_in2 : in  std_logic_vector(DATA_WIDTH1 * (2 ** (ADDRESS_WIDTH1 - ADDRESS_WIDTH2)) - 1 downto 0);                
-	data_out1   : out std_logic_vector(DATA_WIDTH1 - 1 downto 0);
-	data_out2   : out std_logic_vector(DATA_WIDTH1 * 2 ** (ADDRESS_WIDTH1 - ADDRESS_WIDTH2) - 1 downto 0));
-
-end mixed_width_true_dual_port_ram;
-
-architecture rtl of mixed_width_true_dual_port_ram is
-	constant RATIO       : natural := 2 ** (ADDRESS_WIDTH1 - ADDRESS_WIDTH2) ;
-	constant DATA_WIDTH2 : natural := DATA_WIDTH1 * RATIO; 
-	constant RAM_DEPTH   : natural := 2 ** ADDRESS_WIDTH2;
-
-	-- Use a multidimensional array to model mixed-width 
-	type word_t is array(RATIO - 1 downto 0) of std_logic_vector(DATA_WIDTH1 - 1 downto 0);
-	type ram_t is array (0 to RAM_DEPTH - 1) of word_t;
-
-	-- declare the RAM
-	signal ram : ram_t;
-
-	signal w1_local : word_t;
-	signal q1_local : word_t;
-
-begin  -- rtl
-	-- Re-organize the write data to match the RAM word type
-	unpack: for i in 0 to RATIO - 1 generate    
-		w1_local(i) <= data_in2(DATA_WIDTH1*(i+1) - 1 downto DATA_WIDTH1*i);
-		data_out2(DATA_WIDTH1*(i+1) - 1 downto DATA_WIDTH1*i) <= q1_local(i);
-	end generate unpack;
-
-	--port A
-	process(clk)
-	begin
-		if(rising_edge(clk)) then 
-			if(we2 = '1') then
-				ram(addr2) <= w1_local;
-			end if;
-			q1_local <= ram(addr2);
-		end if;
-	end process;
-
-	-- port B
-	process(clk)
-	begin
-		if(rising_edge(clk)) then 
-			data_out1 <= ram(addr1 / RATIO )(addr1 mod RATIO);
-			if(we1 ='1') then
-				ram(addr1 / RATIO)(addr1 mod RATIO) <= data_in1;
-			end if;
-		end if;
-	end process;  
-end rtl;
-
 
 
 -- Quartus II VHDL Template

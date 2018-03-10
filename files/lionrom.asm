@@ -55,7 +55,7 @@ SDOKO:	MOVI		A0,5        ; sd card ok
 		MOV		A2,$0105
 		INT		4            ; print ok
 		MOVI		A0,3
-		INT		5             ; get volume params
+		INT		5            ; mount volume, get params
 		CMP		(SDFLAG),256
 		JNZ		SDNOT
 		MOV		A4,BOOTBIN
@@ -554,16 +554,18 @@ FDIV:		STI
 		JZ		FDIV2
 		NOT		A1
 		MOV		A4,(FRAC1)
-		NOT		A4
-		INC		A4
+		;NOT		A4
+		;INC		A4
+		NEG		A4
 		ADC		A1,0
 		MOV		(FRAC1),A4
 FDIV2:	MOV		A4,(FRAC2)
 		BTST		A2,15          ; check if neg and convert 
 		JZ		FDIV3
 		NOT		A2
-		NOT		A4
-		INC		A4
+		;NOT		A4
+		;INC		A4
+		NEG		A4
 		ADC		A2,0          ; A2A4 = Q Divident
 FDIV3:	MOV		A3,(FRAC1)
 		
@@ -593,8 +595,9 @@ FDC3:
 		PUSHX		
 
 		NOT		A1
-		NOT		A3
-		INC		A3
+		;NOT		A3
+		;INC		A3
+		NEG		A3
 		ADC		A1,0
 		MOV		A7,A1    ; store -M
 		MOV		(FRAC2),A3
@@ -651,8 +654,9 @@ FDC7:		MOV		A1,A2	     ; integer result in A1
 		BTST		A0,15
 		JZ		FDIVEND     ; correct sign
 		NOT		A1
-		NOT		A4
-		INC		A4
+		;NOT		A4
+		;INC		A4
+		NEG		A4
 		ADC		A1,0
 FDIVEND:	MOV		(FRAC1),A4  ; store fraction result 
 		POPX
@@ -676,16 +680,18 @@ FMULT:	STI
 		JZ		FMUL2
 		NOT		A1
 		MOV		A4,(FRAC1)
-		NOT		A4
-		INC		A4
+		;NOT		A4
+		;INC		A4
+		NEG		A4
 		ADC		A1,0
 		MOV		(FRAC1),A4
 FMUL2:	BTST		A2,15   ; check if neg and convert 
 		JZ		FMUL3
 		NOT		A2
 		MOV		A4,(FRAC2)
-		NOT		A4
-		INC		A4
+		;NOT		A4
+		;INC		A4
+		NEG		A4
 		ADC		A2,0
 		MOV		(FRAC2),A4
 FMUL3:	MOV		A5,A1
@@ -1094,13 +1100,12 @@ SERIN:	IN		A0,6  ;Read serial byte if availiable
 SEROUT:	IN		A0,6  ;Wite serial byte if ready
 		BTST		A0,0  ; A0(0)=0 if not ready
 		JZ		INTEXIT
-            PUSH        A1
 		OUT		0,A1
-		MOVI		A1,0
 		MOVI		A0,1
 		OUT		2,A0
-		OUT		2,A1
-		POP		A1
+		MOVI		A0,0
+		OUT		2,A0
+		MOVI		A0,1
 		RETI
 ; -------------------------------------
 SKEYBIN:	IN		A0,6  ;Read serial byte if availiable
@@ -1317,12 +1322,14 @@ MULT:		STI
 		PUSH		A0
 		BTST		A1,15    ; check if neg and convert 
 		JZ		MUL2
-		NOT		A1
-		INC		A1
+		;NOT		A1
+		;INC		A1
+		NEG		A1
 MUL2:		BTST		A2,15   ; check if neg and convert 
 		JZ		MUL3
-		NOT		A2
-		INC		A2
+		;NOT		A2
+		;INC		A2
+		NEG		A2
 MUL3:		MULU		A1,A2
 		POP		A0
 		BTST		A0, 15
@@ -1346,22 +1353,21 @@ DIV:		STI
 		MOV		A1,32767
 		CMPI		A3,0
 		JZ		DIVE
-		CMP		A3,$8000
-		JZ		DIVE
 		MOVI		A1,0
 		XOR		A0,A2
-		BTST		A0,15
-		JZ		DIV1     ; Check result sign
+		JP		DIV1     ; Check result sign
 		MOVI		A1,1
 DIV1:		PUSH		A1 
 		BTST		A2,15    ; check if neg and convert 
 		JZ		DIV2
-		NOT		A2
-		INC		A2
+		;NOT		A2
+		;INC		A2
+		NEG		A2
 DIV2:		BTST		A3,15   ; check if neg and convert 
 		JZ		DIV3
-		NOT		A3
-		INC		A3
+		;NOT		A3
+		;INC		A3
+		NEG		A3
 DIV3:		MOV		A1,A2
 		CMP		A3,A1
 		JBE		DIV4
@@ -1406,16 +1412,16 @@ DIV9:		MOV		A2,A0  ; new dividend = remainder
 DIV11:	SLL		A1,1       
 		CMP		A0,A3  ; compare remainder with divisor
 		JC		DIV8		
-		BSET		A1,1
+		BSET		A1,0
 		SUB		A0,A3
 DIV8:		SRL		A3,1
 		JMPX		DIV11
-		SRL		A1,1
 DIV14:	POP		A3
 		OR		A3,A3
 		JZ		DIVE
-		NOT		A1
-		INC		A1
+		;NOT		A1
+		;INC		A1
+		NEG		A1
 DIVE:		POP		A4
 		POP		A3
 		POPX
@@ -1476,11 +1482,10 @@ UDIV9:	MOV		A2,A0  ; new dividend = remainder
 UDIV11:	SLL		A1,1       
 		CMP		A0,A3  ; compare remainder with divisor
 		JC		UDIV8		
-		BSET		A1,1
+		BSET		A1,0
 		SUB		A0,A3
 UDIV8:	SRL		A3,1
 		JMPX		UDIV11
-		SRL		A1,1
 UDIVE:	POP		A4
 		POP		A3
 		POPX

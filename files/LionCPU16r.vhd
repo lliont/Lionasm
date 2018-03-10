@@ -18,6 +18,7 @@ entity LionCPU16 is
 		RD, Reset, Clock, Int, HOLD: IN Std_Logic;
 		IO, HOLDA : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
+		IACK : OUT std_logic;
 		IA : OUT std_logic_vector(1 downto 0)
 	);
 end LionCPU16;
@@ -99,7 +100,7 @@ IF Reset = '1' THEN
 		PC <= "0000000000010000"; SR <= ZERO8; IA<="00"; HOLDA<='0';
 		AS<='1';   DS<='1'; RW<='1';   ST <= "0011111111111110"; --(16382) end of internal ram
 		AD <= (OTHERS => '0'); IR<=(OTHERS=>'0');	 
-		Wen<='0'; rhalf<='1';
+		Wen<='0'; rhalf<='1'; IACK<='0';
 		FF<="000"; TT<=0; add<='0'; sub<='0';  cin<='0'; rdy<='0'; 
 	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='1' AND FF="000" AND TT=0  then
 		HOLDA<='1';
@@ -108,7 +109,7 @@ IF Reset = '1' THEN
 	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='0' and INT='1' AND FF="000" AND TT=0 and SR(7)='0' THEN   -- Interrupts
 		IR<="100000100000"&I&"00";
 		FF<="110"; TT<=0; Wen<='0';
-		IA<=I; 
+		IA<=I; IACK<='1';
 		HOLDA<='0';
 	ELSIF Clock'EVENT AND Clock = '1'  THEN   
 		rest:=false; rest2:=false; HOLDA<='0'; 
@@ -795,7 +796,7 @@ IF Reset = '1' THEN
 				when 5 =>
 				when others =>	
 					PC<=Di;
-					AS<='1'; IA<="00";
+					AS<='1'; IA<="00"; IACK<='0';
 					rest2:=true;
 				end case;
 			when "1000011" =>              -- CLI
@@ -939,8 +940,25 @@ IF Reset = '1' THEN
 					set_flags;
 					rest2:=true;
 				end case;
+			when "1010101" =>              -- NEG Rn
+				case TT is
+				when 0 =>
+					X1<=NOT X1;
+				when 1 =>
+					Y1<="0000000000000001";
+					add<='1';
+					half<=bwb;
+				when 2  =>
+				when others =>
+					add<='0';
+					tmp:=Z1;
+					set_reg(r1,tmp,bwb,'0'); 
+					set_flags;
+					rest2:=true;
+				end case;
 
 ------instructions equal or between 1100... and 11100.... cause double fetch -----------------			
+
 			when "1100000" =>              -- MOV (n),n
 					AD<=X; Y1<=Y; FF<="111";
 					rest:=true;
@@ -965,6 +983,7 @@ IF Reset = '1' THEN
 					set_flags;
 					rest2:=true;
 				end case;
+
 				
 		-----------    instructions after "11100..." relative 
 			when "1110000" =>              -- JR (Reg,NUM,[reg],[n])

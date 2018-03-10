@@ -143,7 +143,6 @@ set_location_assignment PIN_126 -to IA[0]
 set_location_assignment PIN_142 -to IOo
 set_location_assignment PIN_73 -to RWo
 set_location_assignment PIN_74 -to ASo
-set_location_assignment PIN_141 -to Vclock
 set_location_assignment PIN_87 -to ADo[15]
 set_location_assignment PIN_86 -to ADo[14]
 set_location_assignment PIN_85 -to ADo[13]
@@ -204,4 +203,10 @@ set_global_assignment -name VHDL_FILE video_640x480.vhd
 set_global_assignment -name VHDL_FILE UART.vhd
 set_global_assignment -name VHDL_FILE SPI.vhd
 set_global_assignment -name CDF_FILE output_files/LionSystem.cdf
+set_location_assignment PIN_39 -to IACK
+set_location_assignment PIN_72 -to JOYST1[4]
+set_location_assignment PIN_137 -to JOYST1[3]
+set_location_assignment PIN_1 -to JOYST1[2]
+set_location_assignment PIN_2 -to JOYST1[1]
+set_location_assignment PIN_75 -to JOYST1[0]
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

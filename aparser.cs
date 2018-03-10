@@ -118,7 +118,6 @@ namespace Lion_assembler
             colorList.Add("SLA", Color.Blue);
             colorList.Add("SRL", Color.Blue);
             colorList.Add("SLL", Color.Blue);
-            //clist.Add("ROR", Color.Blue);
             colorList.Add("ROL", Color.Blue);
             colorList.Add("JMP", Color.Blue);
             colorList.Add("JZ", Color.Blue);
@@ -169,8 +168,8 @@ namespace Lion_assembler
             colorList.Add("OR.B", Color.Blue);
             colorList.Add("XOR.B", Color.Blue);
             colorList.Add("NOT.B", Color.Blue);
-            //clist.Add("SRA.B", Color.Blue);
-            //clist.Add("SLA.B", Color.Blue);
+            colorList.Add("NEG.B", Color.Blue);
+            colorList.Add("NEG", Color.Blue);
             colorList.Add("SRL.B", Color.Blue);
             colorList.Add("SLL.B", Color.Blue);
             colorList.Add("ROR.B", Color.Blue);
@@ -196,8 +195,6 @@ namespace Lion_assembler
             colorList.Add("MOVX", Color.Blue);
             colorList.Add("SETSP", Color.Blue);
             colorList.Add("GETSP", Color.Blue);
-            //clist.Add("MOVMI", Color.Blue);
-            //clist.Add("CMPHL", Color.Blue);
             colorList.Add("MOVR", Color.Blue);
             colorList.Add("GADR", Color.Blue);
             colorList.Add("MOVR.B", Color.Blue);
@@ -315,7 +312,8 @@ namespace Lion_assembler
             instList.Add("MOVR", 2);
             instList.Add("MOVR.B", 2);
             instList.Add("GADR", 2);
-            //ilist.Add("MOVMI", 2);
+            instList.Add("NEG", 1);
+            instList.Add("NEG.B", 1);
         }
 
         public void fill_dlist()
@@ -2849,8 +2847,10 @@ namespace Lion_assembler
                     return gen5(il, "0001001");
                 case "GETSP":
                     return gen2(il, "1000101");
-                //case "CMPHL":
-                //    return gen5(il, "1001011");
+                case "NEG":
+                    return gen2(il, "1010101",'0');
+                case "NEG.B":
+                    return gen2(il, "1010101",'1');
                 case "MOVR":
                     return movr(il, '0');
                 case "GADR":

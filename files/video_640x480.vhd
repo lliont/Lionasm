@@ -12,7 +12,7 @@ entity VideoRGB is
 	(
 		sclk: IN std_logic;
 		R,G,B,VSYN,HSYN, VSINT: OUT std_logic;
-		reset, pbuffer, dbuffer : IN std_logic;
+		reset, pbuffer, dbuffer, addxy : IN std_logic;
 		addr : OUT natural range 0 to 8191;
 		Q : IN std_logic_vector(15 downto 0)
 	);
@@ -39,7 +39,7 @@ constant maxd:natural range 0 to 1023:=16;
 
 begin
 
-process (reset, sclk)
+process (reset, sclk, addxy)
 variable pc: boolean;
 --variable ad: natural range 0 to 65535;
 
@@ -58,6 +58,7 @@ variable QQQ:boolean;
 variable d1,d2:dist;
 variable	bl,QQ: bool;
 variable pixi,lin: natural range 0 to 1023;
+variable lastadxy: std_logic;
 
 begin
 	if (reset='1') then
@@ -71,6 +72,14 @@ begin
 		else
 			pc:=false;
 		end if; 
+		
+--		if lastadxy/=addxy then 
+--			lastadxy:=addxy;
+--			for i in 0 to 7 loop
+--				SX(i):=SX(i)+SDX(i);	if SX(i)>"101111111" then SX(i):="000000000"; end if;
+--				SY(i):=SY(i)+SDY(i); if SY(i)>"11110111" then SY(i):="000000000"; end if;
+--			end loop;
+--		end if;
 		
 		if  pc=true then 
 			if pixel=799 then
@@ -201,7 +210,7 @@ begin
 				end if;
 			end if;
 		else   ------ pc false ---------------------------------------
-		
+
 			if (lines>=l1) and (lines<=l2) and (pixel>=p1) and (pixel<=p2) then
 				pix<=pix+1;  -- (pixel-85) * 8
 				addr<= pix/2 + addr2; 
@@ -297,7 +306,8 @@ entity SoundI is
 		Q : IN std_logic_vector(15 downto 0);
 		count: OUT std_logic_vector(15 downto 0);
 		play: OUT  std_logic;
-		Inter: OUT std_logic
+		Inter: OUT std_logic;
+		IAC: IN std_logic
 	);
 end SoundI;
 
@@ -349,7 +359,7 @@ process (clk,reset,wr)
 				end if;
 				if i=99 then inter<='1'; i<=0; count<=count+'1'; else i<=i+1; end if;
 			else
-				if c1="0000001000" then
+				if IAC='1' or c1="0000001000" then
 					inter<='0';
 				end if;
 			end if;
