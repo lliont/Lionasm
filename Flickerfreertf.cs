@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Forms;
 
-namespace Glos
+namespace Lion_assembler
 {
     /// <summary>
     /// Summary description for Flickerfreertf.

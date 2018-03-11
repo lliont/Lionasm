@@ -554,8 +554,6 @@ FDIV:		STI
 		JZ		FDIV2
 		NOT		A1
 		MOV		A4,(FRAC1)
-		;NOT		A4
-		;INC		A4
 		NEG		A4
 		ADC		A1,0
 		MOV		(FRAC1),A4
@@ -563,8 +561,6 @@ FDIV2:	MOV		A4,(FRAC2)
 		BTST		A2,15          ; check if neg and convert 
 		JZ		FDIV3
 		NOT		A2
-		;NOT		A4
-		;INC		A4
 		NEG		A4
 		ADC		A2,0          ; A2A4 = Q Divident
 FDIV3:	MOV		A3,(FRAC1)
@@ -595,8 +591,6 @@ FDC3:
 		PUSHX		
 
 		NOT		A1
-		;NOT		A3
-		;INC		A3
 		NEG		A3
 		ADC		A1,0
 		MOV		A7,A1    ; store -M
@@ -654,8 +648,6 @@ FDC7:		MOV		A1,A2	     ; integer result in A1
 		BTST		A0,15
 		JZ		FDIVEND     ; correct sign
 		NOT		A1
-		;NOT		A4
-		;INC		A4
 		NEG		A4
 		ADC		A1,0
 FDIVEND:	MOV		(FRAC1),A4  ; store fraction result 
@@ -680,8 +672,6 @@ FMULT:	STI
 		JZ		FMUL2
 		NOT		A1
 		MOV		A4,(FRAC1)
-		;NOT		A4
-		;INC		A4
 		NEG		A4
 		ADC		A1,0
 		MOV		(FRAC1),A4
@@ -689,8 +679,6 @@ FMUL2:	BTST		A2,15   ; check if neg and convert
 		JZ		FMUL3
 		NOT		A2
 		MOV		A4,(FRAC2)
-		;NOT		A4
-		;INC		A4
 		NEG		A4
 		ADC		A2,0
 		MOV		(FRAC2),A4
@@ -724,9 +712,8 @@ FMULZ:	MOV		A1,A3
 		MOV		A2,A0
 		JZ		FMULEND     ; Check result sign
 		NOT		A1
-		NOT		A4
 		NOT		A2
-		INC		A4
+		NEG		A4
 		ADC		A1,0
 		ADC		A2,0
 FMULEND:	MOV		(FRAC1),A4
@@ -1322,22 +1309,17 @@ MULT:		STI
 		PUSH		A0
 		BTST		A1,15    ; check if neg and convert 
 		JZ		MUL2
-		;NOT		A1
-		;INC		A1
 		NEG		A1
 MUL2:		BTST		A2,15   ; check if neg and convert 
 		JZ		MUL3
-		;NOT		A2
-		;INC		A2
 		NEG		A2
 MUL3:		MULU		A1,A2
 		POP		A0
 		BTST		A0, 15
 		MOV		A0,A2
 		JZ		MULEND     ; Check result sign
-		NOT		A1
 		NOT		A2
-		INC		A1
+		NEG		A1
 		ADC		A2,0
 MULEND:	POP		A3
 		RETI
@@ -1360,13 +1342,9 @@ DIV:		STI
 DIV1:		PUSH		A1 
 		BTST		A2,15    ; check if neg and convert 
 		JZ		DIV2
-		;NOT		A2
-		;INC		A2
 		NEG		A2
 DIV2:		BTST		A3,15   ; check if neg and convert 
 		JZ		DIV3
-		;NOT		A3
-		;INC		A3
 		NEG		A3
 DIV3:		MOV		A1,A2
 		CMP		A3,A1
@@ -1419,8 +1397,6 @@ DIV8:		SRL		A3,1
 DIV14:	POP		A3
 		OR		A3,A3
 		JZ		DIVE
-		;NOT		A1
-		;INC		A1
 		NEG		A1
 DIVE:		POP		A4
 		POP		A3
