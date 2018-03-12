@@ -1354,13 +1354,15 @@ LD6:	PUSH	A3
 	CMPI	A5,0
 	JNZ	LD3
 	ADD	A1,TXTBGN
-	MOV	(TXTUNF),A1
-	MOV	(A1),13
+	;CMP	(A1),13
+	;JZ	LD7
+	;DEC	A1
+LD7:	MOV	(TXTUNF),A1
 LD3:	POP	A1
 	POPX
 	POP	A4
 	POP	A5
-	JMP	FINISH
+	JMP	RSTART
 	
 ;--------------------------
 
@@ -1509,7 +1511,7 @@ SD4:	MOV	A4,FNAME
 	MOV	A1,TXTBGN
 	MOV	A7,(TXTUNF)
 	SUB	A7,TXTBGN
-	INC	A7
+	;INC	A7
 SD6:	PUSH	A3
 	PUSH	A5
 	MOV	A6,A1          ; save address
@@ -1996,9 +1998,9 @@ KEYIN:
 		JA	SKP2
 		AND.B	A0,$DF        ; UPPER CASE 
 SKP2:	      CMPI.B A0,8       ; BS
-		JNZ   gl2
+		JNZ   GL2
 		CMP	A4,BUFFER
-		JBE	gl1
+		JBE	GL1
 		DEC.B	(XX)
 		JP	GL4
 		MOV.B	(XX),0
@@ -2011,21 +2013,21 @@ GL4:		DEC	A4
 		INT	4
 		POP	A2
 		JMP	gl1
-gl2:		MOV.B	(A4),A0
+GL2:		MOV.B	(A4),A0
 		INC	A4
 		CMPI.B A0,13
-		JZ    gl1e
+		JZ    GL1E
 		CMP	A4,BUFEND
 		JZ	gl3
 		JSR	CHROUT
 		JMP	GL1
-gl3:		
+GL3:		
 		DEC	A4
 		JMP	GL1
 GL1E:		
 		JSR	CHROUT
-		MOV	A1,A4
-		SUB	A1,BUFFER
+		;MOV	A1,A4
+		;SUB	A1,BUFFER
 		POP	A1
 		MOV	A3,A4
 		RET
@@ -2403,22 +2405,25 @@ LODSW:
 
 OUTCMD:
 	JSR	EXP
-	MOV	A0,OUTIO
-	ADDI 	A0,2
-	MOV	(A0),A1
+	MOV	A5,A1
+	;ADDI 	A0,2
+	;MOV	(A0),A1
 	MOVHL	A0,44
 	JSR	IGNBLNK
 	JNZ	QWHAT
 	JSR	EXP
-	JSR	OUTIO
+	;JSR	OUTIO
+	OUT	A5,A1
 	JMP	FINISH
 
 INP:
 	JSR	PARN
-	MOV	A0,INPIO
-	ADDI	A0,2
-	MOV	(A0),A1
-	JMP	INPIO
+	;MOV	A0,INPIO
+	;ADDI	A0,2
+	;MOV	(A0),A1
+	IN	A1,A1
+	RET
+	;JMP	INPIO
 
 ; 'usr(i(,j))'
 ;
@@ -2461,13 +2466,13 @@ USRET1:
 	POP	A2
 	RET
 
-outio:
- 	out $FFFF,A1
- 	ret
+;outio:
+; 	out $FFFF,A1
+; 	ret
 
-INPIO:
-	IN	A1,$FFFF
-	RET
+;INPIO:
+;	IN	A1,$FFFF
+;	RET
 ;-----------------------------------------------------
 ; DATA
 SINP11	EQU	$0001

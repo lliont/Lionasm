@@ -23,8 +23,7 @@ Architecture Behavior of VideoRGB is
 Signal dcounter: std_logic_vector(1 downto 0);
 Signal lines: natural range 0 to 1023;
 Signal pixel, p6, prc : natural range 0 to 1023;
-Signal addr2,addr3: natural range 0 to 16383;
-Signal pix,l: natural range 0 to 16383;
+Signal addr2,addr3,pix: natural range 0 to 16383;
 signal m8: natural range 0 to 15;
 
 constant sp1: natural:= 14000;
@@ -89,9 +88,9 @@ begin
 					m8<=0;
 				else
 					if lines=l1-1 then 
-						m8<=0; addr2<=0; l<=0;
+						m8<=0; addr2<=0; 
 					else
-						if m8=7 then l<=l+8; m8<=0; addr2<=addr2+384/2; else m8<=m8+1; end if;
+						if m8=7 then m8<=0; addr2<=addr2+384/2; else m8<=m8+1; end if;
 					end if;
 					lines<=lines+1;
 				end if;

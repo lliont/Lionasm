@@ -1077,33 +1077,33 @@ SERIN:	IN		A0,6  ;Read serial byte if availiable
 		BTST		A0,1  ;Result in A1, A0(1)=0 if not avail
 		JZ		INTEXIT
 		IN		A1,4
-		MOVI		A0,2
-		OUT		2,A0
-		MOVI		A0,0
-		OUT		2,A0
-		MOVI		A0,2
+		;MOVI		A0,2
+		OUT		2,2
+		;MOVI		A0,0
+		OUT		2,0
+		;MOVI		A0,2
 		RETI
 ;----------------------------------------
 SEROUT:	IN		A0,6  ;Wite serial byte if ready
 		BTST		A0,0  ; A0(0)=0 if not ready
 		JZ		INTEXIT
 		OUT		0,A1
-		MOVI		A0,1
-		OUT		2,A0
-		MOVI		A0,0
-		OUT		2,A0
-		MOVI		A0,1
+		;MOVI		A0,1
+		OUT		2,1
+		;MOVI		A0,0
+		OUT		2,0
+		;MOVI		A0,1
 		RETI
 ; -------------------------------------
 SKEYBIN:	IN		A0,6  ;Read serial byte if availiable
 		BTST		A0,2  ;Result in A1, A0(2)=0 if not avail
 		JZ		INTEXIT
 		IN		A1,14
-		MOVI		A0,2
-		OUT		15,A0
-		MOVI		A0,0
-		OUT		15,A0
-		MOVI		A0,4
+		;MOVI		A0,2
+		OUT		15,2
+		;MOVI		A0,0
+		OUT		15,0
+		;MOVI		A0,4
 		RETI
 
 ;----------------------------------------
