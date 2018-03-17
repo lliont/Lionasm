@@ -87,7 +87,6 @@ begin
 
 DOo<=DO; DSo<=DS; ASo<=AS; RWo<=RW;
 
-
 Process (Reset,Clock)
 variable rest,rest2,fetch,fetch1,fetch2,fetch3,rel:boolean:=false;
 variable tmp,tmp2:Std_logic_vector(15 downto 0);
@@ -97,7 +96,7 @@ variable bwb: Std_logic; --  bit to distinguish between word byte operations
 begin
 IF Reset = '1' THEN
 		PC <= "0000000000010000"; SR <= ZERO8; IA<="00"; HOLDA<='0';
-		AS<='1';   DS<='1'; RW<='1';   ST <= "0011111111111110"; --(16382) end of internal ram
+		AS<='1';  DS<='1'; RW<='1'; ST <= "0011111111111110"; --(16382) end of internal ram
 		AD <= (OTHERS => '0'); IR<=(OTHERS=>'0');	 
 		Wen<='0'; rhalf<='1'; IACK<='0';
 		FF<="000"; TT<=0; add<='0'; sub<='0';  cin<='0'; rdy<='0'; 
@@ -125,15 +124,13 @@ IF Reset = '1' THEN
 				IR<=Di;
 				RR<=Di(4 downto 2); R<=Di(8 downto 6);
 			when others =>
-				r2:=RR; r1:=R;
-				X1<=Ao;	Y1<=Ao2;
+				r2:=RR; r1:=R;	X1<=Ao;	Y1<=Ao2;
 				bt:=to_integer(unsigned(IR(5 downto 2)));
 				bwb:= IR(5);
 				rel:= IR(15)='1' and IR(14)='1' and IR(13)='1';
 				fetch3:=IR(15)='1' and IR(14)='1' and IR(13)='0';
 				if IR(0)='1' then
-					FF<="001";
-					AD<=PC; AS<='0'; 
+					FF<="001"; AD<=PC; AS<='0'; 
 				else 
 					if IR(1)='1' then	
 						FF<="011"; 
@@ -149,8 +146,7 @@ IF Reset = '1' THEN
 				fetch1:=true;
 				PC<=PC+1;
 			when others =>
-				X<=Di; PC<=PC+1;
-				AS<='1'; 
+				X<=Di; PC<=PC+1; AS<='1'; 
 				if fetch3 then 
 					FF<="010";
 				else	
@@ -176,8 +172,7 @@ IF Reset = '1' THEN
 		when "011" =>              -- indirect
 			case TT is
 			when 0 =>
-				fetch2:=true;
-				AS<='0';  
+				fetch2:=true; AS<='0';  
 				if IR(0)='1' then	AD<=X; x2<=X; else AD<=Y1; x2<=y1; end if;
 			when 1 =>
 			when others =>
@@ -811,12 +806,12 @@ IF Reset = '1' THEN
 			when "1010101" =>              -- NEG Rn
 				case TT is
 				when 0 =>
-					X1<=NOT X1;
-				when 1 =>
+					tmp:=X1;
+					X1<=NOT tmp;
 					Y1<="0000000000000001";
 					add<='1';
 					half<=bwb;
-				when 2  =>
+				when 1  =>
 				when others =>
 					add<='0';
 					tmp:=Z1;
@@ -847,7 +842,8 @@ IF Reset = '1' THEN
 
 			when "1100011" =>              -- OUT n,n	
 					AD<=X;
-					IO<='1'; AS<='0';   RW<='0';	 Do<=Y; IR(15 downto 9)<="0000111"; -- continue as in OUT n,ax
+					IO<='1'; AS<='0';   RW<='0';	 Do<=Y; 
+					IR(15 downto 9)<="0000111"; -- continue as in OUT n,ax
 				
 		-----------    instructions after "11100..." relative 
 			when "1110000" =>              -- JR (Reg,NUM,[reg],[n])

@@ -22,9 +22,9 @@ BOOTC:	MOV		(SDFLAG),0
 		SETSP		A1
 		SETX		1983       ; Set default color 
 		MOV		A1,61152 ; was 65144
-COLINIT:	MOV.B		(A1),57
+COLINI:	MOV.B		(A1),57
 		INC		A1
-		JMPX		COLINIT
+		JMPX		COLINI
 		MOV		A2,32767
 		SETX		32766    ;  memory test
 		MOV		A1,16384
@@ -112,6 +112,7 @@ INT5T3	DA		VMOUNT   ; Load First Volume, return A0=fat root 1st cluster
 INT5T4	DA		FILEDEL  ; Delete file A4 points to filename
 INT5T5	DA		FILESAV  ; Save memory range to file A4 points to filename
 INT5T6	DA		UDIV     ; Unsigned int Div A2 by A1 res in A1,A0
+
 
 ;Hardware interrupt
 HINT:		INC		(COUNTER)
@@ -538,6 +539,7 @@ PHX2:		MOVI	A0,4
 		RET 
 
 
+
 ;---------------------------------
 ; INT5 A0=1  fixed point 16.16 
 ; Div A2 by A1 res in A1 (FRAC1),   restoring division 9/5/2017
@@ -564,9 +566,8 @@ FDIV2:	MOV		A4,(FRAC2)
 		NEG		A4
 		ADC		A2,0          ; A2A4 = Q Divident
 FDIV3:	MOV		A3,(FRAC1)
-		
 
-		SETX		14            ; shift dividend as left as possible
+		SETX		15            ; shift dividend as left as possible
 FDC1:		BTST		A2,15
 		JNZ		FDC2
 		SLL		A2,1
@@ -575,9 +576,9 @@ FDC1:		BTST		A2,15
 		JMPx		FDC1
 FDC2:		
 		MOVX		A0
-		CMPI		A0,8
+		CMPI		A0,6
 		JBE		FDC3
-		SETX		7
+		SETX		9
 		BTST		A3,0
 		JNZ		FDC9
 FDC5:		SRL		A3,1
@@ -625,7 +626,7 @@ FD_COND2:
 		JMPX		FD_INTER
 		
 		POP		A0          ; shift left as needed
-		ADDI		A0,2
+		ADDI		A0,1
 		;SUBI		A0,1
 		JN		FDC6
 		SETX		A0

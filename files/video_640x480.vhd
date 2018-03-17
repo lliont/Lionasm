@@ -351,7 +351,7 @@ process (clk,reset,wr)
 					Aud<='0';	c2<=(others => '0'); c3<=0; play<='0';
 				else 
 					if c2=f(11 downto 0) then
-						Aud<=not Aud;
+						if c2/="000000000000" then Aud<=not Aud; end if;
 						c2<=(others => '0');			
 					end if;
 					play<='1';
@@ -422,7 +422,7 @@ process (clk,reset,wr)
 					Aud<='0';	c2<=(others => '0'); c3<=0; play<='0';
 				else 
 					if c2=f(11 downto 0) then
-						Aud<=not Aud;
+						if c2/="000000000000" then Aud<=not Aud; end if;
 						c2<=(others => '0');			
 					end if;
 					play<='1';

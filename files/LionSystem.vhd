@@ -25,7 +25,7 @@ entity LionSystem is
 		SCLK,MOSI,SPICS: OUT std_logic;
 		MISO: IN std_logic;
 		LED: OUT std_logic_vector(7 downto 0);
-		JOYST1: IN std_logic_vector(4 downto 0)
+		JOYST1,JOYST2: IN std_logic_vector(4 downto 0)
 	);
 end LionSystem;
 
@@ -79,26 +79,6 @@ Component true_dual_port_ram_single_clock is
 		q_a		: out std_logic_vector((DATA_WIDTH -1) downto 0);
 		q_b		: out std_logic_vector((DATA_WIDTH -1) downto 0)
 	);
-
-end Component;
-
-Component mixed_width_true_dual_port_ram is
-    
-	generic (
-		DATA_WIDTH1    : natural :=  8;
-		ADDRESS_WIDTH1 : natural :=  14;                
-		ADDRESS_WIDTH2 : natural :=  13);
-
-	port (
-	we1   : in std_logic;
-	we2   : in std_logic;
-	clk   : in std_logic;
-	addr1 : in natural range 0 to (2 ** ADDRESS_WIDTH1 - 1);
-	addr2 : in natural range 0 to (2 ** ADDRESS_WIDTH2 - 1);
-	data_in1 : in  std_logic_vector(DATA_WIDTH1 - 1 downto 0);
-	data_in2 : in  std_logic_vector(DATA_WIDTH1 * (2 ** (ADDRESS_WIDTH1 - ADDRESS_WIDTH2)) - 1 downto 0);                
-	data_out1   : out std_logic_vector(DATA_WIDTH1 - 1 downto 0);
-	data_out2   : out std_logic_vector(DATA_WIDTH1 * 2 ** (ADDRESS_WIDTH1 - ADDRESS_WIDTH2) - 1 downto 0));
 
 end Component;
 
@@ -279,7 +259,7 @@ di<="00000000"&sdo when falling_edge(clock) AND AD="0000000000000100" and IO='1'
 								and RW='1' AND AD="000000000010001" and IO='1' and AS='0' else   -- 17
 	"00000000000000"& play2 & play  when falling_edge(clock)          -- spi status
 								and RW='1' AND AD="000000000001001" and IO='1' and AS='0' else   -- 9
-	"00000000000"& JOYST1  when falling_edge(clock)          -- spi status
+	"000"&JOYST2&"000"& JOYST1  when falling_edge(clock)          -- spi status
 								and RW='1' AND AD="000000000010110" and IO='1' and AS='0' else   -- 22
 	count  when falling_edge(clock)          -- spi status
 								and RW='1' AND AD="000000000010100" and IO='1' and AS='0' else   -- 20
@@ -472,7 +452,7 @@ architecture rtl of single_port_rom is
 
 	-- Build a 2-D array type for the RoM
 	subtype word_t is std_logic_vector(15 downto 0);
-	type memory_t is array(2047+1024 downto 0) of word_t;
+	type memory_t is array(2047+1024+256 downto 0) of word_t;
 
 	function init_rom
 		return memory_t is 
@@ -489,10 +469,10 @@ signal rom : memory_t; --:= init_rom;
 	
 begin
 	process(clk,addr)
-	variable add: natural range 0 to 2047+1024:=0;
+	variable add: natural range 0 to 2047+1024+256:=0;
 	begin
 		if(Clk'EVENT AND Clk = '1' ) then
-			if addr<2048+1024 then
+			if addr<2048+1024+256 then
 				--add:=addr;
 				q <= rom(addr);
 			end if;
