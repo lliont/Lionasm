@@ -163,7 +163,7 @@ FRFT2:
 	MOV	A1,(FSTFAT)
 	ADD	A1,A4
 	MOV	A2,SDCBUF2
-	INT	4              ; Save FAT
+	INT	4    ; Save FAT
 FRFT5: 
 	MOV	A0,A3
 	POP	A4
@@ -176,7 +176,7 @@ FRFT5:
 SVDATA:
 	MOV	A3,A0
 SVD1:	MOV	A4,A3
-	SRL	A4,8            ; divide 256
+	SRL	A4,8    ; divide 256
 	MOV	A1,(FSTCLST)
 	ADD	A1,A3
 	SUBI	A1,2
@@ -188,10 +188,10 @@ SVD1:	MOV	A4,A3
 	ADD	A6,512
 	SUB	A7,512
 	JSR	FREEFAT
-	CMPI	A0,0         ; Is it full
+	CMPI	A0,0     ; Is it full
 	JZ	SVDE
 
-	CMPHL A0,A4        ; same fat offset
+	CMPHL A0,A4    ; same fat offset
 	JZ	NORELD
 
 	PUSH	A0
@@ -1172,7 +1172,7 @@ SCROLL:	STI
 		SETX		5759       ;7499	
 		MOV		A0,VBASE
 		MOV		A1,49536   ; 49152+384
-SC1:		MOV		(A0),(A1)  ;  Only byte wide access to video ram
+SC1:		MOV		(A0),(A1)  ;  word access to video ram
 		ADDI		A0,2
 		ADDI		A1,2
 		JMPX		SC1
@@ -1301,7 +1301,7 @@ LP10:		POPX
 		RETI
 
 ;--------------------------------------------------------------
-; Multiplcation A1*A2 res in A2A1, a0<>0 if 16bit overflow  
+; Multiplcation A1*A2 res in A2A1,
 
 MULT:		STI
 		PUSH		A3
@@ -1331,12 +1331,12 @@ MULEND:	POP		A3
 DIV:		STI
 		PUSHX
 		PUSH		A3
-		PUSH		A4
 		MOV		A3,A1
 		MOV		A1,32767
 		CMPI		A3,0
 		JZ		DIVE
 		MOVI		A1,0
+		MOV		A0,A1
 		XOR		A0,A2
 		JP		DIV1     ; Check result sign
 		MOVI		A1,1
@@ -1347,47 +1347,38 @@ DIV1:		PUSH		A1
 DIV2:		BTST		A3,15   ; check if neg and convert 
 		JZ		DIV3
 		NEG		A3
-DIV3:		MOV		A1,A2
-		CMP		A3,A1
-		JBE		DIV4
-		MOV		A0,A1  ; id divider > divident res=0 rem=divident
+DIV3:		CMP		A3,A2
+		MOV		A0,A2  ; id divider > divident res=0 rem=divident
+		JBE		DIV4		
 		MOVI		A1,0
 		JMP		DIV14
-DIV4:		MOV		A0,A2 ; main algorithm
-		MOVI		A1,0
+DIV4:		MOVI		A1,0   ; main algorithm
 DIV5:		BTST		A0,14  ; left align
 		JNZ		DIV6
 		INC		A1
 		SLL		A0,1
 		JMP		DIV5
 DIV6:		PUSH 		A1     ; store no of shifts
-		MOVI		A4,0
+		MOVI		A2,0
 		MOV		A1,A3
 DIV7:		BTST		A1,14  ; left align 
 		JNZ		DIV12
 		SLL		A1,1
-		INC		A4
+		INC		A2
 		JMP		DIV7
-DIV12:	MOV		A2,A0  
-		MOV		A3,A1  
-		MOV		A1,A4
-		POP		A0  ; Get no of shifts
-		MOV		A4,A0
-		SUB		A1,A0
-		PUSH		A1   ; shifts differance
-		MOV		A0,A2  
-		MOV		A1,A3  
-DIV10:	OR		A4,A4
-		JZ		DIV9
-		SRL		A1,1
+DIV12:	MOV		A3,A1  
+		MOV		A1,A2
+		POP		A2  ; Get no of shifts
+		SUB		A1,A2
+		CMPI		A2,1
+		JB		DIV9
+		DEC		A2  
+		SETX		A2 
+DIV10:	SRL		A3,1  ; align back
 		SRL		A0,1
-		DEC		A4
-		JMP		DIV10
-DIV9:		MOV		A2,A0  ; new dividend = remainder
-		MOV		A3,A1  ; new divisor
-		POP		A1
-		SETX		A1
-		MOVI		A1,0       ; quotient
+		JMPX		DIV10
+DIV9:		SETX		A1
+		MOVI		A1,0     ; quotient
 DIV11:	SLL		A1,1       
 		CMP		A0,A3  ; compare remainder with divisor
 		JC		DIV8		
@@ -1399,8 +1390,7 @@ DIV14:	POP		A3
 		OR		A3,A3
 		JZ		DIVE
 		NEG		A1
-DIVE:		POP		A4
-		POP		A3
+DIVE:		POP		A3
 		POPX
 		RETI
 
@@ -1410,7 +1400,6 @@ DIVE:		POP		A4
 UDIV:		STI
 		PUSHX
 		PUSH		A3
-		PUSH		A4
 		MOV		A3,A1
 		MOV		A1,65535
 		CMPI		A3,0
@@ -1429,31 +1418,25 @@ UDIV5:	BTST		A0,15  ; left align
 		SLL		A0,1
 		JMP		UDIV5
 UDIV6:	PUSH 		A1     ; store no of shifts
-		MOVI		A4,0
+		MOVI		A2,0
 		MOV		A1,A3
 UDIV7:	BTST		A1,15  ; left align 
 		JNZ		UDIV12
 		SLL		A1,1
-		INC		A4
+		INC		A2
 		JMP		UDIV7
-UDIV12:	MOV		A2,A0  
-		MOV		A3,A1  
-		MOV		A1,A4
-		POP		A0  ; Get no of shifts
-		MOV		A4,A0
-		SUB		A1,A0
-		PUSH		A1   ; shifts differance
-		MOV		A0,A2  
-		MOV		A1,A3  
-UDIV10:	OR		A4,A4
+UDIV12:	MOV		A3,A1  
+		MOV		A1,A2
+		POP		A2  ; Get no of shifts
+		SUB		A1,A2
+		CMPI		A2,0
 		JZ		UDIV9
-		SRL		A1,1
+		DEC		A2
+		SETX		A2
+UDIV10:	SRL		A3,1
 		SRL		A0,1
-		DEC		A4
-		JMP		UDIV10
+		JMPX		UDIV10
 UDIV9:	MOV		A2,A0  ; new dividend = remainder
-		MOV		A3,A1  ; new divisor
-		POP		A1
 		SETX		A1
 		MOVI		A1,0       ; quotient
 UDIV11:	SLL		A1,1       
@@ -1463,8 +1446,7 @@ UDIV11:	SLL		A1,1
 		SUB		A0,A3
 UDIV8:	SRL		A3,1
 		JMPX		UDIV11
-UDIVE:	POP		A4
-		POP		A3
+UDIVE:	POP		A3
 		POPX
 		RETI
 

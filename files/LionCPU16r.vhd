@@ -56,7 +56,7 @@ PORT (Ai : IN STD_logic_vector(15 downto 0);
 END COMPONENT;
 
 
-procedure set_reg(i:Std_logic_vector(2 downto 0); v: in std_logic_vector; b: std_Logic:='0'; f:std_logic:='1') is
+procedure set_reg(i:Std_logic_vector(2 downto 0); v: std_logic_vector; b: std_Logic:='0'; f:std_logic:='1') is
 begin
 	R<=i; Ai<=v; Wen<='1';	
 	if b='1' then
@@ -282,7 +282,7 @@ IF Reset = '1' THEN
 							SR(1) <=  '0';
 						else
 							if M(31 downto 16)=ZERO16 then	
-								SR(1) <=  '0'; --neg & zero & overflow & carry
+								SR(1) <= '0'; --neg & zero & overflow & carry
 							else
 								SR(1)<='1';
 							end if;
@@ -292,6 +292,7 @@ IF Reset = '1' THEN
 					end if;
 					tmp:=M(15 downto 0); set_reg(r1,tmp,'0','0'); 
 					rest2:=fetch or bwb='1';
+				when 3 =>
 				when others =>
 					tmp:=M(31 downto 16); set_reg(r2,tmp,'0','0');
 					rest2:=true;
@@ -322,7 +323,7 @@ IF Reset = '1' THEN
 				case TT is
 				when 0 =>
 					half<=bwb;
-					if fetch then X1<= X; end if;
+					X1<=X; --if fetch then X1<= X; end if;
 					sub<='1'; 
 				when 1  =>
 				when others =>
@@ -407,6 +408,7 @@ IF Reset = '1' THEN
 				when 0 =>
 					tmp:=X1;
 					set_reg(r2,tmp,'0','0');
+				when 1 =>
 				when others =>
 					tmp:=Y1;
 					set_reg(r1,tmp,'0','0');

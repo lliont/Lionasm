@@ -1,6 +1,24 @@
 -- Color Video Controller for Lion Computer
 -- Theodoulos Liontakis (C) 2016 - 2017
 
+-- 640x480 @60 Hz
+-- Vertical refresh	31.46875 kHz
+-- Pixel freq.	25.175 MHz  (25.00 Mhz)
+
+--Scanline part	Pixels	Time [µs]
+--Visible area	640	25.422045680238
+--Front porch	16	   0.63555114200596
+--Sync pulse	96		3.8133068520357
+--Back porch	48		1.9066534260179
+--Whole line	800	31.777557100298
+
+--Frame part	Lines	Time [ms]
+--Visible area	480	15.253227408143
+--Front porch	10		0.31777557100298
+--Sync pulse	2		0.063555114200596
+--Back porch	33		1.0486593843098
+--Whole frame	525	16.683217477656
+
 Library ieee;
 USE ieee.std_logic_1164.all;
 USE ieee.std_logic_unsigned.all ;
@@ -431,6 +449,53 @@ process (clk,reset,wr)
 		end if;
 	end process ;
 end;
+
+-------------------------------------------------------
+-- Design Name : lfsr
+-- File Name   : lfsr.vhd
+-- Function    : Linear feedback shift register
+-- Coder       : Deepak Kumar Tala (Verilog)
+-- Translator  : Alexander H Pham (VHDL)
+-- adapted to 1bit stream, 18bit counter, by Theodoulos Liontakis
+-------------------------------------------------------
+library ieee;
+    use ieee.std_logic_1164.all;
+
+entity lfsr is
+  port (
+    cout   :out std_logic;		-- Output of the counter
+    clk    :in  std_logic;    -- Input rlock
+    reset  :in  std_logic     -- Input reset
+  );
+end entity;
+
+architecture rtl of lfsr is
+    signal count           :std_logic_vector (17 downto 0);
+    signal linear_feedback :std_logic;
+    
+begin
+    linear_feedback <= not(count(17) xor count(6));
+
+	 process (clk, reset) 
+	 variable cnt: natural range 0 to 65535;
+	 begin
+				
+		  if (reset = '1') then
+				count <= (others=>'0'); cnt:=0;
+		  elsif (rising_edge(clk)) then
+				cnt:=cnt+1;
+				if cnt=8000 then
+					count <= ( count(16) & count(15)&
+								count(14) & count(13) & count(12) & count(11)&
+								count(10) & count(9) & count(8) & count(7)&
+								count(6) & count(5) & count(4) & count(3) 
+							  & count(2) & count(1) & count(0) & linear_feedback);
+					cnt:=0;
+				end if;
+		  end if;
+	 end process;
+	cout <= count(17);
+end architecture;
 
 --------------------------------------------------------------------
 -- Composite Video Controller for Lion Computer

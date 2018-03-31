@@ -21,7 +21,7 @@ entity LionSystem is
 		Tx  : OUT std_logic ;
 		Rx, Rx2  : IN std_logic ;
 		Mdecod1: OUT std_logic;
-		AUDIO: OUT std_logic;
+		AUDIO,AUDIOB: OUT std_logic;
 		SCLK,MOSI,SPICS: OUT std_logic;
 		MISO: IN std_logic;
 		LED: OUT std_logic_vector(7 downto 0);
@@ -44,6 +44,15 @@ Component LionCPU16 is
 		IACK: OUT std_logic;
 		IA : OUT std_logic_vector(1 downto 0)
 	);
+end Component;
+
+
+Component lfsr is
+  port (
+    cout   :out std_logic;-- Output of the counter
+    clk    :in  std_logic;                    -- Input rlock
+    reset  :in  std_logic                     -- Input reset
+  );
 end Component;
 
 Component VideoRGB is
@@ -168,11 +177,13 @@ Signal Ii : std_logic_vector(1 downto 0);
 Signal qi2 : std_logic_vector(7 downto 0);
 Signal ad1 :  natural range 0 to 16383;
 Signal ad2 :  natural range 0 to 16383;
-Signal sr,sw,sdready,sready,sr2,sdready2, vs, IAC: std_Logic;
+Signal sr,sw,sdready,sready,sr2,sdready2, vs, IAC, noise: std_Logic;
+Signal nen, ne: std_Logic:='0';
 Signal sdi,sdo,sdo2 : std_logic_vector (7 downto 0);
 SIGNAL addr,addr1 : natural range 0 to 65535;
 SIGNAL Spi_in,Spi_out: STD_LOGIC_VECTOR (7 downto 0);
 Signal Spi_w,spi_rdy, play, play2, AUDIO1 ,AUDIO2, spb, sdb, adxy : std_logic;
+constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 
 begin
 CPU: LionCPU16 
@@ -196,6 +207,8 @@ IROM: single_port_rom
 	PORT MAP ( clock, addr1, QRO ) ;
 MSPI: SPI 
 	PORT MAP ( SCLK,MOSI,MISO,clock,reset,spi_w,spi_rdy,spi_in,spi_out);
+NOIZ:lfsr
+	PORT MAP ( noise, clock, reset);
 
 -- data out 
 HOLDAo<=HOLDA;
@@ -208,14 +221,16 @@ ADo<= AD when AS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 addr<=to_integer(unsigned(AD)) when AS='0';
 addr1<=to_integer(unsigned(AD(15 downto 1))) when AS='0';
 ad2<=to_integer(unsigned(AD(13 downto 1))) when AS='0';
-AUDIO<= AUDIO1 OR AUDIO2;
+ne<='1' when (nen='1') and (aq/=ZERO16) else '0';
+AUDIO<= AUDIO1 OR (NOISE and play and ne);
+audiob<=audio2;
 vs<=VSYN;
 IACK<=IAC;
 -- Video Ram 
 process (clock,reset,AS,DS,RW)
 begin 
 if reset='1' then
-	w1<='0'; w2<='0';
+	w1<='0'; w2<='0'; 
 elsif clock'EVENT AND clock = '1' AND AS='0' and DS='0' then 
 	if AD(15 downto 14)="11" then --61440
 		w1<=not RW;
@@ -241,8 +256,9 @@ sdb<=Do(0) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_
 adxy<=Do(2) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 --spb<=not spb when rising_edge(vs) ;
  --Sound IO decoding 
-aq<=Do when IO='1' and AD="0000000000001000" and falling_edge(clock);
-aq2<=Do when IO='1' and AD="0000000000001010" and falling_edge(clock);
+aq<=Do when IO='1' and AD="0000000000001000" and falling_edge(clock); -- port 8
+aq2<=Do when IO='1' and AD="0000000000001010" and falling_edge(clock); -- port 10
+nen<=Do(0) when IO='1' and AD="0000000000001011" and falling_edge(clock);  -- noise enable
 Waud<='0' when AD="0000000000001000" and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
 Waud2<='0' when AD="0000000000001010" and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
 
@@ -261,6 +277,8 @@ di<="00000000"&sdo when falling_edge(clock) AND AD="0000000000000100" and IO='1'
 								and RW='1' AND AD="000000000001001" and IO='1' and AS='0' else   -- 9
 	"000"&JOYST2&"000"& JOYST1  when falling_edge(clock)          -- spi status
 								and RW='1' AND AD="000000000010110" and IO='1' and AS='0' else   -- 22
+	"00000000000000"&Vsyn&hsyn when falling_edge(clock)          -- spi status
+								and RW='1' AND AD="000000000010101" and IO='1' and AS='0' else   -- 21
 	count  when falling_edge(clock)          -- spi status
 								and RW='1' AND AD="000000000010100" and IO='1' and AS='0' else   -- 20
 	qro when addr<8192 and RW='1' and IO='0' and AS='0' and falling_edge(clock) else  --rom
@@ -274,9 +292,9 @@ Mdecod1 <= '0' when (AD(15 downto 14)="10" or AD(15 downto 14)="01") and AS='0' 
 --Int_in <= '1' whe n sdready='1' or Int='1' else '0'; 
 --Ii <= "11" when sdready='1' else I;
 
---Int_in <= (Int or VINT) when rising_edge(clock) and reset='0' else '0' when rising_edge(clock) and reset='1';
-Int_in <= (Int or Inter) when rising_edge(clock) and reset='0' else '0' when rising_edge(clock) and reset='1';
-Ii<="00" when Inter='1' and rising_edge(clock) else 
+Int_in <= (Int or VINT) when rising_edge(clock) and reset='0' else '0' when rising_edge(clock) and reset='1';
+--Int_in <= (Int or Inter) when rising_edge(clock) and reset='0' else '0' when rising_edge(clock) and reset='1';
+Ii<="00" when VINT='1' and rising_edge(clock) else 
 		Ii	when int='1' and  rising_edge(clock) else
 		"00" when rising_edge(clock);
 		
