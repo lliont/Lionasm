@@ -218,9 +218,9 @@ begin
 				if lines<2 then
 					VSYN<='0';
 					if pixel<2 then 
-						VSINT<='1';
-					else	
 						VSINT<='0';
+					else	
+						VSINT<='1';
 					end if;
 				else
 					VSYN<='1';
@@ -344,7 +344,7 @@ f<=Q when wr='0' ;
 process (clk,reset,wr)	
 	begin
 		if (reset='1') then
-		   Aud<='0'; c3<=0;  inter<='0'; i<=0; count<=(others=>'0'); play<='0'; dur<=0;
+		   Aud<='0'; c3<=0;  inter<='1'; i<=0; count<=(others=>'0'); play<='0'; dur<=0;
 		elsif  Clk'EVENT AND Clk = '1' then
 			if wr='0' then 
 				CASE f(15 downto 14) is
@@ -374,10 +374,10 @@ process (clk,reset,wr)
 					end if;
 					play<='1';
 				end if;
-				if i=99 then inter<='1'; i<=0; count<=count+'1'; else i<=i+1; end if;
+				if i=99 then inter<='0'; i<=0; count<=count+'1'; else i<=i+1; end if;
 			else
 				if IAC='1' or c1="0000001000" then
-					inter<='0';
+					inter<='1';
 				end if;
 			end if;
 		end if;

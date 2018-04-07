@@ -8,10 +8,10 @@ XCC		EQU	64   ; Horizontal Lines
 YCC		EQU	31     ; Vertical Rows
 
 	  	ORG 		0    ; Rom 
-INT0_3      DA		HINT   ; hardware interrupts
+INT0_3      DA		INTEXIT  ; hardware interrupts
 		DA          INTEXIT
 		DA		INTEXIT
-		DA		INTEXIT  
+		DA		HINT 
 INT4        DA        	INTR4     ; interrupt vector 4 system calls
 INT5 		DA		INTR5	    ; fixed point routines
 INT6_14     DW          32,32,32,32,32,32,32,32,32

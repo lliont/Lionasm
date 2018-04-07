@@ -21,7 +21,7 @@ entity LionSystem is
 		Tx  : OUT std_logic ;
 		Rx, Rx2  : IN std_logic ;
 		Mdecod1: OUT std_logic;
-		AUDIO,AUDIOB: OUT std_logic;
+		AUDIO,AUDIOB,NOIS: OUT std_logic;
 		SCLK,MOSI,SPICS: OUT std_logic;
 		MISO: IN std_logic;
 		LED: OUT std_logic_vector(7 downto 0);
@@ -221,8 +221,9 @@ ADo<= AD when AS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 addr<=to_integer(unsigned(AD)) when AS='0';
 addr1<=to_integer(unsigned(AD(15 downto 1))) when AS='0';
 ad2<=to_integer(unsigned(AD(13 downto 1))) when AS='0';
-ne<='1' when (nen='1') and (aq/=ZERO16) else '0';
-AUDIO<= AUDIO1 OR (NOISE and play and ne);
+ne<='1' when (nen='1') and (aq(11 downto 0)/="000000000000") else '0';
+AUDIO<= AUDIO1 ;
+NOIS<=NOISE and play and ne;
 audiob<=audio2;
 vs<=VSYN;
 IACK<=IAC;
@@ -292,11 +293,11 @@ Mdecod1 <= '0' when (AD(15 downto 14)="10" or AD(15 downto 14)="01") and AS='0' 
 --Int_in <= '1' whe n sdready='1' or Int='1' else '0'; 
 --Ii <= "11" when sdready='1' else I;
 
-Int_in <= (Int or VINT) when rising_edge(clock) and reset='0' else '0' when rising_edge(clock) and reset='1';
+Int_in <= (Int and VINT) when rising_edge(clock) and reset='0' else '1' when rising_edge(clock) and reset='1';
 --Int_in <= (Int or Inter) when rising_edge(clock) and reset='0' else '0' when rising_edge(clock) and reset='1';
-Ii<="00" when VINT='1' and rising_edge(clock) else 
-		Ii	when int='1' and  rising_edge(clock) else
-		"00" when rising_edge(clock);
+Ii<="11" when VINT='0' and rising_edge(clock) else 
+		Ii	when int='0' and  rising_edge(clock) else
+		"11" when rising_edge(clock);
 		
 --LED(7)<=Inter;
 --LED(6)<=INT;

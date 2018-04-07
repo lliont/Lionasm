@@ -100,11 +100,11 @@ IF Reset = '1' THEN
 		AD <= (OTHERS => '0'); IR<=(OTHERS=>'0');	 
 		Wen<='0'; rhalf<='1'; IACK<='0';
 		FF<="000"; TT<=0; add<='0'; sub<='0';  cin<='0'; rdy<='0'; 
-	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='1' AND FF="000" AND TT=0  then
+	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='0' AND FF="000" AND TT=0  then
 		HOLDA<='1'; Wen<='0';
-	ELSIF Clock'EVENT AND Clock = '1' AND RD='1' THEN 
+	ELSIF Clock'EVENT AND Clock = '1' AND RD='0' THEN 
 	   rdy<='1'; Wen<='0';
-	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='0' and INT='1' AND FF="000" AND TT=0 and SR(7)='0' THEN   -- Interrupts
+	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='1' and INT='0' AND FF="000" AND TT=0 and SR(7)='0' THEN   -- Interrupts
 		IR<="100000100000"&I&"00";
 		FF<="110"; TT<=0; Wen<='0';
 		IA<=I; IACK<='1';
