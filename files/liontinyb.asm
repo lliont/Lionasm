@@ -24,8 +24,16 @@ SDFLAG	EQU	$240c  ;DS	2    SD card initialized by rom=256
 COUNTER     EQU	$240e  ;DS	2    General use counter increased by int 0 
 FRAC1		EQU	$2410  ;DS	2    for fixed point multiplication-division
 FRAC2		EQU  	$2412  ;DS	2               >>
+RHINT0	EQU	$2414  ; Hardware interrupt 0
+RHINT1	EQU	$2418  ; Hardware interrupt 1
+RHINT2	EQU	$241c
+RINT6		EQU	$2420
+RINT7		EQU	$2424
+RINT8		EQU	$2428
+RINT9		EQU	$242c
+RINT15	EQU	$2430
 
-ORG     	$2414  ;Ram
+ORG     	$2434  ;Ram
 
 ; RAM program ENTRY POINT
 ; A7 Reserved for decimal (was num2), in A6 fraction result of TSTNUM
@@ -396,6 +404,12 @@ TAB4	TEXT	"KE"
 	TEXT	"IN"
 	DB	'T'+128
 	DA	TOINT
+	TEXT	"JOY"
+	DB	'1'+128
+	DA	JOYST1
+	TEXT	"JOY"
+	DB	'2'+128
+	DA	JOYST2
 	TEXT	"SI"
 	DB	'N'+128
 	DA	SIN
@@ -1749,6 +1763,19 @@ PEEK:
 	MOV   (UINT),0
 	MOV.B	A1,(A1)
 	MOVHL	A1,0
+	RET
+
+JOYST1:
+	IN	A1,22
+	NOT	A1
+	AND	A1,31
+	RET
+
+JOYST2:
+	IN	A1,22
+	SWAP	A1
+	NOT	A1
+	AND	A1,31
 	RET
 
 TIMER:

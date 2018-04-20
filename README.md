@@ -9,6 +9,6 @@ Lion CPU and Lion Computer, which is a homebrew 16-bit computer based on this cp
 Project Page:  
 http://users.sch.gr/tliontakis/index.php/my-projects/13-vhdl-cpu
 
-This free software can be used and distributed under coditions of the GNU License.
+This free software can be used and distributed under the coditions of the GNU License.
 
-The files folder also contains the Lion cpu-computer project, (VHDL and assembly source files). 
+The files folder also contains the Lion cpu-computer project, (VHDL, schematic and assembly source files). 

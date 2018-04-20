@@ -8,14 +8,22 @@ XCC		EQU	64   ; Horizontal Lines
 YCC		EQU	31     ; Vertical Rows
 
 	  	ORG 		0    ; Rom 
-INT0_3      DA		INTEXIT  ; hardware interrupts
-		DA          INTEXIT
-		DA		INTEXIT
-		DA		HINT 
+INT0_3      DA		RHINT0 ; hardware interrupts (ram)
+		DA          RHINT1 ; (ram)
+		DA		RHINT2 ; (ram)
+		DA		HINT   ; (rom)
 INT4        DA        	INTR4     ; interrupt vector 4 system calls
-INT5 		DA		INTR5	    ; fixed point routines
-INT6_14     DW          32,32,32,32,32,32,32,32,32
-INT15		DA		INTR15   ; trace interrupt
+INT5 		DA		INTR5	    ; fixed point & fat routines
+INT6        DA          RINT6     ; address in ram
+INT7		DA		RINT7	    
+INT8        DA          RINT8
+INT9		DA		RINT9
+INT10		DA          INTEXIT
+INT11		DA          INTEXIT
+INT12		DA          INTEXIT
+INT13		DA          INTEXIT
+INT14		DA          INTEXIT
+INT15		DA		RINT15   ; trace interrupt in ram	
 
 BOOTC:	MOV		(SDFLAG),0
 		MOV		A1,49148
@@ -116,7 +124,7 @@ INT5T6	DA		UDIV     ; Unsigned int Div A2 by A1 res in A1,A0
 
 ;Hardware interrupt
 HINT:		INC		(COUNTER)
-INTR15:	RETI        ; trace interrupt
+		RETI        ; trace interrupt
 		
 INTR4:	SLL		A0,1
 		ADD		A0,INT4T0
@@ -1516,9 +1524,17 @@ FATROOT	DS	2
 FSTCLST	DS	2
 FSTFAT	DS	2
 SDFLAG	DS	2
-COUNTER     DS	2 ; Counter for general use increased by hardware int 0 
+COUNTER     DS	2 ; Counter for general use increased by VSYNC INT 0 
 FRAC1		DS	2 ; for fixed point multiplication - division
 FRAC2		DS	2 ;
+RHINT0	DS	4 ; RAM redirection of interrupts
+RHINT1	DS	4 ; to be filled with jmp to service routine instructions
+RHINT2	DS	4		
+RINT6		DS	4
+RINT7		DS	4
+RINT8		DS	4
+RINT9		DS	4
+RINT15	DS	4 ; TRACE INT service routine
 
 START:	
 
