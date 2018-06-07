@@ -1,0 +1,4089 @@
+;  Lion System Rom
+;  (C) 2015-2018 Theodoulos Liontakis 
+
+VBASE		EQU		49152
+XDIM2		EQU		384    ; XDIM Screen Horizontal Dim. 
+YDIM		EQU		248    ; Screen Vertical Dimention
+XCC		EQU	64   ; Horizontal Lines
+YCC		EQU	31     ; Vertical Rows
+
+	  	ORG 		0    ; Rom 
+INT0_3      DA		RHINT0 ; hardware interrupts (ram)
+		DA          RHINT1 ; (ram)
+		DA		RHINT2 ; (ram)
+		DA		HINT   ; (rom)
+INT4        DA        	INTR4     ; interrupt vector 4 system calls
+INT5 		DA		INTR5	    ; fixed point & fat routines
+INT6        DA          RINT6     ; address in ram
+INT7		DA		RINT7	    
+INT8        DA          RINT8
+INT9		DA		RINT9
+INT10		DA          INTEXIT
+INT11		DA          INTEXIT
+INT12		DA          INTEXIT
+INT13		DA          INTEXIT
+INT14		DA          INTEXIT
+INT15		DA		RINT15   ; trace interrupt in ram	
+
+BOOTC:	MOV		(SDFLAG),0
+		MOV		A1,49148
+		SETSP		A1
+		SETX		1983       ; Set default color 
+		MOV		A1,61152 ; was 65144
+COLINI:	MOV.B		(A1),57
+		INC		A1
+		JMPX		COLINI
+		MOV		A2,32767
+		SETX		32766    ;  memory test
+		MOV		A1,16384
+MEMTST:     MOV.B		A2,(A1)
+		MOV.B		(A1),$FF
+		MOV.B		A0,(A1)
+		CMP.B		A0,$FF
+		MOV.B		(A1),A2
+		JZ		MEMOK
+		PUSH		A1
+		MOVI		A0,5
+		MOV		A1,MEMNOTOK
+		MOVI		A2,4
+		INT		4
+		POP		A1
+		JMP		MEMNOK
+MEMOK:	INC		A1
+		JMPX		MEMTST
+MEMNOK:	SETX		80
+SDRETR:	MOVI		A0,11        ; sd card init
+		INT		4
+		CMP		A0,256
+		JZ		SDOKO
+		JMPX		SDRETR
+		JMP		SDNOT
+SDOKO:	MOVI		A0,5        ; sd card ok
+		MOV		A1,SDOK
+		MOV		A2,$0105
+		INT		4            ; print ok
+		MOVI		A0,3
+		INT		5            ; mount volume, get params
+		CMP		(SDFLAG),256
+		JNZ		SDNOT
+		MOV		A4,BOOTBIN
+		JSR		FINDFN        ; Find BOOT.BIN
+		CMPI		A0,0
+		JZ		SDNOT
+		PUSH		A0
+		MOV		A0,A1
+		JSR		PRNHEX
+		MOVI		A0,5           
+		MOV		A1,SDBOK
+		MOV		A2,$0106
+		INT		4	         ; print 
+		POP		A0
+		MOV		A3,START
+		MOV		A4,A0
+		JSR		FLOAD   ; Load boot file
+		STI	
+		JMP		START  ; address at RAM
+SDNOT:
+		MOVI		A0,5
+		MOV		A1,SDNOTOK
+		MOVI		A2,5
+		INT		4
+		JMP		START
+
+
+;   End of boot code
+;--------------------------------------------------
+
+;  INT4 FUNCTION TABLE  function in a0
+INT4T0	DA		SERIN    ; Serial port in A1  A0(0)=1 
+INT4T1	DA		SEROUT   ; Serial port out A1  
+INT4T2	DA		PLOT     ; at X=A1,Y=A2 A4=1 set A4=0 clear
+INT4T3	DA		CLRSCR   ; CLEAR SCREEN
+INT4T4	DA		PUTC     ; Print char A1 at x A2.H  y A2.L
+INT4T5	DA		PSTR     ; Print zero & cr terminated string
+INT4T6	DA		SCROLL   ; Scrolls screen 1 char (8 points) up
+INT4T7	DA		SKEYBIN  ; Serial Keyboard port in A1 A0(2)=1
+INT4T8	DA		MULT     ; Multiplcation A1*A2 res in A2A1, a0<>0 overflow 
+INT4T9	DA		DIV      ; integer Div A2 by A1 res in A1,A0
+INT4T10	DA		KEYB     ; converts to ascii the codes from serial keyboard
+INT4T11	DA		SPI_INIT ; initialize spi sd card
+INT4T12	DA		SPISEND  ; spi send/rec byt in A1 mode A2 1=CS low 3=CS h res a0
+INT4T13	DA		READSEC  ; read in buffer at A2, n in A1
+INT4T14	DA		WRITESEC ; WRITE BUFFER at A2 TO A1 BLOCK
+INT4T15	DA		PIMG     ; plot 8xA4 image from (A5) to A1,A2
+
+;  INT5 FUNCTION TABLE  function in a0
+INT5T0	DA		FMULT	   ; Fixed point multiply A1*A2
+INT5T1	DA		FDIV	   ; Fixed point divide A2.(FRAC2)/A1.(FRAC1)
+INT5T2	DA		FILELD   ; Load file A4 points to filename, at A3
+INT5T3	DA		VMOUNT   ; Load First Volume, return A0=fat root 1st cluster
+INT5T4	DA		FILEDEL  ; Delete file A4 points to filename
+INT5T5	DA		FILESAV  ; Save memory range to file A4 points to filename
+INT5T6	DA		UDIV     ; Unsigned int Div A2 by A1 res in A1,A0
+
+
+;Hardware interrupt
+HINT:		INC		(COUNTER)
+		RETI        ; trace interrupt
+		
+INTR4:	SLL		A0,1
+		ADD		A0,INT4T0
+		JMP		(A0)
+
+INTR5:	SLL		A0,1
+		ADD		A0,INT5T0
+		JMP		(A0)
+
+;---------INT5 A0=5 Save -----------------------------
+; A4 filename, a6 address, a7 size
+;-------------------------------------------
+
+FREEFAT:     ;find next free cluster in a0 and mark it
+	PUSH	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A4
+	MOVI	A4,0
+	MOVI	A3,0
+FRFT1:
+	MOVI	A0,13
+	MOV	A1,(FSTFAT)
+	ADD	A1,A4
+	MOV	A2,SDCBUF2
+	INT	4              ; Load FAT
+FRFT3:	
+	CMP	(A2),0
+	JZ	FRFT2
+	ADDI	A2,2
+	INC	A3
+	CMPI.B A3,0
+	JNZ	FRFT3
+	INC	A4
+	CMP	A4,238
+	JA	FRFT4
+	JMP	FRFT1
+FRFT4: 
+	MOVI	A3,0
+	JMP	FRFT5	
+FRFT2: 
+	MOV	(A2),$F0F0 
+	MOVI	A0,14
+	MOV	A1,(FSTFAT)
+	ADD	A1,A4
+	MOV	A2,SDCBUF2
+	INT	4    ; Save FAT
+FRFT5: 
+	MOV	A0,A3
+	POP	A4
+	POP	A3
+	POP	A2
+	POP	A1
+	RET
+
+;---------------------------
+SVDATA:
+	MOV	A3,A0
+SVD1:	MOV	A4,A3
+	SRL	A4,8    ; divide 256
+	MOV	A1,(FSTCLST)
+	ADD	A1,A3
+	SUBI	A1,2
+	MOVI	A0,14
+	MOV	A2,A6
+	INT	4
+	CMP	A7,512
+	JBE	SVD2
+	ADD	A6,512
+	SUB	A7,512
+	JSR	FREEFAT
+	CMPI	A0,0     ; Is it full
+	JZ	SVDE
+
+	CMPHL A0,A4    ; same fat offset
+	JZ	NORELD
+
+	PUSH	A0
+	MOV	A1,(FSTFAT)
+	ADD	A1,A4
+	MOVI	A0,13
+	MOV	A2,SDCBUF2
+	INT	4
+	POP	A0
+NORELD:
+	AND	A3,$00FF
+	SLL	A3,1
+	ADD	A3,SDCBUF2   ;store next cluster
+	SWAP	A0
+	MOV	(A3),A0
+	SWAP	A0
+	PUSH	A0
+
+	MOV	A2,SDCBUF2
+	MOV	A1,(FSTFAT)
+	ADD	A1,A4
+	MOVI	A0,14
+	INT	4
+
+	POP	A3
+	JMP	SVD1
+SVD2:	
+	MOV	A1,(FSTFAT)
+	ADD	A1,A4
+	MOVI	A0,13
+	MOV	A2,SDCBUF2
+	INT	4
+
+	AND	A3,$00FF
+	SLL	A3,1
+	ADD	A3,SDCBUF2   ;store last cluster
+	MOV	(A3),$FFFF
+	MOV	A2,SDCBUF2
+	MOV	A1,(FSTFAT)
+	ADD	A1,A4
+	MOVI	A0,14
+	INT	4         ;write $FFFF and exit
+	MOV	A0,256
+SVDE:
+	RET
+;----------------------------
+
+FILESAV:
+	PUSHX
+	PUSH	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A4
+	PUSH	A5	
+	PUSH	A6
+	PUSH	A7
+	JSR	FINDFN
+	CMPI	A0,0
+	JZ	FSV7
+	MOVI	A0,0
+	JMP	FSVE
+FSV7:	MOVI	A5,0
+
+FSV4:	MOV	A1,(FATROOT)
+	ADD	A1,A5
+	MOVI	A0,13
+	MOV	A2,SDCBUF1
+	INT	4              ; Load Root Folder 1st sector
+	MOVI	A0,0
+	MOVI	A3,0
+FSV1:	
+	CMP.B (A2),0
+	JZ	FSV2
+	CMP.B	(A2),$E5
+	JNZ	FSV3
+FSV2:	                 ; Found free slot
+	SETX	10
+FSV5:	MOV	(A2),(A4)
+	INC	A2
+	INC	A4
+	JMPX	FSV5
+	MOV.B	(A2),32    ;set archive bit
+	ADD	A2,17
+	SWAP	A7	     ;store FILE SIZE
+	MOV	(A2),A7
+	SWAP	A7     
+	ADDI	A2,2
+	MOV	(A2),0  
+	SUBI	A2,4
+	JSR	FREEFAT     ; free
+	CMPI	A0,0
+	JZ	FSVE
+	SWAP	A0	
+	MOV	(A2),A0
+	SWAP	A0
+	PUSH	A0
+	MOVI	A0,14
+	MOV	A1,(FATROOT)
+	ADD	A1,A5
+	MOV	A2,SDCBUF1
+	INT	4         ; save header
+	POP	A0
+	JSR	SVDATA
+	JMP	FSVE
+FSV3:	
+	ADD	A2,32
+	ADD	A3,32
+	CMP	A3,512
+	JNZ	FSV1  ; search same sector
+	INC	A5
+	CMP	A5,32  ;if not last root dir sector 
+	JNZ	FSV4   ;load next sector and continue search
+FSVE:	
+	POP	A7
+	POP	A6
+	POP	A5
+	POP	A4
+	POP	A3
+	POP	A2
+	POP	A1
+	POPX
+	RETI
+
+;--------INT5 A0=4 DELETE FILE -----------------------
+
+FILEDEL:
+	PUSH	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A4
+	PUSH	A5	
+	JSR	FINDFN
+	CMPI	A0,0
+	JZ	FDELX
+	MOV.B	(A2),$E5  ; Delete file entry
+	MOV	A4,A0
+	MOVI	A0,14
+	MOV	A1,(FATROOT)
+	ADD	A1,A5
+	MOV	A2,SDCBUF1
+	INT	4          ; save file header
+FDL1:	
+	MOV	A5,A4
+	SRL	A5,8   ; DIVIDE BY 256
+	MOV	A1,(FSTFAT)
+	ADD	A1,A5
+	MOVI	A0,13
+	MOV	A2,SDCBUF2
+	INT	4              ; Load FAT
+	AND	A4,$00FF  ; mod 256	
+	SLL	A4,1  
+	MOV	A5,SDCBUF2
+	ADD	A5,A4
+	MOV	A4,(A5)
+	MOV	(A5),0  ; free cluster
+	MOVI	A0,14
+	INT	4        ; write fat back
+	SWAP	A4
+	CMP	A4,$FFFF
+	JZ	FDELX
+	CMPI	A4,0
+	JNZ	FDL1
+FDELX:
+	POP	A5
+	POP	A4
+	POP	A3
+	POP	A2
+	POP	A1
+
+	RETI
+
+
+;-------- MOUNT VOUME ---------------------------
+
+VMOUNT:
+	PUSH	A1
+	PUSH	A2
+	MOVI	A0,13
+	MOVI	A1,0
+	MOV	A2,SDCBUF1
+	INT	4             ; read MBR
+	JSR	DELAY
+      CMP	A0,256
+	JNZ	VMEX
+	MOV	A2,SDCBUF1      
+	ADD	A2,$1C6
+	MOV	A0,(A2)        ; Get 1st partition boot sector 
+	SWAP	A0		   ; little endian
+	MOV	(FATBOOT),A0  
+	MOV	A1,A0           ; A1 fatboot
+	MOVI	A0,13
+	MOV	A2,SDCBUF1
+	INT	4              ; Load FAT boot sector
+      CMP	A0,256
+	JNZ	VMEX
+	MOV	(SDFLAG),256
+	ADDI	A2,14
+	MOV	A0,(A2)   ; Reserved sectors
+	SWAP	A0
+	ADD	A1,A0
+	MOV	(FSTFAT),A1  ; save first fat cluster num
+	ADD	A2,8
+	MOV	A0,(A2)   ; secors per fat
+	SWAP	A0
+	SLL	A0,1        ; 2 fats
+	ADD	A1,A0	    ; Root Folder
+	MOV	(FATROOT),A1
+	ADD	A1,32     ; 32 bytes * 512 entries =32 sectors
+	MOV	(FSTCLST),A1
+	MOV	A0,(FATROOT)
+VMEX:	POP	A2
+	POP	A1
+	RETI
+
+
+
+;---------------------------------------------------
+; INT 5,A0=3 Load file
+FILELD:	JSR	FINDFN    
+		MOV	A4,A0
+		CMPI	A0,0
+		JZ	INTEXIT
+		JSR	FLOAD
+INTEXIT:	RETI
+;-------------------------------------------------
+
+DELAY: PUSHX
+	SETX	60000
+LDDL: JMPX	LDDL    ;delay
+	POPX
+	RET
+
+FLOAD:	; A4 cluster, A3 Dest address
+	PUSH	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A4
+	PUSH	A5
+	PUSH	A6
+FLD1:	MOV	A6,A4
+	SRL	A6,8   ; DIVIDE BY 256
+	MOV	A1,(FSTFAT)
+	ADD	A1,A6
+	MOVI	A0,13
+	MOV	A2,SDCBUF2
+	INT	4              ; Load FAT
+	MOVI	A0,13          ;
+	MOV	A1,(FSTCLST)
+	ADD	A1,A4
+	SUBI	A1,2
+	MOV	A2,A3          ; Dest
+	INT 	4              ; Load sector 
+	ADD	A3,512
+	AND	A4,$00FF  ; mod 256
+	SLL	A4,1  
+	MOV	A5,SDCBUF2
+	ADD	A5,A4
+	MOV	A4,(A5)
+	SWAP	A4
+	CMP	A4,$FFFF
+	JNZ	FLD1
+	POP	A6
+	POP	A5
+	POP	A4
+	POP	A3
+	POP	A2
+	POP	A1
+	RET 
+
+;Find filename in root directory
+; A4 pointer to filename, A0 return cluster relative to (FSTCLST)
+; file name in header at A2, directory cluster at A5 
+FINDFN:     PUSHX
+		PUSH	A3
+		PUSH	A4
+		MOVI	A5,0
+TFF4:		MOV	A1,(FATROOT)
+		ADD	A1,A5
+		MOVI	A0,13
+		MOV	A2,SDCBUF1
+		INT	4              ; Load Root Folder 1st sector
+		MOVI	A0,0
+		MOVI	A3,0
+TFF1:		CMP.B (A2),0
+		JZ	TFF6
+		SETX	10
+		PUSH	A2
+		PUSH	A4
+TFF2:		CMP.B	(A2),(A4)
+		JNZ	TFF3
+		INC	A2
+		INC	A4
+		JMPX	TFF2
+		POP	A4
+		POP	A2
+		ADD	A2,26
+		MOV	A0,(A2)
+		SWAP	A0
+		ADDI	A2,2
+		MOV	A1,(A2)
+		SWAP	A1	;FILE SIZE       
+		SUB	A2,28
+		JMP	TFF5
+TFF3:		POP	A4
+		POP	A2
+		ADD	A2,32
+		ADD	A3,32
+		CMP	A3,512
+		JNZ	TFF1  ; search same sector
+		INC	A5
+		CMP	A5,32  ;if not last root dir sector 
+		JNZ	TFF4   ;load next sector and continue search
+TFF6:		MOVI	A0,0
+TFF5:		POP	A4
+		POP	A3
+		POPX
+		RET
+
+
+PRNHEX:	; print num in A0 in hex for debugging 
+		PUSHX
+		PUSH	A0
+		PUSH	A1
+		PUSH	A2
+		PUSH	A3
+		MOV	A3,A0
+		MOV	A2,$3205
+		SETX	3
+PHX1:		MOV	A1,A3
+		AND	A1,$000F
+		ADD	A1,48
+		CMP	A1,57
+		JBE	PHX2
+		ADDI	A1,7
+PHX2:		MOVI	A0,4
+		SUB	A2,$0100
+		INT	4
+		SRL	A3,4
+		JMPX	PHX1
+		POP	A3
+		POP	A2
+		POP	A1
+		POP	A0
+		POPX
+		RET 
+
+
+
+;---------------------------------
+; INT5 A0=1  fixed point 16.16 
+; Div A2 by A1 res in A1 (FRAC1),   restoring division 9/5/2017
+
+FDIV:		STI	
+		PUSH		A3
+		PUSH		A4
+		PUSH		A7
+		PUSHX
+		MOV		A0,A2
+		XOR		A0,A1
+		PUSH		A0
+		BTST		A1,15           ; check if neg and convert 
+		JZ		FDIV2
+		NOT		A1
+		MOV		A4,(FRAC1)
+		NEG		A4
+		ADC		A1,0
+		MOV		(FRAC1),A4
+FDIV2:	MOV		A4,(FRAC2)
+		BTST		A2,15          ; check if neg and convert 
+		JZ		FDIV3
+		NOT		A2
+		NEG		A4
+		ADC		A2,0          ; A2A4 = Q Divident
+FDIV3:	MOV		A3,(FRAC1)
+
+		SETX		15            ; shift dividend as left as possible
+FDC1:		BTST		A2,15
+		JNZ		FDC2
+		SLL		A2,1
+		SLL		A4,1
+		ADC		A2,0
+		JMPx		FDC1
+FDC2:		
+		MOVX		A0
+		CMPI		A0,6
+		JBE		FDC3
+		SETX		9
+		BTST		A3,0
+		JNZ		FDC9
+FDC5:		SRL		A3,1
+		SRL		A1,1
+		JNC		FDC4
+		BSET		A3,15
+FDC4:		DEC		A0
+		JMPX		FDC5		
+FDC9:		SETX		A0
+FDC3:
+		PUSHX		
+
+		NOT		A1
+		NEG		A3
+		ADC		A1,0
+		MOV		A7,A1    ; store -M
+		MOV		(FRAC2),A3
+		
+		MOVI		A1,0
+		MOVI		A3,0	   	; A1A3 = A
+		SETX		30
+		 
+FD_INTER:
+		SLL		A1,1           ; shift AQ left
+		SLL		A3,1
+		ADC		A1,0
+		SLL		A2,1
+		ADC		A3,0
+		SLL		A4,1
+		ADC		A2,0
+		
+		PUSH		A1
+		PUSH		A3
+		ADD		A3,(FRAC2)   	;A=A-M
+ 		ADC		A1,A7
+		JP		FD_COND1   
+		POP		A3
+		POP		A1
+		BCLR		A4,0
+		JMP		FD_COND2
+FD_COND1:	POP		A0
+		POP		A0	
+		BSET		A4,0       
+FD_COND2:	
+		JMPX		FD_INTER
+		
+		POP		A0          ; shift left as needed
+		ADDI		A0,1
+		;SUBI		A0,1
+		JN		FDC6
+		SETX		A0
+FDLP:		SLL		A2,1
+		SLL		A4,1
+		ADC		A2,0
+		JMPX		FDLP
+		JMP		FDC7
+
+FDC6:		INC		A0
+		JZ		FDC7
+		SRL		A4,1        ; or shift right as needed
+		SRL		A2,1
+		JNC		FDC8
+		BSET		A4,15
+FDC8:		JMP		FDC6
+
+FDC7:		MOV		A1,A2	     ; integer result in A1
+		POP		A0
+		BTST		A0,15
+		JZ		FDIVEND     ; correct sign
+		NOT		A1
+		NEG		A4
+		ADC		A1,0
+FDIVEND:	MOV		(FRAC1),A4  ; store fraction result 
+		POPX
+		POP		A7
+		POP		A4
+		POP		A3
+		RETI
+
+;-------------------------------------
+;  		INT 5 A0=0
+; fixed point multiply
+FMULT:	STI	
+		PUSH		A3
+		PUSH		A4
+		PUSH		A5
+		PUSH		A6
+		MOV		A0,A2
+		XOR		A0,A1
+		PUSH		A0
+		BTST		A1,15    ; check if neg and convert 
+		JZ		FMUL2
+		NOT		A1
+		MOV		A4,(FRAC1)
+		NEG		A4
+		ADC		A1,0
+		MOV		(FRAC1),A4
+FMUL2:	BTST		A2,15   ; check if neg and convert 
+		JZ		FMUL3
+		NOT		A2
+		MOV		A4,(FRAC2)
+		NEG		A4
+		ADC		A2,0
+		MOV		(FRAC2),A4
+FMUL3:	MOV		A5,A1
+		MOV		A6,A2
+		MULU		A1,A2
+		MOV		A0,A2
+		MOV		A3,A1
+		MOV		A1,(FRAC1)
+		MOV		A2,(FRAC2)
+		MOV		A4,A1
+		OR		A4,A2
+		JZ		FMULZ ; skip more mults if fractions = zero
+		MULU		A1,A2
+		MOV		A4,A2 ; store result fraction
+		MOV		A1,(FRAC1)
+		MOV		A2,A6
+		MULU 		A1,A2
+		ADD		A4,A1
+		ADC		A3,A2
+		ADC		A0,0
+		MOV		A1,(FRAC2)
+		MOV		A2,A5
+		MULU 		A1,A2
+		ADD		A4,A1
+		ADC		A3,A2
+		ADC		A0,0	
+FMULZ:	MOV		A1,A3
+		POP		A2
+		BTST		A2, 15
+		MOV		A2,A0
+		JZ		FMULEND     ; Check result sign
+		NOT		A1
+		NOT		A2
+		NEG		A4
+		ADC		A1,0
+		ADC		A2,0
+FMULEND:	MOV		(FRAC1),A4
+		POP		A6
+		POP		A5
+		POP		A4
+		POP		A3
+		RETI
+
+
+;--------------------------------------
+WRITESEC:
+	PUSHX
+	SETX	4
+WRSCR:
+	MOVI	A0,14
+	JSR	WSEC
+	JSR 	DELAY
+	CMP	A0,256
+	JRZ	4
+	JMPX	WRSCR
+	POPX	
+	RETI
+
+WSEC:
+	PUSHX
+	PUSH	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A4
+
+	PUSH  A2   ; save buffer address
+
+	MOV	A4,A1
+	MOV	A3,A1
+	SRL	A3,7
+	SLL	A4,9    ; multiply 512 to convert block to byte
+
+	MOVI	A2,3
+	MOV 	A1,$FF  ; send dummy with cs high
+	JSR	SPIS
+	MOVI	A2,1
+
+	MOV 	A1,$58  ; write SECTOR
+	JSR	SPIS
+	MOVLH	A1,A3
+	JSR	SPIS
+	MOV.B	A1,A3
+	JSR	SPIS
+	MOVLH	A1,A4
+	JSR	SPIS
+	MOV.B	A1,A4
+	JSR	SPIS
+	MOV 	A1,$FF 
+	JSR	SPIS 
+
+	MOV	A1,$FF   ; delay
+	JSR	SPIS
+
+
+	MOV	A1,$FE    ; SEND START OF DATA
+	JSR	SPIS	
+
+	POP 	A3         ;	MOV	A3,SDCBUF1    ; buffer
+	SETX	511        ; WRITE DATA 512 BYTES + 2 CRC bytes
+WRI6:	MOV.B	A1,(A3)
+	JSR	SPIS
+	INC	A3
+	JMPX	WRI6
+	MOVI	A1,0
+	JSR	SPIS
+	MOVI	A1,0
+	JSR	SPIS
+
+	SETX	100          ; READ ANSWER until $05 is found
+WRS8:	MOV	A1,$FF
+	JSR	SPIS
+	AND.B	A0,$0F
+	CMPI.B A0,5
+	JRZ	4
+	JMPX	WRS8
+
+	CMPI.B A0,5
+	JNZ	WRIF
+
+	SETX	5000          ; READ ANSWER until $00 is found
+WRS9: MOV	A1,$FF
+	JSR	SPIS
+	OR.B	A0,A0
+	JRZ	4
+	JMPX	WRS9
+	
+	OR.B	A0,A0
+	JNZ	WRIF
+
+	MOVI	A2,3
+	MOV 	A1,$FF  ; send dummy with cs high
+	JSR	SPIS
+
+	MOV	A0,$0100  ; ALL OK
+
+WRIF: POP	A4
+	POP	A3
+	POP	A2
+	POP	A1
+	POPX
+	RET
+
+;-----------------------------------------
+
+READSEC:
+	PUSHX
+	SETX	4
+RDSCR:
+	MOVI	A0,13
+	JSR	READSC
+	JSR	DELAY
+	CMP	A0,256
+	JRZ	4
+	JMPX	RDSCR
+	POPX
+	RETI
+READSC:
+	PUSHX
+	PUSH	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A4
+
+	PUSH	A2
+
+	MOV	A4,A1
+	MOV	A3,A1
+	SRL	A3,7
+	SLL	A4,9    ; multiply 512 to convert block to byte
+
+	MOVI	A2,3
+	MOV 	A1,$FF  ; send dummy with cs high
+	JSR	SPIS
+	MOVI	A2,1
+	;OUT	19,1
+
+	MOV 	A1,$51  ; READ SECTOR
+	JSR	SPIS
+	MOVLH	A1,A3
+	JSR	SPIS
+	MOV.B	A1,A3
+	JSR	SPIS
+	MOVLH	A1,A4
+	JSR	SPIS
+	MOV.B	A1,A4
+	JSR	SPIS
+	MOV 	A1,$FF 
+	JSR	SPIS 
+
+	SETX	299          ; READ ANSWER until $FE is found
+RDS5:	MOV	A1,$FF
+	JSR	SPIS
+	CMP.B	A0,$FE
+	JZ	SDRD2
+	JMPX	RDS5
+
+SDRD2:
+	POP	A3   		; MOV	A3,SDCBUF1 ; read to buffer
+	CMP.B	A0,$FE  
+	JNZ	RDIF       ; data ready ?
+	SETX	513        ; READ DATA 512 BYTES + 2 CRC bytes
+RDI6:	MOV	A1,$FF
+	JSR	SPIS
+	MOV.B	(A3),A0
+	INC	A3
+	JMPX	RDI6
+
+	MOVI	A2,3
+	MOV 	A1,$FF  ; send dummy with cs high
+	JSR	SPIS
+
+	MOV	A0,$0100  ; ALL OK
+
+RDIF: POP	A4
+	POP	A3
+	POP	A2
+	POP	A1
+	POPX
+	RET
+
+;-----------------------------------------
+SPISEND:
+	PUSH	A1
+	PUSH	A2
+	JSR	SPIS
+	POP	A2
+	POP	A1
+	RETI
+;------------------------------------------------
+SPIS:
+	OUT	18,A1
+	OUT	19,A2
+	BCLR	A2,0
+	OUT	19,A2
+	BSET	A2,0
+SPIC: IN	A1,17
+	OR.B	A1,A1
+	JNZ	SPIC
+	IN	A0,16
+	RET
+	
+;--------------- * INIT * ----------------
+SPI_INIT:
+	PUSHX
+	PUSH 	A1
+	PUSH	A2
+	PUSH	A3
+
+	MOVI	A3,0
+
+SPIN:	CMP	A3,100   
+	JA	SPIF  ; MANY RETRIES FAIL
+	SETX	9
+	MOVI	A2,3
+SPI0: MOV	A1,255	
+	JSR	SPIS
+	JMPX	SPI0    ; SEND 80 CLK PULSES WITH CS HIGH
+	
+	MOVI	A2,1
+	;OUT	19,0    ; cs=0
+
+
+	MOV 	A1,$40  ; INIT SPI MODE WITH CS LOW
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOV 	A1,$95
+	JSR	SPIS	
+
+	SETX	7	         ;READ 8 RESPONCES
+SPI3:	MOV	A1,$FF
+	JSR	SPIS
+	CMPI.B A0,1
+	JNZ	SPNF
+	MOV	A2,5
+SPNF:	JMPX	SPI3
+	
+	INC 	A3	
+	CMPI	A2,5
+	JNZ	SPIN
+
+	MOV	A3,0
+
+SPNT:	CMP	A3,50
+	JA	SPIF
+
+	MOVI	A2,3
+	MOV 	A1,$FF  ; send dummy with cs high
+	JSR	SPIS
+	MOVI	A2,1
+
+	MOV 	A1,$41  ; INITIALIZE spi
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOV 	A1,$FF 
+	JSR	SPIS 
+
+	SETX	7         ; READ 8 ANSWERS
+SPI2:	MOV	A1,$FF
+	JSR	SPIS
+	OR.B	A0,A0
+	JNZ	SPNX
+	MOV	A2,5
+SPNX:	JMPX	SPI2
+
+	INC	A3
+	CMPI	A2,5
+	JNZ	SPNT
+
+	MOVI	A2,3
+	MOV 	A1,$FF  ; send dummy with cs high
+	JSR	SPIS
+	MOVI	A2,1
+
+	MOV 	A1,$50  ; SET TRANSFER SIZE
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOVI 	A1,$02
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOV 	A1,$FF 
+	JSR	SPIS 
+
+	SETX	7          ; READ ANSWER
+SPI4:	MOV	A1,$FF
+	JSR	SPIS
+	JMPX	SPI4
+
+	MOVI	A2,3
+	MOV 	A1,$FF  ; send dummy with cs high
+	JSR	SPIS
+	MOVI	A2,1
+
+	MOV 	A1,$51  ; READ FIRST SECTOR
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOVI 	A1,$0
+	JSR	SPIS
+	MOV 	A1,$FF 
+	JSR	SPIS 
+
+	SETX	101          ; READ ANSWER until $FE is found
+SPI5:	MOV	A1,$FF
+	JSR	SPIS
+	CMP.B	A0,$FE
+	JZ	SDRD
+	JMPX	SPI5
+
+SDRD:	CMP.B	A0,$FE  
+	JNZ	SPIF       ; data ready ?
+	MOV	A3,SDCBUF1 ; read to buffer
+	SETX	513        ; READ DATA 512 BYTES + 2 CRC bytes
+SPI6:	MOV	A1,$FF
+	JSR	SPIS 
+	MOV.B	(A3),A0
+	INC	A3
+	JMPX	SPI6
+
+	MOVI	A2,3
+	MOV 	A1,$FF  ; send dummy with cs high
+	JSR	SPIS
+
+	MOV	A0,$0100  ; ALL OK
+
+SPIF:	POP	A3
+	POP	A2
+	POP	A1
+	POPX
+	RETI
+
+;---------------------------------------- 
+SERIN:	IN		A0,6  ;Read serial byte if availiable
+		BTST		A0,1  ;Result in A1, A0(1)=0 if not avail
+		JZ		INTEXIT
+		IN		A1,4
+		;MOVI		A0,2
+		OUT		2,2
+		;MOVI		A0,0
+		OUT		2,0
+		;MOVI		A0,2
+		RETI
+;----------------------------------------
+SEROUT:	IN		A0,6  ;Wite serial byte if ready
+		BTST		A0,0  ; A0(0)=0 if not ready
+		JZ		INTEXIT
+		OUT		0,A1
+		;MOVI		A0,1
+		OUT		2,1
+		;MOVI		A0,0
+		OUT		2,0
+		;MOVI		A0,1
+		RETI
+; -------------------------------------
+SKEYBIN:	IN		A0,6  ;Read serial byte if availiable
+		BTST		A0,2  ;Result in A1, A0(2)=0 if not avail
+		JZ		INTEXIT
+		IN		A1,14
+		;MOVI		A0,2
+		OUT		15,2
+		;MOVI		A0,0
+		OUT		15,0
+		;MOVI		A0,4
+		RETI
+
+;----------------------------------------
+PUTC:		STI
+		PUSHX                    ;  PRINT Character in A1 at A2 (XY)
+		PUSH		A4
+		PUSH		A1
+		AND		A1,$00FF
+		CMP.B		A1,96  
+		JBE		LAB1
+		SUB.B		A1,32
+		CMP.B		A1,90
+		JLE		LAB1
+		ADDI		A1,6
+LAB1:		SUB.B		A1,32    
+		MULU		A1,6
+		ADD		A1,CTABLE
+		MOV		A4,A1       ; character table address
+		MOVI		A0,0
+		MOV.B		A0,A2
+		MULU		A0,XDIM2
+		MOVI		A1,0
+          	MOVLH 	A1,A2
+		MULU.B	A1,6
+		ADD		A0,A1
+		ADD		A0,VBASE   ; video base
+		SETX		2          ; 6 bytes
+LP1:		MOV		(A0),(A4)
+		ADDI		A4,2
+		ADDI		A0,2          ; next   
+		JMPX		LP1
+		POP		A1
+		POP		A4
+		POPX	
+		RETI
+;----------------------------------------
+PSTR:		STI
+		MOVI		A0,0     ; PRINT A 0 OR 13 TERM. STRING POINTED BY A1 AT A2
+		MOV.B		A0,(A1)
+		CMPI.B	A0,0
+		JZ		STREXIT
+		CMPI.B	A0,13
+		JZ  		STREXIT
+PSTR2:	PUSH 		A1
+		MOV		A1,A0
+		MOVI		A0,4
+		INT		4
+		POP		A1
+		ADD		A2,$0100
+		CMPHL		A2,XCC
+		JB		PSTR3
+		INC		A2
+		AND		A2,$00FF
+		CMP.B		A2,YCC
+		JB		PSTR3
+		RETI
+PSTR3:	INC		A1
+		JMP		PSTR
+STREXIT:	RETI
+;----------------------------------------
+
+SCROLL:	STI
+		PUSHX
+		PUSH		A1
+		SETX		5759       ;7499	
+		MOV		A0,VBASE
+		MOV		A1,49536   ; 49152+384
+SC1:		MOV		(A0),(A1)  ;  word access to video ram
+		ADDI		A0,2
+		ADDI		A1,2
+		JMPX		SC1
+		SETX		191
+SC2:		MOV		(A0),0
+		ADDI		A0,2
+		JMPX		SC2		
+		POP		A1
+		POPX
+		RETI
+;----------------------------------------
+
+CLRSCR:	STI
+		PUSHX
+		SETX		5952	;7799	
+		MOV		A0,VBASE
+CLRS1:	MOV		(A0),0
+		ADDI		A0,2
+		JMPX		CLRS1
+		POPX
+		RETI
+;----------------------------------------
+PLOT:		STI
+		PUSH		A1
+		PUSH		A2        ; PLOT at A1,A2 mode in A4
+		MOV		A0,A2
+		NOT		A0
+		AND		A0,7
+		SRL		A2,3
+		MULU		A2,XDIM2
+		ADD		A2,A1
+		ADD		A2,VBASE 
+		MOV.B		A1,(A2)
+		OR		A4,A4
+		JNZ		PL3
+		BCLR		A1,A0   ; mode 0  clear
+		JMP		PL4
+PL3:		CMPI		A4,2
+		JNZ		PL5
+		BTST		A1,A0  ; mode 2  not
+		JZ		PL5
+		BCLR		A1,A0
+		JMP		PL4
+PL5:		BSET		A1,A0    ; mode 1  set
+PL4:		MOV.B		(A2),A1
+		POP		A2
+		POP		A1
+		RETI
+;----------------------------------------
+PIMG:		STI
+		PUSHX
+		PUSH		A1
+		PUSH		A2       ;Draw Image at A1,A2 from A5(A3 bytes)
+		PUSH		A3
+		MOV		A0,A2
+		AND		A0,7
+		SRL		A2,3
+		MULU		A2,XDIM2
+		ADD		A2,A1
+		ADD		A2,VBASE 
+		
+		DEC		A3
+		SETX		A3
+PIM1:		MOVI		A3,0
+		MOV.B		A3,(A5)
+		SWAP		A3
+		PUSH		A0
+
+PIM2:		CMPI		A0,0
+		JZ		PIM3
+		SRL		A3,1
+		DEC		A0
+		JNZ		PIM2
+	
+PIM3:		SWAP		A3
+		MOV.B		A1,(A2)
+		XOR		A1,A3
+		MOV.B		(A2),A1
+		MOV		A0,XDIM2
+		;SLL		A0,1
+		ADD		A0,A2
+		MOV.B		A1,(A0)
+		SWAP		A3
+		XOR		A1,A3
+		MOV.B		(A0),A1
+		INC		A2
+		INC		A5
+		POP		A0	
+		JMPX		PIM1
+		POP		A3
+		POP		A2
+		POP		A1
+		POPX
+		RETI
+
+;---------------------------------------
+KEYB:		STI
+		PUSHX
+		CMP		A1,90 
+		JNZ		NOTCR
+		MOVI		A1,13
+		JMP		LP10
+NOTCR:	CMP		A1,102
+		JNZ		NOTBS
+		MOVI		A1,8
+		JMP		LP10
+NOTBS:	CMP		A1,118
+		JNZ		KB1
+		MOV		A1,27
+		JMP		LP10		
+KB1:		SETX 		67           ; Convert Keyboard scan codes to ASCII
+		MOV		A0,KEYBCD
+LP3:		CMP.B		A1,(A0)
+		JZ		LP4
+		INC		A0
+		JMPX		LP3
+		MOV		A1,0
+		JMP		LP10
+LP4:		MOVX		A0
+		MOV		A1,99
+		SUB		A1,A0
+		CMP.B		A1,94
+		JBE		LP10
+		ADD		A1,28
+LP10:		POPX
+		RETI
+
+;--------------------------------------------------------------
+; Multiplcation A1*A2 res in A2A1,
+
+MULT:		STI
+		PUSH		A3
+		MOV		A0,A2
+		XOR		A0,A1
+		PUSH		A0
+		BTST		A1,15    ; check if neg and convert 
+		JZ		MUL2
+		NEG		A1
+MUL2:		BTST		A2,15   ; check if neg and convert 
+		JZ		MUL3
+		NEG		A2
+MUL3:		MULU		A1,A2
+		POP		A0
+		BTST		A0, 15
+		MOV		A0,A2
+		JZ		MULEND     ; Check result sign
+		NOT		A2
+		NEG		A1
+		ADC		A2,0
+MULEND:	POP		A3
+		RETI
+
+;-------------------------------------------------------------
+; Div A2 by A1 res in A1,A0
+
+DIV:		STI
+		PUSHX
+		PUSH		A3
+		MOV		A3,A1
+		MOV		A1,32767
+		CMPI		A3,0
+		JZ		DIVE
+		MOVI		A1,0
+		MOV		A0,A1
+		XOR		A0,A2
+		JP		DIV1     ; Check result sign
+		MOVI		A1,1
+DIV1:		PUSH		A1 
+		BTST		A2,15    ; check if neg and convert 
+		JZ		DIV2
+		NEG		A2
+DIV2:		BTST		A3,15   ; check if neg and convert 
+		JZ		DIV3
+		NEG		A3
+DIV3:		CMP		A3,A2
+		MOV		A0,A2  ; id divider > divident res=0 rem=divident
+		JBE		DIV4		
+		MOVI		A1,0
+		JMP		DIV14
+DIV4:		MOVI		A1,0   ; main algorithm
+DIV5:		BTST		A0,14  ; left align
+		JNZ		DIV6
+		INC		A1
+		SLL		A0,1
+		JMP		DIV5
+DIV6:		PUSH 		A1     ; store no of shifts
+		MOVI		A2,0
+		MOV		A1,A3
+DIV7:		BTST		A1,14  ; left align 
+		JNZ		DIV12
+		SLL		A1,1
+		INC		A2
+		JMP		DIV7
+DIV12:	MOV		A3,A1  
+		MOV		A1,A2
+		POP		A2  ; Get no of shifts
+		SUB		A1,A2
+		CMPI		A2,1
+		JB		DIV9
+		DEC		A2  
+		SETX		A2 
+DIV10:	SRL		A3,1  ; align back
+		SRL		A0,1
+		JMPX		DIV10
+DIV9:		SETX		A1
+		MOVI		A1,0     ; quotient
+DIV11:	SLL		A1,1       
+		CMP		A0,A3  ; compare remainder with divisor
+		JC		DIV8		
+		BSET		A1,0
+		SUB		A0,A3
+DIV8:		SRL		A3,1
+		JMPX		DIV11
+DIV14:	POP		A3
+		OR		A3,A3
+		JZ		DIVE
+		NEG		A1
+DIVE:		POP		A3
+		POPX
+		RETI
+
+;-------------------------------------------------------------
+; unsigned Div A2 by A1 res in A1,A0
+
+UDIV:		STI
+		PUSHX
+		PUSH		A3
+		MOV		A3,A1
+		MOV		A1,65535
+		CMPI		A3,0
+		JZ		UDIVE
+UDIV3:	MOV		A1,A2
+		CMP		A3,A1
+		JBE		UDIV4
+		MOV		A0,A1  ; id divider > divident res=0 rem=divident
+		MOVI		A1,0
+		JMP		UDIVE
+UDIV4:	MOV		A0,A2 ; main algorithm
+		MOVI		A1,0
+UDIV5:	BTST		A0,15  ; left align
+		JNZ		UDIV6
+		INC		A1
+		SLL		A0,1
+		JMP		UDIV5
+UDIV6:	PUSH 		A1     ; store no of shifts
+		MOVI		A2,0
+		MOV		A1,A3
+UDIV7:	BTST		A1,15  ; left align 
+		JNZ		UDIV12
+		SLL		A1,1
+		INC		A2
+		JMP		UDIV7
+UDIV12:	MOV		A3,A1  
+		MOV		A1,A2
+		POP		A2  ; Get no of shifts
+		SUB		A1,A2
+		CMPI		A2,0
+		JZ		UDIV9
+		DEC		A2
+		SETX		A2
+UDIV10:	SRL		A3,1
+		SRL		A0,1
+		JMPX		UDIV10
+UDIV9:	MOV		A2,A0  ; new dividend = remainder
+		SETX		A1
+		MOVI		A1,0       ; quotient
+UDIV11:	SLL		A1,1       
+		CMP		A0,A3  ; compare remainder with divisor
+		JC		UDIV8		
+		BSET		A1,0
+		SUB		A0,A3
+UDIV8:	SRL		A3,1
+		JMPX		UDIV11
+UDIVE:	POP		A3
+		POPX
+		RETI
+
+
+ROMEND:
+; Charcter table Font
+CTABLE	DB	0,0,0,0,0,0,58,0,0,0,0,0
+C34_35	DB	96,0,96,0,0,0,20,62,20,62,20,0
+C36_37	DB	58,42,127,42,46,0,34,4,8,16,34,0
+C38_39      DB    20,62,20,62,20,0,96,0,0,0,0,0
+C40_41	DB	28,34,0,0,0,0,34,28,0,0,0,0
+C42_43	DB	168,112,32,112,168,0,8,8,62,8,8,0
+C44_45	DB	3,0,0,0,0,0,8,8,8,8,8,0
+C46_47	DB	2,0,0,0,0,0,0,6,8,48,0,0
+C48_49	DB	28,38,42,50,28,0,0,18,62,2,0,0
+C50_51	DB	38,42,42,42,18,0,34,42,42,42,54,0
+C52_53	DB	60,4,14,4,4,0,58,42,42,42,36,0
+C54_55	DB	62,42,42,42,46,0,32,32,38,40,48,0
+C56_57	DB	62,42,42,42,62,0,58,42,42,42,62,0
+C58_59	DB	34,0,0,0,0,0,35,0,0,0,0,0
+C60_61	DB	8,20,34,0,0,0,20,20,20,20,20,0
+C62_63	DB	34,20,8,0,0,0,16,32,42,16,0,0
+C64_65	DB	62,34,42,42,58,0,62,36,36,36,62,0
+C66_67	DB	62,42,42,42,54,0,62,34,34,34,34,0
+C68_69	DB	62,34,34,34,28,0,62,42,42,42,34,0
+C70_71	DB	62,40,40,40,32,0,62,34,34,42,46,0
+C72_73	DB	62,8,8,8,62,0,34,34,62,34,34,0
+C74_75	DB	6,2,2,34,62,0,62,8,8,20,34,0
+C76_77	DB	62,2,2,2,2,0,62,16,8,16,62,0
+C78_79	DB	62,16,8,4,62,0,28,34,34,34,28,0
+C80_81	DB	62,40,40,40,16,0,60,36,38,36,60,0
+C82_83	DB	62,40,40,40,22,0,58,42,42,42,46,0
+C84_85	DB	32,32,62,32,32,0,62,2,2,2,62,0
+C86_87	DB	48,12,2,12,48,0,60,2,12,2,60,0
+C88_89	DB	34,20,8,20,34,0,48,8,6,8,48,0
+C90_91	DB	34,38,42,50,34,0,62,34,0,0,0,0
+C92_93	DB	48,8,6,0,0,0,34,62,0,0,0,0
+C94_95	DB	0,64,128,64,0,0,2,2,2,2,2,2
+C96_123	DB	0,128,0,0,0,0,0,8,62,34,0,0
+C124_125 	DB	54,0,0,0,0,0,0,34,62,8,0,0
+C126  	DB	64,128,64,128,0,0
+
+
+KEYBCD	DB    $29,$16,$71,$26,$25,$2E,$3D,$52,$46,$45,$3E,$79,$41,$4E,$49,$4A,$70,$69,$72,$7A
+		DB    $6B,$73,$74,$6C,$75,$7D,$7C,$4C,$7E,$55,$E1,$78,$1E,$1C,$32,$21,$23,$24,$2B,$34
+		DB	$33,$43,$3B,$42,$4B,$3A,$31,$44,$4D,$15,$2D,$1B,$2C,$3C,$2A,$1D,$22,$35,$1A,$54
+		DB	$5D,$58,$36,$3,$0B,$83,$0A,0
+
+BOOTBIN     TEXT		"BOOT    BIN"
+		DB 	0
+SDOK		TEXT		"SD Card OK"
+		DB	0
+SDBOK		TEXT        "Loading BOOT.BIN"
+		DB	0
+SDNOTOK	TEXT		"No SDCard Boot"
+		DB	0
+MEMNOTOK	TEXT		"Memory Error"
+		DB	0
+
+
+		ORG     	8192   ;Ram
+
+SDCBUF1	DS	514
+SDCBUF2	DS	514
+FATBOOT	DS	2
+FATROOT	DS	2
+FSTCLST	DS	2
+FSTFAT	DS	2
+SDFLAG	DS	2
+COUNTER     DS	2 ; Counter for general use increased by VSYNC INT 0 
+FRAC1		DS	2 ; for fixed point multiplication - division
+FRAC2		DS	2 ;
+RHINT0	DS	4 ; RAM redirection of interrupts
+RHINT1	DS	4 ; to be filled with jmp to service routine instructions
+RHINT2	DS	4		
+RINT6		DS	4
+RINT7		DS	4
+RINT8		DS	4
+RINT9		DS	4
+RINT15	DS	4 ; TRACE INT service routine
+
+
+START:	CLI
+		MOV	A1,STACK 
+		SETSP	A1
+		JSR	CLRMEM
+		STI
+		SETX	15
+		MOV	A0,63159   ; disable sprites
+SPRLP:	MOV.B	(A0),0
+		ADDI	A0,8
+		JMPX	SPRLP
+		SETX	1983  ; set colors 
+		MOV	A1,61152 
+COLINIT:	MOV.B	(A1),57
+		INC	A1
+		JMPX	COLINIT
+		MOV	(XX),$001E ; Set INITIAL POS 
+		MOV	A3,TITLE
+		MOVI	A2,0
+		MOVI	A0,0
+		JSR	PRTSTG
+		MOV	A3,TXTBGN
+		MOV	A4,A3
+		MOV	(TXTUNF),A3
+
+RSTART:	CLI
+		MOV	A0,STACK
+		SETSP	A0
+		STI
+		MOVI	A1,0
+		MOV	(LOPVAR),A1
+		MOV	(STKGOS),A1
+		MOV	(CURRNT),A1
+		JSR	CRLF
+		MOV   A3,OK 
+		MOVI	A0,0
+		JSR	prtstg
+ST3:
+		MOV	(XX),$001E
+		MOV   (UINT),0
+		MOVHL	A0,0
+		MOV.B	A0,'>'
+		JSR	GETLN
+		PUSH	A4         ; A4 end of text in buffer
+		MOV 	A3,BUFFER
+		JSR	TSTNUM
+		MOVHL	A0,0
+		JSR	IGNBLNK
+		OR	A1,A1      ; A1 num 
+		POP	A2
+		JZ	DIRECT
+		SUBI	A3,2
+		MOV	A0,A1
+		MOV	A4,A3
+		JSR	STOSW  ; store lineno to 
+		PUSH	A2
+		PUSH  A3
+		MOV	A0,A2
+		SUB	A0,A3
+		PUSH	A0
+		JSR	FNDLN
+		PUSH	A3
+		JNZ	ST4
+		PUSH	A3
+		JSR	FNDNXT
+
+		POP	A2
+		MOV	A1,(TXTUNF)
+		JSR	MVUP
+		MOV	A1,A2
+		MOV	(TXTUNF),A1
+ST4:		
+		POP	A2
+		MOV	A1,(TXTUNF)
+
+		POP	A0
+		PUSH	A1
+		CMPI.B A0,3
+		JZ	RSTART
+		ADD	A0,A1
+		MOV	A1,A0	
+		MOV	A3,TXTEND
+		CMP	A1,A3
+		JNC	QSORRY
+		MOV	(TXTUNF),A1
+		POP	A3
+		JSR	MVDOWN
+		POP	A3
+		POP	A1
+		JSR	MVUP
+		JMP	ST3
+
+TSTV:		
+		MOVHL	A0,'@'
+		JSR	IGNBLNK
+		JC	RET01
+TSTV1:	
+		JNZ	TV1
+		JSR	PARN
+		SLL	A1,2
+		PUSH	A3
+		XCHG	A1,A3
+		JSR	SIZE
+		CMP	A1,A3
+		JC	ASORRY
+		MOV 	A1,TXTEND
+		SUB	A1,A3
+		POP	A3
+RET01:	
+		RET
+
+TV1:		CMP.B	A0,'Z'  ; TEST VARIABLE
+		JA	RET22
+		CMP.B	A0,'A'
+		JC	RET2
+		INC	A3
+TV1A:	
+		MOV	A1,VARBGN
+		SUB.B	A0,65
+		AND	A0,$00FF
+		SLL	A0,2
+		ADD	A1,A0
+RET2:		
+		RET	
+RET22:	
+		CMP.B	A0,255
+		RET
+
+;----- TSTNUM
+
+TSTNUM:
+		MOVI	A1,0
+		MOV	A6,0
+		MOVHL	A2,A1
+		MOVHL	A0,0
+		JSR	IGNBLNK
+TN1:
+		CMP.B	A0,'.'
+		JZ	DECIM
+		CMP.B	A0,'0'
+		JC	RET2
+		CMP.B A0,':'
+		JNC	RET2
+		ADD	A2,$0100
+		PUSH	A2
+		MOVI	A2,10
+		MULU	A1,A2
+		MOVI	A0,0
+            MOV.B	A0,(A3)
+		SUB.B	A0,'0'
+		MOVHL	A0,0
+		INC	A3
+		ADD	A1,A0
+		POP	A2
+		MOV.B A0,(A3)
+		JP	TN1
+QHOW:
+		PUSH	A3
+AHOW:	
+		MOV	A3,HOW
+		JMP	ERROR
+
+DECIM:	PUSH	A1
+		PUSH	A2
+		PUSH	A4
+		MOVI	A4,1
+		MOVI	A1,0
+		MOVI	A0,0
+TN2:		INC	A3
+		MOV.B	A0,(A3)
+		CMP.B	A0,'0'
+		JC	DRET
+		CMP.B A0,':'
+		JNC	DRET
+		MOVI	A2,10
+		MULU	A1,A2
+		SUB.B	A0,'0'
+		CMP	A4,10000
+		JZ	QHOW
+		MOVI	A2,10
+		MULU	A4,A2
+		ADD	A1,A0
+		JNC	TN2	
+		JMP	QHOW
+DRET:		MOVI	A2,0
+		MOV	A0,15
+DTOB2:	OR	A0,A0
+		JN	DTOBEND
+		SLL	A1,1		
+		CMP	A1,A4
+		JC	DTOB1
+		;SLL	A2,1
+		BSET	A2,A0
+		DEC	A0
+		SUB	A1,A4
+		JNZ	DTOB2
+		JMP	DTOBEND
+DTOB1:	DEC	A0
+		;SLL	A2,1
+		;OR	A1,A1
+		JMP	DTOB2	
+DTOBEND:	SETX	A0
+DTOB4:	;SLL	A2,1
+		JMPX	DTOB4
+DTOB3:	MOV	A6,A2
+		POP	A4
+		POP	A2
+		POP	A1
+		RET
+
+TSTUNUM:
+		MOVI	A1,0
+		MOV	A6,0
+		MOVHL	A2,A1
+		MOVHL	A0,0
+		JSR	IGNBLNK
+UTN1:
+		CMP.B	A0,'0'
+		JC	RET2
+		CMP.B A0,':'
+		JNC	RET2
+		ADD	A2,$0100
+		PUSH	A2
+		MOVI	A2,10
+		MULU	A1,A2
+		CMPI	A2,0
+		JNZ	QHOW
+		MOVI	A0,0
+            MOV.B	A0,(A3)
+		SUB.B	A0,'0'
+		MOVHL	A0,0
+		INC	A3
+		POP	A2
+		ADD	A1,A0
+		MOV.B A0,(A3)
+		JNC	UTN1
+		JMP   QHOW
+
+;--------  tables ----
+tab1:	
+	TEXT	"LIS"
+	DB	'T'+128
+	DA	LIST
+	TEXT	"NE"
+	DB	'W'+128
+	DA	NEW
+	TEXT	"RU"
+	DB	'N'+128
+	DA	RUN
+	TEXT	"BY"
+	DB	'E'+128
+	DA	NEW
+	TEXT	"SLIS"
+	DB	'T'+128
+	DA	SLIST
+	TEXT  "LOA"
+	DB	'D'+128
+	DA	LOAD
+	TEXT  "SAV"
+	DB	'E'+128
+	DA	SAVE
+	TEXT "FIN"
+	DB	'D'+128
+	DA	FIND
+	TEXT	"DI"
+	DB	'R'+128
+	DA	DIR
+
+
+TAB2	TEXT	"PRIN"
+	DB	'T'+128
+	DA	PRINT
+	TEXT	"I"
+	DB	'F'+128
+	DA	IFF
+	TEXT	"NEX"
+	DB	'T'+128
+	DA	NEXT
+	TEXT	"GOT"
+	DB	'O'+128
+	DA	GOTO
+	TEXT	"GOSU"
+	DB	'B'+128
+	DA	GOSUB
+	TEXT	"RETUR"
+	DB	'N'+128
+	DA	RETURN
+	TEXT	"FO"
+	DB	'R'+128
+	DA	FOR
+      TEXT	"PLO"
+	DB	'T'+128
+	DA	TPLOT
+      TEXT	"PIM"
+	DB	'G'+128
+	DA	PIMAGE
+	TEXT	"PO"
+	DB	'S'+128
+      DA	ATCMD
+	TEXT	"OU"
+	DB	'T'+128
+	DA	OUTCMD
+	TEXT	"RE"
+	DB	'M'+128
+	DA	REM
+	TEXT	"INPU"
+	DB	'T'+128
+	DA	INPUT
+	DB	'?'+128
+	DA	PRINT
+	TEXT	"POK"
+	DB	'E'+128
+	DA	POKE
+	TEXT	"COLO"
+	DB	'R'+128
+	DA	COLOR
+	TEXT	"BEE"
+	DB	'P'+128
+	DA	BEEP
+	TEXT	"CL"
+	DB	'S'+128
+	DA	CLS
+	TEXT	"LE"
+	DB	'T'+128
+	DA	LET
+	TEXT	"SCREE"
+	DB	'N'+128
+	DA	SCREEN
+	TEXT  "LCOD"
+	DB	'E'+128
+	DA	LCODE
+	TEXT  "SCOD"
+	DB	'E'+128
+	DA	SCODE
+	TEXT  "RCOD"
+	DB	'E'+128
+	DA	RCODE
+	TEXT  "DELET"
+	DB	'E'+128
+	DA	DELETE
+	TEXT	"STO"
+	DB	'P'+128
+	DA	STOP
+	DB 	128
+	DA	DEFLT
+
+TAB4	TEXT	"KE"
+	DB	'Y'+128
+	DA	KEY
+	TEXT	"RN"
+	DB	'D'+128
+	DA	RND
+	TEXT	"ROUN"
+	DB	'D'+128
+	DA	ROUND
+	TEXT	"AB"
+	DB	'S'+128
+	DA	MYABS
+	TEXT	"IN"
+	DB	'P'+128
+	DA	INP
+	TEXT	"PEE"
+	DB	'K'+128
+	DA	PEEK
+	TEXT	"IN"
+	DB	'T'+128
+	DA	TOINT
+	TEXT	"JOY"
+	DB	'1'+128
+	DA	JOYST1
+	TEXT	"JOY"
+	DB	'2'+128
+	DA	JOYST2
+	TEXT	"SI"
+	DB	'N'+128
+	DA	SIN
+	TEXT	"CO"
+	DB	'S'+128
+	DA	COS
+	TEXT	"P"
+	DB	'I'+128
+	DA	PI
+	TEXT	"SQR"
+	DB	'T'+128
+	DA	SQRT
+	TEXT	"EX"
+	DB	'P'+128
+	DA	EXPO
+	TEXT	"L"
+	DB	'N'+128
+	DA	LN
+	TEXT  "TIME"
+	DB	'R'+128
+	DA	TIMER
+	TEXT	"SIZ"
+	DB	'E'+128
+	DA	SIZE
+	TEXT	"WAIT"
+	DB	'K'+128
+	DA	WAITK
+	TEXT	"US"
+	DB	'R'+128
+	DA	USR
+	TEXT	"SDINI"
+	DB	'T'+128
+	DA	SDINIT
+	TEXT  "BTO"
+	DB	'P'+128
+	DA	BTOP
+;	TEXT  "S"
+;	DB	'P'+128
+;	DA	SP
+	DB	128
+	DA	XP40
+
+TAB5	DB	'T', 'O'+128
+	DA	FR1
+	DB	128
+	DA	QWHAT
+
+TAB6	TEXT	"STE"
+	DB	'P'+128
+	DA	FR2
+	DB	128
+	DA	FR3
+TAB8	DB	'>'
+	DB 	'='+128
+	DA	XP11
+	DB	'#'+128
+	DA	XP12
+	DB	'>'+128
+	DA	XP13
+	DB	'='+128
+	DA	XP15
+	DB	'<'
+	DB	'='+128
+	DA	XP14
+	DB	'<'+128
+	DA	XP16
+	DB	128	
+	DA	XP17
+
+
+DIRECT:
+	MOV	A1,TAB1
+	DEC	A1
+EXEC:	
+	MOVHL	A0,0
+	JSR	IGNBLNK
+	PUSH	A3
+EX1:
+	MOV.B	A0,(A3)
+	INC	A3
+	CMP.B	A0,'.'   
+	JZ	EX4
+	INC	A1
+	MOV.B	A4,(A1)
+	BCLR	A4,7
+	XOR.B A4,A0
+	JZ	EX2
+EX0A:                   ; not equal 
+	CMP.B	(A1),128
+	JNC	EX0B
+	INC	A1
+	JMP	EX0A
+EX0B:
+	ADDI	A1,3     ; next keyword
+	BTST	A1,0
+	JZ	ALI2
+	INC	A1
+ALI2: POP	A3
+	CMP.B (A1),128
+	JZ	EX3A
+	DEC	A1
+	JMP	EXEC
+EX4:
+	INC	A1    ; found ending with .
+	CMP.B	(A1),128
+	JC	EX4
+	JMP	EX3
+EX2:
+	CMP.B	(A1),128
+	JC	EX1
+EX3:
+	POP	A0
+EX3A:	INC	A1
+	BTST	A1,0   ; ALIGN TO EVEN ADDRESS
+	JZ	ALIG
+	INC	A1
+ALIG:	JMP 	(A1)
+;--------------------
+
+NEW:
+	JMP	START
+
+STOP:
+	JSR	ENDCHK
+	JMP	RSTART
+
+RUN:
+	JSR	ENDCHK
+	MOV	A3,TXTBGN
+
+RUNNXL:
+	MOVI	A1,0
+	JSR	FNDLNP
+	JNC	RUNTSL
+	JMP	RSTART
+
+RUNTSL:
+	XCHG	A1,A3
+	MOV	(CURRNT),A1
+	XCHG	A1,A3
+	ADDI	A3,2
+RUNSML:
+	JSR	CHKIO
+	MOV	A1,TAB2
+	DEC	A1
+	JMP	EXEC
+
+GOTO:
+	JSR	EXP
+	PUSH	A3
+	JSR	ENDCHK
+	JSR	FNDLN
+	JNZ	AHOW
+	POP	A0
+	JMP	RUNTSL
+
+; ----------- LIST 
+SLIST:
+	MOV.B	(SER),1  ; REDIRECT TO SERIAL PORT
+
+LIST:	MOVI	A5,0
+	JSR	TSTNUM
+	JSR	ENDCHK
+	JSR	FNDLN
+LS1:
+	JNC	LS2
+	MOV.B	(SER),0
+	JMP	RSTART
+LS2:
+	JSR	PRTLN
+	JSR	CHKIO
+	INC	A5
+	CMP	A5,29
+	JB	LS3
+	MOVI	A5,0
+	PUSH	A1
+	JSR	WAITK
+	POP	A1
+LS3:	JSR	FNDLNP
+	JMP	LS1
+
+FIND:
+	JSR	TSTNUM
+	JSR	ENDCHK
+	JSR	FNDLN
+	JC	RSTART
+	JSR	PRTLN
+	JMP	ST3
+
+
+PRINT:
+	MOVI.B A2,3
+	MOVHL	A0,59
+	JSR	IGNBLNK
+	JNZ	PR2
+	JSR	CRLF
+	JMP	RUNSML
+PR2:
+	MOVHL	A0,13
+	JSR	IGNBLNK
+	JNZ	PR0
+	JSR	CRLF
+	JMP	RUNNXL
+PR0:	
+	MOVHL	A0,'#'
+	JSR	IGNBLNK
+	JNZ	PR1
+	JSR	EXP
+	MOV.B	A2,A1
+	JMP	PR3
+PR1:
+	JSR	QTSTG
+	JMP	PR8
+PR3:
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	PR6
+	JSR	FIN
+	JMP	PR0
+PR6:
+	MOVHL	A0,'\'
+	JSR	IGNBLNK
+	JZ	FINISH
+	JSR	CRLF
+	JMP	FINISH
+PR8:
+	JSR	EXP
+	PUSH	A2
+	JSR	PRTNUM
+	MOV	A1,A7
+	OR	A1,A1
+	JZ	PR9
+	MOV.B	A0,'.'
+	JSR	CHROUT
+	JSR	FRACTION
+PR9:	POP	A2
+	JMP	PR3
+
+FRACTION:
+	PUSH	A3
+	PUSH	A4
+	PUSH	A6
+	MOVI	A4,0
+	MOVI	A5,0
+	MOVI	A6,1
+	MOV	A3,$3880  ;80000
+	SETX	15
+FRA1:	BTST	A1,15
+	JZ	FRA2
+	ADD	A4,A3
+	ADC	A5,A6
+FRA2:	SRL	A3,1
+	SRL	A6,1
+	JNC	FRA6
+	BSET	A3,15
+FRA6:	SLL	A1,1
+	JMPX	FRA1
+	SETX	1
+	MOV	A1,A4
+FRA4:	SRL	A1,1
+	SRL	A5,1
+	JNC	FRA5
+	BSET	A1,15
+FRA5: JMPX	FRA4
+FRA3:	SRL	A1,2
+	MOVI	A2,3
+	JSR	PRTUNUM
+	POP	A6
+	POP	A4
+	POP	A3
+	RET
+
+;--------------  GOSUB
+
+GOSUB:
+	JSR	PUSHA
+	JSR	EXP
+	PUSH	A3
+	JSR	FNDLN
+	JNZ	AHOW
+	MOV	A1,(CURRNT)
+	PUSH	A1
+	MOV	A1,(STKGOS)
+	PUSH	A1
+	MOVI	A1,0
+	MOV	(LOPVAR),A1
+	GETSP	A0
+	ADD	A1,A0
+	MOV	(STKGOS),A1
+	JMP	RUNTSL
+
+RETURN:
+	JSR	ENDCHK
+	MOV	A1,(STKGOS)
+	OR	A1,A1
+	JZ	QWHAT
+	SETSP	A1
+	POP	A1
+	MOV	(STKGOS),A1
+	POP	A1
+	MOV	(CURRNT),A1
+	POP	A3
+	JSR	POPA
+	JMP 	FINISH
+
+; ----------for
+
+FOR:	JSR	PUSHA
+	JSR	SETVAL
+	DEC	A1
+	MOV	(LOPVAR),A1
+	MOV	A1,TAB5
+	DEC	A1
+	JMP	EXEC
+FR1:
+	JSR	EXP
+	MOV	(LOPLMT),A1
+	MOV	A1,TAB6
+	DEC	A1
+	JMP	EXEC
+FR2:
+	JSR	EXP
+	JMP	FR4
+FR3:
+	MOVI	A1,1
+FR4:
+	MOV	(LOPINC),A1
+FR5:
+	MOV	A1,(CURRNT)
+	MOV	(LOPLN),A1
+	XCHG	A1,A3
+	MOV	(LOPPT),A1
+	MOVI	A2,10
+	MOV	A1,(LOPVAR)
+	XCHG	A3,A1
+	MOV	A1,A2
+	GETSP	A0
+	ADD	A1,A0
+	JMP	FR7A
+FR7:
+	ADD	A1,A2
+FR7A:
+	MOVHL	A0,(A1)
+	INC	A1
+	MOV.B	A0,(A1)
+	DEC	A1
+	OR	A0,A0
+	JZ	FR8
+	CMP	A0,A3
+	JNZ	FR7
+	XCHG	A3,A1
+	MOVI	A1,0
+	GETSP	A0
+	ADD	A1,A0
+	MOV	A2,A1
+	MOVI	A1,10
+	ADD	A1,A3
+	JSR	MVDOWN
+	SETSP	A1
+FR8:
+	MOV	A1,(LOPPT)
+	XCHG	A1,A3
+	JMP 	FINISH
+NEXT:
+	JSR	TSTV
+	JC	QWHAT
+	MOV	(VARNXT),A1
+NX0:
+	PUSH	A3
+	XCHG	A3,A1
+	MOV	A1,(LOPVAR)
+	MOVLH	A0,A1
+	OR.B	A0,A1
+	JZ	AWHAT
+	CMP	A3,A1
+	JZ	NX3
+	POP	A3
+	JSR	POPA
+	MOV	A1,(VARNXT)
+	JMP	NX0
+NX3:
+	MOVHL	A3,(A1)
+	INC	A1
+	MOV.B	A3,(A1)
+	MOV	A1,(LOPINC)
+	PUSH	A1
+	ADD	A1,A3
+	XCHG	A3,A1
+	MOV	A1,(LOPVAR)
+	SWAP	A3
+	MOV.B	(A1),A3
+	INC	A1
+	SWAP 	A3
+	MOV.B	(A1),A3
+	MOV	A1,(LOPLMT)
+	POP	A0
+	SWAP	A0
+	OR 	A0,A0
+	JP	NX1
+	XCHG	A1,A3
+NX1:
+	JSR	CKHLDE2
+	POP	A3
+	JC	NX2
+	MOV	A1,(LOPLN)
+	MOV	(CURRNT),A1
+	MOV	A1,(LOPPT)
+	XCHG	A3,A1
+	JMP 	FINISH
+NX2:
+	JSR	POPA
+	JMP 	FINISH	
+
+; ------------ EXPRES
+
+SIZE:
+	PUSH	A3
+	MOV	A3,(TXTUNF)
+	MOV	A1,TXTEND  ;VARBGN
+	SUB	A1,A3
+	POP	A3
+RET10:
+	RET
+
+; ------------ DIVIDE
+
+DIVIDE:  ; INT 4/9 Div A2 by A1 res in A1,A0
+	MOV	A2,A1
+	MOV	A1,A3
+	CMP	(UINT),0
+	JNZ	DV1
+	MOVI	A0,9
+	INT	4
+	JMP	DVE
+DV1:	MOVI	A0,6
+	INT	5
+DVE:	MOV	A2,A1
+	XCHG	A0,A1
+	RET
+
+UDIVIDE:  ; INT 4/9 Div A2 by A1 res in A1,A0
+	MOV	A2,A1
+	MOV	A1,A3
+	MOVI	A0,6
+	INT	5
+	MOV	A2,A1
+	XCHG	A0,A1
+	RET
+
+	
+DIVIDE2:  ; INT 5/1 Div A2 by A1 res in A1,A0
+	MOV	A2,A1
+	MOV	A1,A3
+	MOVI	A0,1
+	INT	5
+	MOV	A2,A1
+	XCHG	A0,A1
+	RET
+
+CHKSGN:
+	OR	A1,A1
+	JP	RET11
+CHGSGN:
+	PUSH	A0
+	MOV	A0,A7
+	NOT	A0
+	NOT	A1
+	INC	A0
+	ADC	A1,0
+	MOV	A7,A0
+	POP	A0
+	XOR	A2,$8000
+RET11:
+	RET
+
+CKHLDE:
+	MOV	A0,A1
+	XOR	A0,A3
+	JP	CK1
+	XCHG	A3,A1
+CK1:	CMP	A1,A3
+	JNZ   CK2
+	MOV	A0,A7
+	BTST	A1,15
+	JZ	CK3
+	;NOT	A4
+	;INC	A4
+	NEG	A4
+CK3:	BTST	A3,15
+	JZ	CK4
+	;NOT	A0
+	;INC	A0
+	NEG	A0
+CK4:	;MOV	(NUM2),A0
+	CMP	A4,A0 ;(NUM2)
+CK2:	RET
+
+
+CKHLDE2:
+	MOV	A0,A1
+	XOR	A0,A3
+	JP	CK11
+	XCHG	A3,A1
+CK11:	CMP	A1,A3
+	RET
+
+;---- GETVAL FIN
+
+SETVAL:
+	JSR	TSTV
+	JC	QWHAT
+	PUSH	A1
+	MOVHL	A0,'='
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	JSR	EXP
+	MOV	A2,A1
+	POP	A1
+	MOV	(A1),A2
+	ADDI	A1,2
+	MOV	(A1),A7
+	DEC	A1
+	RET
+
+FINISH:
+	JSR	FIN
+	JMP	QWHAT
+
+FIN:
+	MOVHL	A0,59
+	JSR	IGNBLNK
+	JNZ	FI1
+	POP	A0
+	JMP	RUNSML
+FI1:
+	MOVHL	A0,13
+	JSR	IGNBLNK
+	JNZ	FI2
+	POP	A0
+	JMP	RUNNXL
+FI2:
+	RET
+
+ENDCHK:
+	MOVHL	A0,13
+	JSR	IGNBLNK
+	JZ	FI2
+QWHAT:
+	PUSH	A3
+AWHAT:
+	MOV	A3,WHAT
+ERROR:
+	SUB.B	A0,A0
+	JSR	PRTSTG
+	POP	A3
+	MOV	A1,(CURRNT)
+	CMPI	A1,0
+	JZ	RSTART
+	JN	INPERR
+	MOV	A4,A1
+	JSR	LODSW
+	JSR	FNDLN
+	MOV	A3,A1
+	JSR	PRTLN
+	POP	A2
+ERR2:
+	JMP	RSTART
+QSORRY:
+	PUSH	A3
+ASORRY:
+	MOV	A3,SORRY
+	JMP	ERROR
+;-----
+
+REM:
+	MOVI	A1,0
+	JMP	IFF1A
+
+IFF:
+	JSR	EXP
+IFF1A:
+	CMPI	A1,0
+	JNZ	RUNSML
+	JSR	FNDSKP
+	JNC	RUNTSL
+	JMP	RSTART
+
+INPERR:
+	MOV	A1,(STKINP)
+	CLI
+	SETSP	A1
+	STI
+	POP	A1
+	MOV	(CURRNT),A1
+	POP	A3
+	POP	A3
+
+INPUT:
+
+	PUSH	A3
+	JSR	QTSTG
+	JMP	IP2
+	JSR	TSTV
+	JC	IP4
+	JMP	IP3
+IP2:
+	PUSH	A3
+	JSR	TSTV
+	JC	QWHAT
+	MOV.B A2,(A3)
+	XOR.B	A0,A0  ; SUB
+	MOV.B	(A3),A0
+	POP	A3
+	JSR	PRTSTG
+	MOV.B	A0,A2
+	DEC	A3
+	MOV.B	(A3),A0
+IP3:
+	PUSH	A3
+	XCHG	A1,A3
+	MOV	A1,(CURRNT)
+	PUSH	A1
+	MOV	(CURRNT),-999
+	GETSP	A0
+	MOV	(STKINP),A0
+	PUSH	A3
+	MOV.B	A0,':'
+	JSR	GETLN
+IP3A:
+	MOV	A3,BUFFER
+	JSR	EXP
+	NOP              ;jsr	endchk
+	NOP
+	NOP
+	POP	A3
+	XCHG	A1,A3
+	SWAP	A3
+	MOV.B	(A1),A3
+	SWAP	A3
+	INC	A1
+	MOV.B	(A1),A3
+	INC	A1
+	SWAP	A7
+	MOV.B	(A1),A7
+	SWAP	A7
+	INC	A1
+	MOV.B	(A1),A7
+	POP	A1
+	MOV	(CURRNT),A1
+	POP	A3
+IP4:
+	POP	A0
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	FINISH
+	JMP	INPUT
+	
+
+DEFLT:
+	MOV.B	A0,(A3)
+	CMPI.B A0,13
+	JZ	FINISH
+LET:
+	JSR	SETVAL
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	FINISH
+	JMP	LET
+
+;-----
+EXP:	MOV	A7,0
+	JSR	EXPR2
+	MOV	A4,A7 ;********************
+	PUSH	A1
+	PUSH	A4
+	
+EXPR1:
+	MOV	A1,TAB8
+	DEC	A1
+	JMP 	EXEC
+XP11:
+	JSR	XP18
+	JC	RET4
+	MOV.B	A1,A0
+	RET
+XP12:
+	JSR	XP18
+	JZ	RET4
+	MOV.B	A1,A0
+RET4:
+	RET
+XP13:
+	JSR	XP18
+	JBE	RET5
+	MOV.B	A1,A0
+RET5:
+	RET
+XP14:
+	JSR	XP18
+	MOV.B	A1,A0
+	JBE	RET6
+	MOVLH	A1,A1
+RET6:
+	RET
+XP15:
+	JSR	XP18
+	JNZ	RET7
+	MOV.B A1,A0
+RET7:
+	RET
+XP16:
+	JSR	XP18
+	JNC	RET8
+	MOV.B	A1,A0
+RET8:
+	RET
+XP17:
+	POP	A4
+	POP	A1
+	MOV	A7,A4 ;*************
+	RET
+XP18:
+	MOV.B	A0,A2
+	POP	A1
+	POP	A4
+	POP	A2
+	PUSH	A1
+	PUSH	A2
+	PUSH	A4
+	MOV.B	A2,A0
+	JSR	EXPR2
+	XCHG	A1,A3
+	POP	A4
+	POP	A0
+	PUSH	A1
+	MOV	A1,A0
+	JSR	CKHLDE
+	MOV	A7,0
+	POP	A3
+	MOVI	A1,0
+	MOVI.B A0,1
+	RET
+
+EXPR2:
+	MOVHL	A0,'-'
+	JSR	IGNBLNK
+	JNZ	XP21
+	MOVI	A1,0
+	JMP	XP26
+XP21:
+	MOVHL	A0,'+'
+	JSR	IGNBLNK
+XP22:
+	JSR	EXPR3
+XP23:
+	MOVHL	A0,'+'
+	JSR	IGNBLNK
+	JNZ	XP25
+	PUSH	A1
+	MOV	A4,A7
+	PUSH	A4
+	JSR	EXPR3
+XP24:
+	XCHG	A1,A3
+	POPX
+	POP	A0
+	PUSH	A1
+	MOV	A1,A0
+	MOV	A0,A7
+	MOVX A4	
+	ADD	A4,A0
+	ADC	A1,A3
+	MOV	A7,A4
+	POP	A3
+	JO	QHOW
+	JMP	XP23
+XP25:
+	MOVHL	A0,'-'
+	JSR	IGNBLNK
+	JNZ	RET9
+XP26:
+	PUSH	A1
+	MOV	A4,A7
+	PUSH	A4
+	JSR	EXPR3
+	JSR	CHGSGN
+	JMP	XP24
+
+EXPR3:
+	JSR	EXPR4
+XP31:
+	MOVHL	A0,'*'
+	JSR	IGNBLNK
+	JNZ	XP34
+	PUSH	A1
+	MOV	A4,A7
+	PUSH	A4
+	JSR	EXPR4
+	XCHG	A1,A3
+	POP	A4
+	POP	A0
+	PUSH	A1
+	PUSH	A0
+	PUSH	A2
+	MOV	(FRAC2),A4
+	MOV	A4,A7
+	MOV	(FRAC1),A4
+	MOV	A1,A3
+	MOV	A2,A0
+	MOVI	A0,0   ;
+	INT	5      ; Multiplcation A1*A2 res in A1
+	MOV	A4,(FRAC1)
+	MOV	A7,A4
+	CMPI	A0,0   ; check overflow
+	POP	A2
+	POP	A0
+	JNZ	AHOW
+	;JO	AHOW
+	JMP	XP35
+XP34:
+	MOVHL	A0,'/'
+	JSR	IGNBLNK
+	JNZ	XP44
+      PUSH	A1
+	MOV	A4,A7
+	PUSH	A4
+	JSR	EXPR4
+	XCHG	A1,A3
+	POP	A4
+	POP	A0
+	PUSH	A1          ; a3
+	MOV	(FRAC2),A4
+	MOV	A4,A7
+	MOV	(FRAC1),A4
+	MOV	A1,A0           ; dividend
+	MOV	A0,A3		   ; divider
+	OR	A0,A4 ;(FRAC1)
+	JZ	AHOW
+	PUSH	A2
+	JSR	DIVIDE2
+	MOV	A4,(FRAC1)
+	MOV	A7,A4
+	MOV	A1,A2
+	POP	A2
+XP35:
+	POP	A3
+	JMP	XP31
+
+
+XP44:
+	MOVHL	A0,'%'
+	JSR	IGNBLNK
+	JNZ	XP55
+	PUSH	A1
+	JSR	EXPR4
+	XCHG	A1,A3
+	POP	A0
+	PUSH	A1
+	MOV	A1,A0
+	OR	A3,A3
+	JZ	AHOW
+	PUSH	A2
+	JSR	DIVIDE
+	MOVI	A7,0
+	POP	A2
+	JMP	XP35
+
+XP55:
+	MOVHL	A0,124     ;'|'
+	JSR	IGNBLNK
+	JNZ	RET9
+	PUSH	A1
+	JSR	EXPR4
+	XCHG	A1,A3
+	POP	A0
+	PUSH	A1
+	MOV	A1,A0
+	OR	A3,A3
+	JZ	AHOW
+	PUSH	A2
+	JSR	DIVIDE
+	MOVI	A7,0
+	MOV	A1,A2
+	POP	A2
+	JMP	XP35
+
+
+EXPR4:
+	MOV	A1,TAB4
+	DEC	A1
+	JMP	EXEC
+XP40:   		
+	JSR	TSTV  ; VARIABLE ?
+	JC	XP41
+	MOV	A0,(A1)
+	ADDI	A1,2
+	XCHG	A1,A0
+	MOV	A4,(A0)
+	MOV	A7,A4
+RET9:
+	RET
+XP41:	
+	CMP	(UINT),0
+	JNZ	UIN
+	JSR	TSTNUM	; NUMBER ?
+	JMP	NUIN
+UIN:  JSR   TSTUNUM
+NUIN:	MOVLH A0,A2
+	OR.B	A0,A0
+	JZ	PARN
+	MOV	A4,A6
+	MOV	A7,A4
+	RET
+PARN:
+	MOVHL	A0,'('
+	JSR	IGNBLNK
+	JNZ	PARN1
+	JSR	EXP
+PARN1:
+	MOVHL	A0,')'
+	JSR	IGNBLNK
+	JNZ	XP43
+XP42:
+	RET
+XP43:
+	JMP	QWHAT
+
+	
+MYABS:
+	JSR	PARN
+	JSR	CHKSGN
+	OR	A0,A1
+	JP	RET10
+	JMP	QHOW
+
+;-----  my ROUTINES
+
+LCODE:
+	PUSH	A5
+	PUSH	A4
+	MOVI	A5,1
+	MOV	A4,FNAME2
+	JMP	LCODI
+LOAD:	
+	PUSH	A5
+	PUSH	A4
+	MOVI	A5,0
+	MOV	A4,FNAME
+	
+LCODI: 
+	CMP	(SDFLAG),256
+	JNZ	QHOW
+	MOVHL	A0,34
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	PUSHX
+	PUSH	A1
+	SETX	7
+LD1:  MOV.B	A0,(A3)
+	CMP.B	A0,31
+	JBE	QWHAT
+	MOV.B	(A4),32
+	CMP.B	A0,34
+	JZ	LD2
+	INC	A3
+	MOV.B	(A4),A0
+LD2:	INC	A4
+	JMPX	LD1
+	MOVHL	A0,34   
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	CMPI	A5,0  ; load or lcode
+	JZ	LD4
+	MOVHL	A0,44     ;lcode
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	MOV	A4,A3
+	MOV   (UINT),1
+	JSR	EXP
+	MOV   (UINT),0
+	MOV	A4,FNAME2
+	JMP	LD6
+LD4:	MOV	A4,FNAME
+	MOV	A1,TXTBGN
+LD6:	PUSH	A3
+	PUSH	A5
+	MOV	A3,A1          ; load address
+	MOV	A0,2
+	INT	5              ; LOAD FILE
+	POP	A5
+	POP	A3
+	CMPI	A0,0
+	JZ	QHOW
+	CMPI	A5,0
+	JNZ	LD3
+	ADD	A1,TXTBGN
+	;CMP	(A1),13
+	;JZ	LD7
+	;DEC	A1
+LD7:	MOV	(TXTUNF),A1
+LD3:	POP	A1
+	POPX
+	POP	A4
+	POP	A5
+	JMP	RSTART
+	
+;--------------------------
+
+DIR:
+	PUSHX
+	PUSH	A2
+	PUSH	A4
+	PUSH	A5
+	MOVI	A0,13
+	JSR	CHROUT
+	MOVI	A5,0
+TBF4:	MOV	A1,(FATROOT)
+	ADD	A1,A5
+	MOVI	A0,13
+	MOV	A2,SDCBUF1
+	INT	4              ; Load Root Folder 1st sector
+	CMPI	A5,0
+	JNZ	TBF3
+	SETX	7
+	PUSH	A2
+TBF7:	MOV.B	A0,(A2)
+	INC	A2
+	JSR	CHROUT            ; print volume name
+	JMPX	TBF7
+	MOVI	A0,13
+	JSR	CHROUT
+	MOVI	A0,13
+	JSR	CHROUT
+	POP	A2
+	MOV.B	(A2),$E5
+	ADD	A2,32
+	MOV.B	(A2),$E5
+	SUB	A2,32
+TBF3:	JSR	DELAY
+	MOVI	A4,0
+TBF1:	CMP.B	(A2),0     ; empty
+	JZ	TBF5
+	CMP.B	(A2),$E5   ; deleted entry
+	JZ	TBF6
+	CMP.B	(A2),47
+	JBE	TBF6
+	PUSH	A2
+	SETX	10
+TBF2: MOV.B	A0,(A2)
+	INC	A2
+	JSR	CHROUT
+	JMPX	TBF2
+	ADD	A2,17
+	MOV	A1,(A2)
+	SWAP	A1	;FILE SIZE
+	MOV	A0,32
+	JSR	CHROUT
+	MOV	A0,32
+	JSR	CHROUT
+	MOV	A0,32
+	JSR	CHROUT
+	PUSH	A4
+	MOV	A2,4
+	MOV	A0,A1	
+	MOV	(LZERO),0
+	JSR	PRTUNUM
+	MOV	(LZERO),1
+	POP	A4
+	MOVI	A0,13
+	JSR	CHROUT
+	POP	A2       
+TBF6:	ADD	A2,32
+	ADD	A4,32
+	CMP	A4,512
+	JNZ	TBF1  ; search same sector
+	INC	A5
+	CMP	A5,32  ;if not last root dir sector 
+	JNZ	TBF4   ;load next sector and continue search
+TBF5:	POP	A5
+	POP	A4
+	POP	A2
+	POPX
+	JMP	FINISH
+
+
+;------------------------------
+
+SCODE:
+	PUSH	A5
+	PUSH	A4
+	MOVI	A5,1
+	MOV	A4,FNAME2
+	JMP	SCODI
+SAVE:	
+	PUSH	A5
+	PUSH	A4
+	MOVI	A5,0
+	MOV	A4,FNAME
+	
+SCODI: 
+	CMP	(SDFLAG),256
+	JNZ	QHOW
+	MOVHL	A0,34
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	PUSHX
+	PUSH	A1
+	PUSH	A6
+	PUSH	A7
+	SETX	7
+SD1:  MOV.B	A0,(A3)
+	CMP.B	A0,31
+	JBE	QWHAT
+	MOV.B	(A4),32
+	CMP.B	A0,34
+	JZ	SD2
+	INC	A3
+	MOV.B	(A4),A0
+SD2:	INC	A4
+	JMPX	SD1
+	MOVHL	A0,34   
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	CMPI	A5,0  ; save or scode
+	JZ	SD4
+	MOVHL	A0,44     ;scode
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	MOV	A4,A3
+	MOV   (UINT),1
+	JSR	EXP
+	MOV   (UINT),0
+	PUSH	A1
+	MOVHL	A0,44     ;scode
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	MOV   (UINT),1
+	JSR	EXP
+	MOV   (UINT),0
+	MOV	A7,A1
+	POP	A1
+	MOV	A4,FNAME2
+	JMP	SD6
+SD4:	MOV	A4,FNAME
+	MOV	A1,TXTBGN
+	MOV	A7,(TXTUNF)
+	SUB	A7,TXTBGN
+	;INC	A7
+SD6:	PUSH	A3
+	PUSH	A5
+	MOV	A6,A1          ; save address
+	MOVI	A0,5
+	INT	5              ; save FILE
+	POP	A5
+	POP	A3
+	CMPI	A0,0
+	JZ	QHOW
+SD3:	POP	A7
+	POP	A6
+	POP	A1
+	POPX
+	POP	A4
+	POP	A5
+	JMP	FINISH
+
+
+;-----------------------------
+DELETE:
+	CMP	(SDFLAG),256
+	JNZ	QHOW
+	MOVHL	A0,34
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	MOV	A4,A3
+	SETX	10
+DEL1: CMP.B	(A3),34
+	JZ	DEL2
+	CMP.B	(A3),13
+	JZ	DEL2
+	INC	A3
+	JMPX	DEL1
+DEL2:	MOVHL	A0,34
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	MOVI	A0,4
+	INT	5
+	MOV	A4,A3
+	JMP	FINISH
+
+;-------------------------------
+RCODE:
+	MOV   (UINT),1 
+	JSR	EXP
+	MOV   (UINT),0
+	JSR	A1
+	JMP	FINISH
+;------------------------------
+CLS:	
+	MOVI	A0,3
+	INT	4
+	JMP	FINISH
+
+ATCMD:
+	JSR	EXP
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	PUSH	A1
+	JSR	EXP
+	MOV.B	A0,A1
+	POP	A1
+	MOV.B	(XX),A0 
+	MOV.B	(YY),A1		
+	JMP 	FINISH
+
+
+COLOR:
+	JSR	EXP
+	CMP	A1,30
+	JA	QWHAT
+	MOV	A5,A1
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	JSR	EXP
+	CMP	A1,63
+	JA	QWHAT
+	MULU	A5,64
+	ADD	A5,A1
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	JSR	EXP
+	ADD	A5,61152 
+	MOV.B	(A5),A1
+	JMP 	FINISH
+
+SCREEN:
+	JSR	EXP
+	SETX		1983
+	MOV		A5,61152 
+SCRN:	MOV.B		(A5),A1
+	INC		A5
+	JMPX		SCRN		
+	JMP 	FINISH
+
+TPLOT:
+	PUSH 	A2
+	PUSH	A4
+	JSR	EXP
+	CMP	A1,383
+	JA	PLTX
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	MOV	A5,A1
+	JSR	EXP
+	CMP	A1,247
+	JA	PLTX
+PLT2:	PUSH	A1
+	MOVHL	A0,44
+	MOVI	A4,1
+	JSR	IGNBLNK
+	JNZ	PLT1
+	JSR	EXP
+	MOV	A4,A1
+PLT1:	POP	A2
+	MOV	A1,A5
+	MOVI	A0,2
+	INT	4
+PLTX:	JSR	IGNTOCR
+	POP	A4
+	POP	A2
+	JMP 	FINISH
+
+PIMAGE:
+	PUSH 	A2
+	JSR	EXP
+	CMP	A1,383
+	JA	PIMX
+	PUSH	A1
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	JSR	EXP
+	CMP	A1,247
+	JBE	PIM22
+	POP	A1
+	JMP	PIMX
+PIM22: PUSH	A1
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	JSR	EXP    ; address
+	PUSH	A1
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	JSR	EXP    ; no of bytes
+	MOV	A4,A3
+	MOV	A3,A1
+	POP	A5
+	POP	A2
+	POP	A1
+	PUSH	A4
+	MOVI	A0,15
+	INT	4
+	POP	A3
+	
+PIMX:	JSR	IGNTOCR
+	POP	A2
+	JMP 	FINISH
+
+
+BEEP:
+	JSR	EXP
+	MOV	A5,A1
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	BEE1
+	JSR	EXP
+	MULU	A1,16384
+	ADD	A1,A5
+BEE1:	OUT	8,A1
+	JMP 	FINISH
+
+POKE:
+	MOV   (UINT),1
+	JSR	EXP
+	MOV   (UINT),0
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JZ	POK2
+	JMP	QWHAT
+POK2:	DEC	A1
+POK1: INC	A1
+	PUSH	A1
+	MOV	(UINT),1
+	JSR	EXP
+	MOV	(UINT),0
+	MOV.B	A0,A1
+	POP	A1
+	MOV.B	(A1),A0
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	FINISH
+	JMP	POK1
+
+PEEK:
+	MOV   (UINT),1
+	JSR	EXP
+	MOV   (UINT),0
+	MOV.B	A1,(A1)
+	MOVHL	A1,0
+	RET
+
+JOYST1:
+	IN	A1,22
+	NOT	A1
+	AND	A1,31
+	RET
+
+JOYST2:
+	IN	A1,22
+	SWAP	A1
+	NOT	A1
+	AND	A1,31
+	RET
+
+TIMER:
+	;MOV	A1,(COUNTER)
+	IN	A1,20
+	BCLR	A1,15
+	RET
+
+TOINT:
+	JSR	PARN
+	BTST	A1,15
+	JZ	TOI1
+	INC	A1
+TOI1:	MOV	A7,0
+	RET
+
+ROUND:
+	JSR	PARN
+	MOV	A0,A7
+	ADD	A0,$8000
+	ADC	A1,0
+	MOV	A7,0
+	RET
+
+RND:	JSR	PARN
+	OR	A1,A1
+	JN	QHOW
+	JNZ	RND1
+	MOVI	A1,0
+	RET
+RND1:	
+	MOV	A0,(COUNTER)
+	ADD	A0,(RAND)
+	MOV	A5,A2
+	MOV 	A2,7
+	MULU	A2,A0
+	BCLR	A2,15
+	MOVI	A0,9
+	INT	4
+	MOV	A1,A0
+	INC	A1
+	MOV	A2,A5
+	MOV	(RAND),A2
+	RET
+
+PI:	MOVI	A1,3
+	MOV	A7,$243F
+	RET
+
+BTOP:	MOV	A1,(TXTUNF)
+	MOVI	A7,0
+	RET
+
+;SP:	MOV	A1,STACK
+;	MOVI	A7,0
+;	RET
+
+SQRT: PUSH	A2
+	PUSH	A4
+	PUSH	A0
+	JSR	PARN
+	SRL	A7,1
+	SRL	A1,1
+	JNC	SQ1
+	BSET	A7,15  ; Set Xo = A/2
+SQ1:	MOV	A5,A1
+	MOV	A6,A7  ; copy A/2 to A5A6
+	SETX	5       ; 6 interations
+SQ2:	MOV	A2,A5
+	MOV	(FRAC2),A6
+	MOV	(FRAC1),A7
+	PUSH	A1
+	PUSH	A7
+	MOV	A0,1
+	INT	5
+	MOV	A7,(FRAC1)
+	POP	A4
+	POP	A2
+	SRL	A4,1
+	SRL	A2,1
+	JNC	SQ3
+	BSET	A4,15
+SQ3: 	ADD	A7,A4
+	ADC	A1,A2
+	JMPX	SQ2
+	POP	A0
+	POP	A4
+	POP	A2
+	RET
+
+EXPO:	RET
+LN:	RET
+
+COS:	PUSH	A2
+	PUSH	A4
+	PUSH	A0
+	JSR	PARN
+	MOV	A0,A7
+	ADD	A0,$921F	
+	ADC	A1,1
+	CMPI	A1,3
+	JRZ	4
+	JL	CSSK
+	;CMP	A0,$0200
+	;JBE	CSSK
+	SUBI	A1,7
+	SUB	A0,$487E
+	JC	CSSK
+	INC	A1
+CSSK:
+	MOV	A7,A0
+	JMP	COSI
+
+
+SIN:  PUSH	A2
+	PUSH	A4
+	PUSH	A0
+	JSR	PARN
+
+COSI:	PUSH	A3
+	MOV	A2,SINP12
+	MOV	(FRAC2),A2
+	MOV	A2,A7
+	MOV	(FRAC1),A2
+	MOVI	A2,1
+	PUSH	A1                 ; save parameter
+	MOVI	A0,0
+	INT	5                  ; X*1.27323954
+	POP	A0	;get param
+	PUSH	A1    ; save res
+	MOV	A2,(FRAC1)
+	PUSH	A2
+	MOV	A1,A0 	; get param again
+	PUSH	A1    	; save again
+	MOV	A2,SINP22
+	MOV	(FRAC2),A2
+	MOV	A2,A7
+	MOV	(FRAC1),A2
+	MOVI	A2,0       ;(SINP21)
+	MOVI	A0,0
+	INT	5          ; X*0.405284735
+	POP	A2
+	PUSH	A2           ;  again save 
+	MOV	A0,A7
+	MOV	(FRAC2),A0
+	MOVI	A0,0        ; X*X*0.405284735
+	INT   5       
+	MOV	A2,(FRAC1)  ; result in A1A2
+	POP	A0 ; get param
+	POP	A4 ; first result
+	POP	A3
+	BTST	A0,15
+	JZ   SIN1
+	ADD	A2,A4 
+	ADC	A1,A3
+	JMP	SIN2
+SIN1:
+	NOT	A1
+	;NOT	A2
+	;INC	A2
+	NEG	A2
+	ADC	A1,0
+	ADD	A2,A4
+	ADC	A1,A3
+SIN2: MOV	A7,A2
+	POP	A3
+	POP	A0
+	POP	A4
+	POP	A2
+	RET
+
+
+WAITK:
+	MOVI	A0,0
+	INT	4           ; Get keyboard code
+	BTST	A0,1        ; if availiable
+	JNZ	WK1
+	MOVI	A0,7
+	INT	4
+	BTST	A0,2
+	JZ	WAITK
+	MOVI	A0,10
+	INT	4
+WK1:
+	RET	
+
+KEY:  MOVI  A1,0
+	MOVI	A0,0
+	INT	4           ; Get keyboard code
+	BTST	A0,1        ; if availiable
+	JNZ	WK2
+	MOVI	A0,7
+	INT	4
+	BTST	A0,2
+	JZ	WK2
+	MOVI	A0,10
+	INT	4
+WK2:
+	RET	
+
+
+SDINIT:
+	MOVI	A0,11
+	INT	4
+	MOV	A1,A0
+	MOVI	A0,3
+	INT	5
+	MOV	A0,(SDFLAG)
+	RET
+
+;SDREAD:
+;	JSR	PARN
+;	MOVI	A0,13
+;	PUSH	A2
+;	MOV	A2,SDCBUF2
+;	INT	4
+;	MOV	A1,A0
+;	POP	A2
+;	RET
+
+;SWRITE:
+;	JSR	PARN
+;	MOVI	A0,14
+;	PUSH	A2
+;	MOV	A2,SDCBUF2
+;	INT	4
+;	MOV	A1,A0
+;	POP	A2
+;	RET
+
+CLRMEM:	PUSH	A1
+		PUSH	A0
+		MOV	A1,TXTBGN
+		MOV	A0,TXTEND
+		SUB	A0,A1
+		SRL	A0,1
+		DEC	A0
+		SETX	A0	
+MEMCL:	MOV	(A1),0
+		ADDI	A1,2
+		JMPX	MEMCL
+		MOV	A1,VARBGN
+		MOV	A0,STKLMT
+		SUB	A0,A1
+		SRL	A0,1
+		DEC	A0
+		SETX	A0	
+MEMCL2:	MOV	(A1),0
+		ADDI	A1,2
+		JMPX	MEMCL2
+		POP	A0
+		POP	A1
+		RET
+
+
+;----- GETLN
+
+GETLN:
+		jsr	chrout
+		push	a1
+		mov	a4,BUFFER  ; a4<->di
+GL1:
+		MOVI	A0,0
+		INT	4           ; Get keyboard code for serial port
+		BTST	A0,1        ; if availiable
+		JNZ	KEYIN
+		MOVI	A0,7
+		INT	4
+		BTST	A0,2
+		JZ	GL1
+		MOVI	A0,10
+		INT	4
+KEYIN:
+		MOV	A0,A1      ; CHAR IN A0
+		CMP.B	A0,97
+		JC	SKP2
+		CMP.B	A0,122
+		JA	SKP2
+		AND.B	A0,$DF        ; UPPER CASE 
+SKP2:	      CMPI.B A0,8       ; BS
+		JNZ   GL2
+		CMP	A4,BUFFER
+		JBE	GL1
+		DEC.B	(XX)
+		JP	GL4
+		MOV.B	(XX),0
+		JMP	GL1
+GL4:		DEC	A4
+		PUSH	A2
+		MOV	A2,(XX)
+		MOVI	A0,4
+		MOV	A1,32
+		INT	4
+		POP	A2
+		JMP	gl1
+GL2:		MOV.B	(A4),A0
+		INC	A4
+		CMPI.B A0,13
+		JZ    GL1E
+		CMP	A4,BUFEND
+		JZ	gl3
+		JSR	CHROUT
+		JMP	GL1
+GL3:		
+		DEC	A4
+		JMP	GL1
+GL1E:		
+		JSR	CHROUT
+		;MOV	A1,A4
+		;SUB	A1,BUFFER
+		POP	A1
+		MOV	A3,A4
+		RET
+		
+FNDLN:	
+		OR	A1,A1
+		JN	QHOW
+		MOV	A3,TXTBGN
+FNDLNP:
+FL1:		
+		MOV	A0,(TXTUNF)
+		DEC	A0
+		CMP	A0,A3
+		JC	RET13
+		MOV	A4,A3
+		JSR	LODSW
+		CMP	A0,A1
+		JC	FNDNXT
+RET13:
+		RET
+
+FNDNXT:	
+		INC	A3
+FL2:
+		INC	A3
+FNDSKP:
+		MOV.B	A0,(A3)
+		CMPI.B  A0,13
+		JNZ	FL2
+		INC	A3
+		JMP	FL1
+
+
+; ----  CHROUT
+CRLF:
+		MOVI	A0,$0D
+CHROUT:	
+		OR.B	A0,A0
+		JZ	RET9
+		PUSH	A0
+		CMPI.B	A0,$0D
+		JZ	CR_SCRL
+		PUSH	A1
+		PUSH 	A2
+		MOV	A1,A0
+		MOV	A2,(XX)
+		MOV	A0,4
+		CMP.B	(SER),1   ; REDIRECT TO SERIAL ?
+		JNZ	NRMI
+		MOVI	A0,1
+		SETX	10000    ;  DELAY FOR SERIAL TRANSMIT
+DLY:		NOP
+		JMPX	DLY
+NRMI:		INT	4
+		SWAP	A2
+		CMP.B	A2,62
+		JBE	SKP4
+		JSR 	CRLF
+		MOV	A2,-1	
+SKP4:		INC.B	A2
+		MOV.B	(XX),A2
+		POP	A2
+		POP	A1
+		POP	A0
+		RET
+
+CR_SCRL:	PUSH	A1
+		MOVI	a0,6
+		CMP.B	(SER),1
+		JNZ	NRMI2
+		SETX	10000    ;  DELAY FOR SERIAL TRANSMIT
+DLY3:		NOP
+		JMPX	DLY3
+		MOVI	A1,13
+		MOVI	A0,1
+NRMI2:
+		INT	4
+		CMP.B	(SER),1
+		JNZ	SKP3
+		SETX	10000    ;  DELAY FOR SERIAL TRANSMIT
+DLY2:		NOP
+		JMPX	DLY2
+		MOVI	A0,1
+		MOVI	A1,10
+		INT	4
+SKP3:		MOV.B	(XX),0
+		POP	A1
+		POP	A0
+		RET
+
+CHKIO:
+	IN	A0,6
+	BTST	A0,1
+	JNZ	CI0
+	BTST	A0,2
+	JNZ	CI0
+	RET
+CI0:	PUSH	A1
+	MOVI	A0,0
+	INT	4           ; Get keyboard code
+	BTST	A0,1        ; if availiable
+	JNZ	CI1
+	MOV	A0,7
+	INT	4
+	BTST	A0,2
+	JZ	IDONE
+	MOV	A0,10
+	INT	4
+CI1:	
+	MOV	A0,A1
+	CMP.B	A0,27
+	JNZ	IDONE
+	JMP	RSTART
+IDONE:
+	POP	A1
+	RET
+
+PRTSTG:     
+	MOVHL	A2,A0
+PS1:
+	MOV.B A0,(A3)
+	INC	A3
+	CMPHL	A2,A0
+	JNZ	PS2
+	RET
+PS2:
+	JSR	CHROUT
+	CMPI.B A0,13
+	JNZ	PS1
+	RET	
+
+QTSTG:
+	MOVHL	A0,34
+	JSR	IGNBLNK
+	JNZ	QT3
+	MOV.B	A0,34
+QT1:
+	JSR	PRTSTG
+	CMPI.B A0,13
+	POP	A1
+	JNZ	QT2
+	JMP	RUNNXL
+QT2:
+	ADDI	A1,4
+	JMP	A1
+QT3:
+	MOVHL	A0,39
+	JSR	IGNBLNK
+	JNZ	QT4
+	MOV.B	A0,39
+	JMP	QT1
+QT4:
+	MOVHL	A0,92
+	JSR	IGNBLNK
+	JNZ	QT5
+	POP	A1
+	JMP	QT2
+QT5:
+	RET
+
+	;---------  DISPLAY NUMBER -----
+
+PRTUNUM:  ; UNSIGNED 
+	PUSH	A3
+	MOVI	A3,10	
+	PUSH	A3
+	MOVHH	A2,A3
+	MOV	A4,A2
+PUN2:
+	JSR	UDIVIDE ; unsigned div A1 by A3 res in A2,A1
+	OR	A2,A2
+	JZ	PUN3
+	PUSH	A1
+	DEC.B	A4
+	MOV	A1,A2
+	JMP	PUN2
+PUN3:
+	MOV	A2,A4
+PUN4:
+	DEC.B	A2
+	OR.B	A2,A2 
+	JN	PUN5
+	MOV.B	A0,'0'
+	CMP	(LZERO),1
+	JRZ	4
+	MOV.B	A0,32
+	JSR	CHROUT
+	JMP	PUN4
+PUN5:
+	MOVLH	A0,A2
+	JSR	CHROUT
+	MOV.B	A3,A1
+PUN6:
+	MOV.B	A0,A3
+	CMPI.B A0,10
+	POP	A3
+	JZ	RET14
+	ADD.B	A0,48
+	JSR	CHROUT
+	JMP	PUN6
+;----------------------------------
+
+PRTNUM:	            ;signed
+	PUSH	A3
+	MOVI	A3,10	
+	PUSH	A3
+	MOVHH	A2,A3
+	DEC.B	A2
+	JSR	CHKSGN 
+	JP	PN1
+	MOVHL	A2,'-'
+	DEC.B	A2
+PN1:
+	MOV	A4,A2
+PN2:
+	JSR	DIVIDE     ; integer div A1 by A3 res in A2,A1
+	OR	A2,A2
+	JZ	PN3
+	PUSH	A1
+	DEC.B	A4
+	MOV	A1,A2
+	JMP	PN2
+PN3:
+	MOV	A2,A4
+PN4:
+	DEC.B	A2
+	OR.B	A2,A2 
+	JN	PN5
+	MOV.B	A0,32
+	JSR	CHROUT
+	JMP	PN4
+PN5:
+	MOVLH	A0,A2
+	JSR	CHROUT
+	MOV.B	A3,A1
+PN6:
+	MOV.B	A0,A3
+	CMPI.B A0,10
+	POP	A3
+	JZ	RET14
+	ADD.B	A0,48
+	JSR	CHROUT
+	JMP	PN6
+
+PRTLN:
+	MOV	A4,A3
+	JSR	LODSW
+	MOV	A1,A0
+	ADDI	A3,2
+PRTLN1:
+	MOV.B	A2,4
+	JSR	PRTNUM
+	MOV.B	A0,32
+	JSR	CHROUT
+	SUB.B	A0,A0
+	JSR	PRTSTG
+RET14:
+	RET
+
+;---------- MVUP MVDOWN
+
+MVUP:
+	CMP	A3,A1
+	JZ	RET15
+	MOV.B	(A2),(A3)  ; replace 4 lines
+	INC	A3
+	INC	A2
+	JMP	MVUP
+
+MVDOWN:
+	CMP	A3,A2
+	JZ	RET15
+MD1:
+	DEC	A3
+	DEC	A1
+	;MOV	A4,A3
+	;JSR	LODSB
+	MOV.B (A1),(A3)
+	;MOV.B	(A1),A0
+	JMP	MVDOWN
+
+POPA:
+	POP	A2
+	POP	A1
+	MOV	(LOPVAR),A1
+	OR	A1,A1
+	JZ	PP1
+	POP	A1
+	MOV	(LOPINC),A1
+	POP	A1
+	MOV	(LOPLMT),A1
+	POP	A1
+	MOV	(LOPLN),A1
+	POP	A1
+	MOV	(LOPPT),A1
+PP1:	PUSH	A2   ; return address
+RET15:
+	RET
+
+PUSHA:
+	MOV	A1,STKLMT
+	JSR	CHGSGN
+	POP	A2
+	GETSP	A0
+	ADD	A1,A0
+	JNC	QSORRY
+
+	MOV	A1,(LOPVAR)
+	OR	A1,A1
+	JZ	PU1
+	MOV	A1,(LOPPT)
+	PUSH	A1
+	MOV	A1,(LOPLN)
+	PUSH	A1
+	MOV	A1,(LOPLMT)
+	PUSH	A1
+	MOV	A1,(LOPINC)
+	PUSH	A1
+	MOV	A1,(LOPVAR)
+PU1:
+	PUSH	A1
+	PUSH	A2
+	RET
+
+;----------- ignblnk ---------
+
+IGNBLNK:   ; eat whitespace including a0 high
+
+ign1:
+	mov.b	a0,(a3)
+	cmp.b	a0,32
+	jnz	ign2
+	inc	a3
+	jmp	ign1
+ign2:
+	swap	a0
+	cmp.b	(a3),a0
+	swap  a0
+
+	jnz	_ret
+	push	sr
+	inc	a3
+	pop	sr
+_ret:	ret
+
+IGNTOCR:
+	MOV.B	A0,(A3)
+	CMP.B	A0,13
+	JZ	IGNCRE
+	CMP.B	A0,59
+	JZ	IGNCRE		
+	INC	A3
+	JMP	IGNTOCR
+IGNCRE:
+	RET
+	
+;--------------------------------
+
+STOSW: 
+	swap	a0
+	mov.b	(a4),a0
+	inc	a4
+	swap	a0
+	mov.b	(a4),a0
+	inc	a4
+	RET
+LODSW: 
+	mov.b	a0,(a4)
+	swap	a0
+	inc	a4
+	mov.b	a0,(a4)
+	inc	a4
+	RET
+;----------ADDED
+
+OUTCMD:
+	JSR	EXP
+	MOV	A5,A1
+	;ADDI 	A0,2
+	;MOV	(A0),A1
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	JSR	EXP
+	;JSR	OUTIO
+	OUT	A5,A1
+	JMP	FINISH
+
+INP:
+	JSR	PARN
+	;MOV	A0,INPIO
+	;ADDI	A0,2
+	;MOV	(A0),A1
+	IN	A1,A1
+	RET
+	;JMP	INPIO
+
+; 'usr(i(,j))'
+;
+; usr call a machine language subroutine at location 'i'  if
+; the optional parameter 'j' is used its value is passed  in
+; hl. the value of the function should be returned in hl.
+
+USR:
+	PUSH	A2
+	MOVHL	A0,'('
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	JSR	EXP
+	MOVHL	A0,')'
+	JSR	IGNBLNK
+	JNZ	PASPRM
+	PUSH	A3
+	MOV	A3,USRET
+	PUSH	A3
+	PUSH	A1
+	RET
+PASPRM:
+	MOVHL	A0,44
+	JSR	IGNBLNK
+	JNZ	USRET1
+	PUSH	A1
+	JSR	EXP
+	MOVHL	A0,')'
+	JSR	IGNBLNK
+	JNZ	USRET1
+	POP	A2
+	PUSH	A3
+	MOV	A3,USRET
+	PUSH	A3
+	PUSH	A2
+	RET
+USRET:
+	POP	A3
+USRET1:
+	POP	A2
+	RET
+
+;outio:
+; 	out $FFFF,A1
+; 	ret
+
+;INPIO:
+;	IN	A1,$FFFF
+;	RET
+;-----------------------------------------------------
+; DATA
+SINP11	EQU	$0001
+SINP12	EQU	$45F3
+SINP21	EQU	$0000
+SINP22	EQU	$67C0
+UINT		DW	0
+LZERO		DW	1
+
+DUMMY		DW	0
+XX		DB	0
+YY		DB	0
+
+FNAME       TEXT	"        BAS"
+		DB	13
+FNAME2      TEXT	"        BIN"
+		DB	13
+TITLE		TEXT	"Tiny Basic for Lion System 2016"
+		DB	13
+how		TEXT  "how?"
+		DB	$0d
+OK		TEXT	"OK"
+		DB	13
+what		TEXT    "what?"
+		DB	$0d
+sorry		TEXT    "sorry"
+		DB    $0d,0
+
+SER		DB	0
+RAND		DW	$0007
+CURRNT	DW	0
+STKGOS	DW	0
+VARNXT	DW	0
+STKINP	DW	0
+LOPVAR	DW	0
+LOPINC	DW	0
+LOPLMT	DW	0
+LOPLN		DW	0
+LOPPT		DW	0
+
+TXTUNF	DA    TXTBGN
+TXTBGN	DS	26000   ; program space
+TXTEND	DS	4
+
+BUFFER	DS	102
+BUFEND:
+
+VARBGN	DS	120
+
+STKLMT	DS	4096
+STACK:	
+
+
+
+
+
