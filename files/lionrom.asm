@@ -26,16 +26,16 @@ INT14		DA          INTEXIT
 INT15		DA		RINT15   ; trace interrupt in ram	
 
 BOOTC:	MOV		(SDFLAG),0
-		MOV		A1,49148
+		MOV		A1,65534
 		SETSP		A1
-		SETX		1983       ; Set default color 
+		SETX		992       ; Set default color 
 		MOV		A1,61152 ; was 65144
-COLINI:	MOV.B		(A1),57
-		INC		A1
+COLINI:	OUT		A1,$3939
+		ADDI		A1,2
 		JMPX		COLINI
 		MOV		A2,32767
-		SETX		32766    ;  memory test
-		MOV		A1,16384
+		SETX		56*1024-2    ;  memory test
+		MOV		A1,8192
 MEMTST:     MOV.B		A2,(A1)
 		MOV.B		(A1),$FF
 		MOV.B		A0,(A1)
@@ -1140,7 +1140,7 @@ LAB1:		SUB.B		A1,32
 		ADD		A0,A1
 		ADD		A0,VBASE   ; video base
 		SETX		2          ; 6 bytes
-LP1:		MOV		(A0),(A4)
+LP1:		OUT		A0,(A4)
 		ADDI		A4,2
 		ADDI		A0,2          ; next   
 		JMPX		LP1
@@ -1177,17 +1177,20 @@ STREXIT:	RETI
 SCROLL:	STI
 		PUSHX
 		PUSH		A1
+		PUSH		A4
 		SETX		5759       ;7499	
 		MOV		A0,VBASE
 		MOV		A1,49536   ; 49152+384
-SC1:		MOV		(A0),(A1)  ;  word access to video ram
+SC1:		IN		A4,A1
+		OUT		A0,A4  ;  word access to video ram
 		ADDI		A0,2
 		ADDI		A1,2
 		JMPX		SC1
 		SETX		191
-SC2:		MOV		(A0),0
+SC2:		OUT		A0,0
 		ADDI		A0,2
-		JMPX		SC2		
+		JMPX		SC2
+		POP		A4		
 		POP		A1
 		POPX
 		RETI
@@ -1195,11 +1198,11 @@ SC2:		MOV		(A0),0
 
 CLRSCR:	STI
 		PUSHX
-		SETX		5952	;7799	
-		MOV		A0,VBASE
-CLRS1:	MOV		(A0),0
-		ADDI		A0,2
-		JMPX		CLRS1
+		SETX	5952	;7799	
+		MOV	A0,VBASE
+CLRS1:	OUT	A0,0
+		ADDI	A0,2
+		JMPX	CLRS1
 		POPX
 		RETI
 ;----------------------------------------
@@ -1213,8 +1216,12 @@ PLOT:		STI
 		MULU		A2,XDIM2
 		ADD		A2,A1
 		ADD		A2,VBASE 
-		MOV.B		A1,(A2)
-		OR		A4,A4
+		;MOV.B		A1,(A2)
+		IN		A1,A2
+		BTST		A2,0
+		JNZ		PL6
+		ADDI		A0,8
+PL6:		OR		A4,A4
 		JNZ		PL3
 		BCLR		A1,A0   ; mode 0  clear
 		JMP		PL4
@@ -1225,7 +1232,7 @@ PL3:		CMPI		A4,2
 		BCLR		A1,A0
 		JMP		PL4
 PL5:		BSET		A1,A0    ; mode 1  set
-PL4:		MOV.B		(A2),A1
+PL4:		OUT		A2,A1
 		POP		A2
 		POP		A1
 		RETI
@@ -1256,16 +1263,16 @@ PIM2:		CMPI		A0,0
 		JNZ		PIM2
 	
 PIM3:		SWAP		A3
-		MOV.B		A1,(A2)
+		IN.B		A1,A2
 		XOR		A1,A3
-		MOV.B		(A2),A1
+		OUT.B		A2,A1
 		MOV		A0,XDIM2
 		;SLL		A0,1
 		ADD		A0,A2
-		MOV.B		A1,(A0)
+		IN.B		A1,A0
 		SWAP		A3
 		XOR		A1,A3
-		MOV.B		(A0),A1
+		OUT.B		A0,A1
 		INC		A2
 		INC		A5
 		POP		A0	
@@ -1275,7 +1282,6 @@ PIM3:		SWAP		A3
 		POP		A1
 		POPX
 		RETI
-
 ;---------------------------------------
 KEYB:		STI
 		PUSHX

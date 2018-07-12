@@ -146,13 +146,20 @@ SDFLAG	EQU	$240c  ;DS	2    SD card initialized by rom=256
 COUNTER     EQU	$240e  ;DS	2    General use counter increased by int 0 
 FRAC1		EQU	$2410  ;DS	2    for fixed point multiplication-division
 FRAC2		EQU  	$2412  ;DS	2               &gt;&gt;
+RHINT0	EQU	$2414  ; Hardware interrupt 0
+RHINT1	EQU	$2418  ; Hardware interrupt 1
+RHINT2	EQU	$241c
+RINT6		EQU	$2420
+RINT7		EQU	$2424
+RINT8		EQU	$2428
+RINT9		EQU	$242c
+RINT15	EQU	$2430
 
-ORG     	$2414  ;Ram
+ORG     	$2434  
 
 ; RAM program ENTRY POINT
 
-START:
-</value>
+START:</value>
   </data>
   <metadata name="$this.TrayHeight" type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
     <value>36</value>

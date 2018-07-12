@@ -12,7 +12,7 @@ entity LionSystem is
 		D  : INOUT  Std_logic_vector(15 downto 0);
 		ADo  : OUT  Std_logic_vector(15 downto 0); 
 		RWo,ASo,DSo : OUT Std_logic;
-		RD,Reset,Clock,Int,HOLD: IN Std_Logic;
+		RD,Reset,iClock,Int,HOLD: IN Std_Logic;
 		IOo, Holdao : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
 		IACK: OUT std_logic;
@@ -46,12 +46,20 @@ Component LionCPU16 is
 	);
 end Component;
 
+Component LPLL2 IS
+	PORT
+	(
+		inclk0: IN STD_LOGIC  := '0';
+		c0		: OUT STD_LOGIC 
+	);
+END Component;
+
 
 Component lfsr is
   port (
-    cout   :out std_logic;-- Output of the counter
-    clk    :in  std_logic;                    -- Input rlock
-    reset  :in  std_logic                     -- Input reset
+    cout   :out std_logic;      -- Output
+    clk    :in  std_logic;      -- Input rlock
+    reset  :in  std_logic       -- Input reset
   );
 end Component;
 
@@ -146,16 +154,16 @@ COMPONENT single_port_rom is
 	);
 end component;
 
-COMPONENT single_port_ram is
-	port 
-	(
-		clk		: in std_logic;
-		addr	: in natural range 0 to 65535;
-		data	: in std_logic_vector(15 downto 0);
-		we,DS		: in std_logic := '1';
-		q		: out std_logic_vector(15 downto 0)
-	);
-end COMPONENT;
+--COMPONENT single_port_ram is
+--	port 
+--	(
+--		clk		: in std_logic;
+--		addr	: in natural range 0 to 65535;
+--		data	: in std_logic_vector(15 downto 0);
+--		we,DS		: in std_logic := '1';
+--		q		: out std_logic_vector(15 downto 0)
+--	);
+--end COMPONENT;
 
 COMPONENT SPI is
 	port
@@ -182,7 +190,7 @@ Signal nen, ne: std_Logic:='0';
 Signal sdi,sdo,sdo2 : std_logic_vector (7 downto 0);
 SIGNAL addr,addr1 : natural range 0 to 65535;
 SIGNAL Spi_in,Spi_out: STD_LOGIC_VECTOR (7 downto 0);
-Signal Spi_w,spi_rdy, play, play2, AUDIO1 ,AUDIO2, spb, sdb, adxy : std_logic;
+Signal Spi_w, spi_rdy, play, play2, AUDIO1, AUDIO2, spb, sdb, adxy, Clock : std_logic;
 constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 
 begin
@@ -201,14 +209,16 @@ SoundIC: SoundI
 	PORT MAP (AUDIO1, reset, Clock, Waud, aq, count, play, Inter, IAC);
 SoundC: Sound
 	PORT MAP (AUDIO2, reset, Clock, Waud2, aq2, play2);
-IRAM: single_port_ram
-	PORT MAP ( clock, addr1, Do, RW, DS, QA ) ;
+--IRAM: single_port_ram
+--	PORT MAP ( clock, addr1, Do, RW, DS, QA ) ;
 IROM: single_port_rom
 	PORT MAP ( clock, addr1, QRO ) ;
 MSPI: SPI 
 	PORT MAP ( SCLK,MOSI,MISO,clock,reset,spi_w,spi_rdy,spi_in,spi_out);
 NOIZ:lfsr
 	PORT MAP ( noise, clock, reset);
+CPLL:LPLL2
+	PORT MAP (iClock,Clock);
 
 -- data out 
 HOLDAo<=HOLDA;
@@ -227,12 +237,13 @@ NOIS<=NOISE and play and ne;
 audiob<=audio2;
 vs<=VSYN;
 IACK<=IAC;
+
 -- Video Ram 
-process (clock,reset,AS,DS,RW)
+process (clock,reset)
 begin 
 if reset='1' then
 	w1<='0'; w2<='0'; 
-elsif clock'EVENT AND clock = '1' AND AS='0' and DS='0' then 
+elsif clock'EVENT AND clock = '1' AND AS='0' and DS='0' and IO='1' then 
 	if AD(15 downto 14)="11" then --61440
 		w1<=not RW;
 		qi<=Do(7 downto 0)&Do(15 downto 8);
@@ -264,7 +275,8 @@ Waud<='0' when AD="0000000000001000" and IO='1' and AS='0' and DS='0' and RW='0'
 Waud2<='0' when AD="0000000000001010" and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
 
 -- Read decoder
-di<="00000000"&sdo when falling_edge(clock) AND AD="0000000000000100" and IO='1' -- serial 
+di<=	
+	"00000000"&sdo when falling_edge(clock) AND AD="0000000000000100" and IO='1' -- serial 
                          and RW='1' and AS='0' else
 	"00000000"&sdo2 when falling_edge(clock) AND AD="0000000000001110" and IO='1' -- serial keyboard
                          and RW='1' and AS='0' else
@@ -282,12 +294,13 @@ di<="00000000"&sdo when falling_edge(clock) AND AD="0000000000000100" and IO='1'
 								and RW='1' AND AD="000000000010101" and IO='1' and AS='0' else   -- 21
 	count  when falling_edge(clock)          -- spi status
 								and RW='1' AND AD="000000000010100" and IO='1' and AS='0' else   -- 20
-	qro when addr<8192 and RW='1' and IO='0' and AS='0' and falling_edge(clock) else  --rom
-	qa when addr>=8192 and addr<16384 and RW='1' and IO='0' and AS='0' and falling_edge(clock) else   --ram
-	q16(7 downto 0)&q16(15 downto 8) when AD(15 downto 14)="11" and RW='1' and IO='0' and AS='0' and falling_edge(clock) else  --read video ram 
-   D when falling_edge(clock) AND RW='1' and AS='0' AND IO='0';   -- external data bus read 
+	--qa when addr>=8192 and addr<16384 and RW='1' and IO='0' and AS='0' and falling_edge(clock) else   --ram
+	q16(7 downto 0)&q16(15 downto 8) when AD(15 downto 14)="11" and (RW='1') and (AS='0') 
+	                     and falling_edge(clock) and (IO='1') else  --read video ram 
+	qro when (addr<8192) and (RW='1') and (IO='0') and (AS='0') and falling_edge(clock) else  --rom
+	D when falling_edge(clock) AND (RW='1') and (AS='0'); 
 	
-Mdecod1 <= '0' when (AD(15 downto 14)="10" or AD(15 downto 14)="01") and AS='0' and IO='0' AND HOLDA='0' else '1';  -- External 32K ram chip select 
+Mdecod1 <= '0' when (AD(15 downto 13)/="000") and (AS='0') and (IO='0') AND (HOLDA='0') else '1';  -- External 56K ram chip select 
 
 --Interupt when serial data_ready
 --Int_in <= '1' whe n sdready='1' or Int='1' else '0'; 
@@ -471,7 +484,7 @@ architecture rtl of single_port_rom is
 
 	-- Build a 2-D array type for the RoM
 	subtype word_t is std_logic_vector(15 downto 0);
-	type memory_t is array(2047+1024+256 downto 0) of word_t;
+	type memory_t is array(2047+2048 downto 0) of word_t;
 
 	function init_rom
 		return memory_t is 
@@ -488,10 +501,10 @@ signal rom : memory_t; --:= init_rom;
 	
 begin
 	process(clk,addr)
-	variable add: natural range 0 to 2047+1024+256:=0;
+	variable add: natural range 0 to 2047+2048:=0;
 	begin
 		if(Clk'EVENT AND Clk = '1' ) then
-			if addr<2048+1024+256 then
+			if addr<2048+2048 then
 				--add:=addr;
 				q <= rom(addr);
 			end if;

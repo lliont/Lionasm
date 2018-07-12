@@ -1,9 +1,9 @@
--- Color Video Controller for Lion Computer
+-- Color Video Controller + Sprites for Lion Computer
 -- Theodoulos Liontakis (C) 2016 - 2017
 
 -- 640x480 @60 Hz
 -- Vertical refresh	31.46875 kHz
--- Pixel freq.	25.175 MHz  (25.00 Mhz)
+-- Pixel freq.	25.175 MHz  (25.1736 Mhz)
 
 --Scanline part	Pixels	Time [µs]
 --Visible area	640	25.422045680238
@@ -44,10 +44,10 @@ Signal pixel, p6, prc : natural range 0 to 1023;
 Signal addr2,addr3,pix: natural range 0 to 16383;
 signal m8: natural range 0 to 15;
 
-constant sp1: natural:= 14000;
-constant sp2: natural:= 14064;
-constant sd1: natural:= 14200;
-constant sd2: natural:= 14456;
+constant sp1: natural:= 14000; 
+constant sp2: natural:= 14128;
+constant sd1: natural:= 14400;
+constant sd2: natural:= 14912;
 constant l1:natural range 0 to 1023:=49;
 constant l2:natural range 0 to 1023:=296;
 constant p1:natural range 0 to 1023:=143;
@@ -56,16 +56,15 @@ constant maxd:natural range 0 to 1023:=16;
 
 begin
 
-process (reset, sclk, addxy)
-variable pc: boolean;
+process (reset, sclk)
+variable vidc: boolean;
 --variable ad: natural range 0 to 65535;
 
-type sprite_line_data is array (0 to 7) of std_logic_vector(15 downto 0);
-type sprite_dim is array (0 to 7) of std_logic_vector(8 downto 0);
-type bool is array (0 to 7) of boolean;
-type dist is array (0 to 7) of natural range 0 to 1023;
-type col is array (0 to 7) of natural range 0 to 7;
-type sprite_param is array (0 to 7) of std_logic_vector(7 downto 0);
+type sprite_line_data is array (0 to 8) of std_logic_vector(15 downto 0);
+type sprite_dim is array (0 to 8) of std_logic_vector(8 downto 0);
+type bool is array (0 to 8) of boolean;
+type dist is array (0 to 8) of natural range 0 to 1023;
+type sprite_param is array (0 to 8) of std_logic_vector(7 downto 0);
 
 variable FG,BG: std_logic_vector(2 downto 0);
 variable SX,SY: sprite_dim;
@@ -74,20 +73,22 @@ variable sen,scolor,sdx,sdy: sprite_param;
 variable QQQ:boolean;
 variable d1,d2:dist;
 variable	bl,QQ: bool;
-variable pixi,lin: natural range 0 to 1023;
+variable pixi,lin,pixl: natural range 0 to 1023;
 variable lastadxy: std_logic;
+variable divp, modp: natural range 0 to 15;
 
 begin
 	if (reset='1') then
 		dcounter<="00"; pixel<=0; m8<=0; addr2<=0; p6<=0; prc<=0; --p8<=0;
 		lines<=0;  R<='0'; G<='0'; B<='0'; HSYN<='1'; VSYN<='1'; VSINT<='0'; addr3<=12000; 
 	elsif  sClk'EVENT AND sClk = '0' then
-		dcounter <= dcounter + 1;
+		
 		if dcounter = "01" then 
 			dcounter<="00";
-			pc:=true; 
+			vidc:=true; 
 		else
-			pc:=false;
+			dcounter <= dcounter + 1;
+			vidc:=false;
 		end if; 
 		
 --		if lastadxy/=addxy then 
@@ -98,7 +99,7 @@ begin
 --			end loop;
 --		end if;
 		
-		if  pc=true then 
+		if  vidc=true then 
 			if pixel=799 then
 				pixel<=0; pix<=0; 
 				if lines=524 then
@@ -116,12 +117,18 @@ begin
 				pixel<=pixel+1;
 			end if;
 
-			if p6=0 and pixel>141 then addr<=addr3+prc/2; end if;
+			if (p6=0) and (pixel>=p1-1) then addr<=addr3+prc/2; end if;
 			if pixel<96 then HSYN<='0'; else HSYN<='1'; end if;
-			
+			--pixl:=pixel;
 			-- sprites  ---------------------
-			if lines=1 then
-				if pixel=0 then SX(0):=Q(0)&Q(15 downto 8); end if;
+			if (lines=1)  then	
+--				divp:= pixel / 4; modp:=pixel mod 4;
+--				if modp=0 then SX(divp):=Q(divp)&Q(15 downto 8); end if;
+--				if modp=1 then SY(divp):=Q(divp)&Q(15 downto 8); end if;
+--				if modp=2 then SDX(divp):=Q(7 downto 0); SDY(divp):=Q(15 downto 8); end if;
+--				if modp=3 then SCOLOR(divp):=Q(7 downto 0); SEN(divp):=Q(15 downto 8); end if;
+--				end if; 
+				if pixel=0 then SX(0):=Q(0)&Q(15 downto 8); end if; 
 				if pixel=1 then SY(0):=Q(0)&Q(15 downto 8); end if;
 				if pixel=2 then SDX(0):=Q(7 downto 0); SDY(0):=Q(15 downto 8); end if;
 				if pixel=3 then SCOLOR(0):=Q(7 downto 0); SEN(0):=Q(15 downto 8); end if;
@@ -153,17 +160,25 @@ begin
 				if pixel=29 then SY(7):=Q(0)&Q(15 downto 8); end if;
 				if pixel=30 then SDX(7):=Q(7 downto 0); SDY(7):=Q(15 downto 8); end if;
 				if pixel=31 then SCOLOR(7):=Q(7 downto 0); SEN(7):=Q(15 downto 8);  end if;
-			end if;
-			
-			if (lines>=l1 and lines<=l2) then
+				if pixel=32 then SX(8):=Q(0)&Q(15 downto 8); end if;
+				if pixel=33 then SY(8):=Q(0)&Q(15 downto 8); end if;
+				if pixel=34 then SDX(8):=Q(7 downto 0); SDY(8):=Q(15 downto 8); end if;
+				if pixel=35 then SCOLOR(8):=Q(7 downto 0); SEN(8):=Q(15 downto 8);  end if;
+--				if pixel=36 then SX(9):=Q(0)&Q(15 downto 8); end if;
+--				if pixel=37 then SY(9):=Q(0)&Q(15 downto 8); end if;
+--				if pixel=38 then SDX(9):=Q(7 downto 0); SDY(9):=Q(15 downto 8); end if;
+--				if pixel=39 then SCOLOR(9):=Q(7 downto 0); SEN(9):=Q(15 downto 8);  end if;
+			elsif (lines>=l1 and lines<=l2) then
 				if pixel=d2(0) then SLData(0):=Q; end if;
-				if pixel=d2(1)+16 then SLData(1):=Q; end if;
+				if pixel=d2(1)+16 then SLData(1):=Q; end if; 
 				if pixel=d2(2)+32 then SLData(2):=Q; end if;
 				if pixel=d2(3)+48 then SLData(3):=Q; end if;
 				if pixel=d2(4)+64 then SLData(4):=Q; end if;
 				if pixel=d2(5)+80 then SLData(5):=Q; end if;
 				if pixel=d2(6)+96 then SLData(6):=Q; end if;
 				if pixel=d2(7)+112 then SLData(7):=Q; end if;
+				if pixel=d2(8)+128 then SLData(8):=Q; end if;
+--				if pixel=d2(9)+144 then SLData(9):=Q; end if;
 			end if;
 			
 			-- sprites -----------------------
@@ -176,7 +191,7 @@ begin
 					if Q(7-m8)='1' then QQQ:=true; else QQQ:=false; end if;
 				end if;
 
-				QQ:=(others=>false);
+				
 				if (SEN(0)(0)='1') then
 					if bl(0) and (SLData(0)(d1(0))='1') then QQ(0):=true; end if;
 				end if;
@@ -201,6 +216,12 @@ begin
 				if (SEN(7)(0)='1') then
 					if bl(7) and (SLData(7)(d1(7))='1') then QQ(7):=true; end if;
 				end if;
+				if (SEN(8)(0)='1') then
+					if bl(8) and (SLData(8)(d1(8))='1') then QQ(8):=true; end if;
+				end if;
+--				if (SEN(9)(0)='1') then
+--					if bl(9) and (SLData(9)(d1(9))='1') then QQ(9):=true; end if;
+--				end if;
 
 				if    QQ(0) then R<=SCOLOR(0)(2); G<=SCOLOR(0)(1); B<=SCOLOR(0)(0); 
 				elsif QQ(1) then R<=SCOLOR(1)(2); G<=SCOLOR(1)(1); B<=SCOLOR(1)(0); 
@@ -210,24 +231,19 @@ begin
 				elsif QQ(5) then R<=SCOLOR(5)(2); G<=SCOLOR(5)(1); B<=SCOLOR(5)(0);
 				elsif QQ(6) then R<=SCOLOR(6)(2); G<=SCOLOR(6)(1); B<=SCOLOR(6)(0); 
 				elsif QQ(7) then R<=SCOLOR(7)(2); G<=SCOLOR(7)(1); B<=SCOLOR(7)(0); 
+				elsif QQ(8) then R<=SCOLOR(8)(2); G<=SCOLOR(8)(1); B<=SCOLOR(8)(0); 
+--				elsif QQ(9) then R<=SCOLOR(9)(2); G<=SCOLOR(9)(1); B<=SCOLOR(9)(0); 
 				elsif QQQ then R<=FG(2); G<=FG(1); B<=FG(0);
 				else  R<=BG(2); G<=BG(1); B<=BG(0); end if;
-
+				
 			else  -- vsync  0.01 us = 1 pixels
 				B<='0'; R<='0'; G<='0';
-				if lines<2 then
-					VSYN<='0';
-					if pixel<2 then 
-						VSINT<='0';
-					else	
-						VSINT<='1';
-					end if;
-				else
-					VSYN<='1';
-				end if;
+				if lines<2 then VSYN<='0';	else	VSYN<='1';	end if;
+				if (lines=0) and (pixel<4) then 	VSINT<='0';	else	VSINT<='1';	end if;
 			end if;
-		else   ------ pc false ---------------------------------------
-
+		else   ------ vidc false ---------------------------------------
+			QQ:=(others=>false);
+			
 			if (lines>=l1) and (lines<=l2) and (pixel>=p1) and (pixel<=p2) then
 				pix<=pix+1;  -- (pixel-85) * 8
 				addr<= pix/2 + addr2; 
@@ -236,7 +252,7 @@ begin
 			-- sprites
 			if (lines=1) and (pixel<p1) then 
 				if pbuffer='0' then addr<=(sp1/2+pixel); else addr<=(sp2/2+pixel); end if;
-			elsif (pixel<128) then 
+			elsif (pixel<p1) then 
 				if dbuffer='0' then addr<=(sd1/2+pixel); else addr<=(sd2/2+pixel); end if; 
 			end if;
 			lin:=lines-l1; pixi:=pixel-p1;
@@ -257,6 +273,10 @@ begin
 				d2(6):=lin-to_integer(unsigned(SY(6)));
 				d1(7):=pixi-to_integer(unsigned(SX(7))); 
 				d2(7):=lin-to_integer(unsigned(SY(7)));
+				d1(8):=pixi-to_integer(unsigned(SX(8))); 
+				d2(8):=lin-to_integer(unsigned(SY(8)));
+--				d1(9):=pixi-to_integer(unsigned(SX(9))); 
+--				d2(9):=lin-to_integer(unsigned(SY(9)));
 				
 				bl(0):=(d1(0)<maxd) and (d2(0)<maxd);
 				bl(1):=(d1(1)<maxd) and (d2(1)<maxd);
@@ -266,6 +286,8 @@ begin
 				bl(5):=(d1(5)<maxd) and (d2(5)<maxd);
 				bl(6):=(d1(6)<maxd) and (d2(6)<maxd);
 				bl(7):=(d1(7)<maxd) and (d2(7)<maxd);
+				bl(8):=(d1(8)<maxd) and (d2(8)<maxd-1);
+--				bl(9):=(d1(9)<maxd) and (d2(9)<maxd);
 			end if;
 			-- sprites 
 
@@ -362,7 +384,7 @@ process (clk,reset,wr)
 				c1<=c1+1;
 				if c3=0 and dur/=0 then dur<=dur-1; end if;
 			end if;
-			if c1="000111110011" then  -- c1=499 100Khz was c1=999  50Khz
+			if c1="000111110110" then  -- c1=502 100khz (clock =50.347.222) c1=499 100Khz was c1=999  50Khz
 				c1<="0000000000";
 				c3<=c3+1; c2<=c2+1; 
 				if dur=0 then
