@@ -12,7 +12,7 @@ entity LionSystem is
 		D  : INOUT  Std_logic_vector(15 downto 0);
 		ADo  : OUT  Std_logic_vector(15 downto 0); 
 		RWo,ASo,DSo : OUT Std_logic;
-		RD,Reset,iClock,Int,HOLD: IN Std_Logic;
+		RD,Reset,Clock,Int,HOLD: IN Std_Logic;
 		IOo, Holdao : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
 		IACK: OUT std_logic;
@@ -46,13 +46,13 @@ Component LionCPU16 is
 	);
 end Component;
 
-Component LPLL2 IS
-	PORT
-	(
-		inclk0: IN STD_LOGIC  := '0';
-		c0		: OUT STD_LOGIC 
-	);
-END Component;
+--Component LPLL2 IS
+--	PORT
+--	(
+--		inclk0: IN STD_LOGIC  := '0';
+--		c0		: OUT STD_LOGIC 
+--	);
+--END Component;
 
 
 Component lfsr is
@@ -190,7 +190,7 @@ Signal nen, ne: std_Logic:='0';
 Signal sdi,sdo,sdo2 : std_logic_vector (7 downto 0);
 SIGNAL addr,addr1 : natural range 0 to 65535;
 SIGNAL Spi_in,Spi_out: STD_LOGIC_VECTOR (7 downto 0);
-Signal Spi_w, spi_rdy, play, play2, AUDIO1, AUDIO2, spb, sdb, adxy, Clock : std_logic;
+Signal Spi_w, spi_rdy, play, play2, AUDIO1, AUDIO2, spb, sdb, adxy : std_logic;
 constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 
 begin
@@ -217,8 +217,8 @@ MSPI: SPI
 	PORT MAP ( SCLK,MOSI,MISO,clock,reset,spi_w,spi_rdy,spi_in,spi_out);
 NOIZ:lfsr
 	PORT MAP ( noise, clock, reset);
-CPLL:LPLL2
-	PORT MAP (iClock,Clock);
+--CPLL:LPLL2
+--	PORT MAP (iClock,Clock);
 
 -- data out 
 HOLDAo<=HOLDA;
@@ -246,7 +246,7 @@ if reset='1' then
 elsif clock'EVENT AND clock = '1' AND AS='0' and DS='0' and IO='1' then 
 	if AD(15 downto 14)="11" then --61440
 		w1<=not RW;
-		qi<=Do(7 downto 0)&Do(15 downto 8);
+		qi<=Do; --(7 downto 0)&Do(15 downto 8);
 	else	
 	   w1<='0';
 	end if;
@@ -286,16 +286,16 @@ di<=
                          and RW='1' and AS='0' else	
 	"000000000000000" & spi_rdy  when falling_edge(clock)          -- spi status
 								and RW='1' AND AD="000000000010001" and IO='1' and AS='0' else   -- 17
-	"00000000000000"& play2 & play  when falling_edge(clock)          -- spi status
+	"00000000000000"& play2 & play  when falling_edge(clock)          
 								and RW='1' AND AD="000000000001001" and IO='1' and AS='0' else   -- 9
-	"000"&JOYST2&"000"& JOYST1  when falling_edge(clock)          -- spi status
+	"000"&JOYST2&"000"& JOYST1  when falling_edge(clock)          
 								and RW='1' AND AD="000000000010110" and IO='1' and AS='0' else   -- 22
-	"00000000000000"&Vsyn&hsyn when falling_edge(clock)          -- spi status
+	"00000000000000"&Vsyn&hsyn when falling_edge(clock)          
 								and RW='1' AND AD="000000000010101" and IO='1' and AS='0' else   -- 21
 	count  when falling_edge(clock)          -- spi status
 								and RW='1' AND AD="000000000010100" and IO='1' and AS='0' else   -- 20
 	--qa when addr>=8192 and addr<16384 and RW='1' and IO='0' and AS='0' and falling_edge(clock) else   --ram
-	q16(7 downto 0)&q16(15 downto 8) when AD(15 downto 14)="11" and (RW='1') and (AS='0') 
+	q16 when AD(15 downto 14)="11" and (RW='1') and (AS='0') 
 	                     and falling_edge(clock) and (IO='1') else  --read video ram 
 	qro when (addr<8192) and (RW='1') and (IO='0') and (AS='0') and falling_edge(clock) else  --rom
 	D when falling_edge(clock) AND (RW='1') and (AS='0'); 

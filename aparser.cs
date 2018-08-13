@@ -181,6 +181,7 @@ namespace Lion_assembler
             colorList.Add("JG", Color.Blue);
             colorList.Add("JL", Color.Blue);
             colorList.Add("JRLE", Color.Blue);
+            colorList.Add("JRL", Color.Blue);
             colorList.Add("JRG", Color.Blue);
             colorList.Add("BTST", Color.Blue);
             colorList.Add("BSET", Color.Blue);
@@ -193,6 +194,7 @@ namespace Lion_assembler
             colorList.Add("SETX", Color.Blue);
             colorList.Add("JMPX", Color.Blue);
             colorList.Add("PUSHX", Color.Blue);
+            colorList.Add("JRX", Color.Blue);
             colorList.Add("POPX", Color.Blue);
             colorList.Add("MOVX", Color.Blue);
             colorList.Add("SETSP", Color.Blue);
@@ -290,6 +292,7 @@ namespace Lion_assembler
             instList.Add("JRA.B", 1);
             instList.Add("JLE", 1);
             instList.Add("JL", 1);
+            instList.Add("JRL", 1);
             instList.Add("JG", 1);
             instList.Add("JRLE", 1);
             instList.Add("JRG", 1);
@@ -307,6 +310,7 @@ namespace Lion_assembler
             instList.Add("SUBI", 2);
             instList.Add("SETX", 1);
             instList.Add("JMPX", 1);
+            instList.Add("JRX", 1);
             instList.Add("PUSHX", 0);
             instList.Add("MOVX", 1);
             instList.Add("POPX", 0);
@@ -475,14 +479,14 @@ namespace Lion_assembler
             {
                 return OperandType.StatusRegister;
             }
-            if ((s[0] >= 'A' && s[0] <= 'Z') || (s[0] == '_'))
+            if ((s[0] >= 'A' && s[0] <= 'Z') || (s[0] == '_') || (s[0] == '.'))
             {
                 if (lblList.ContainsKey(s)) return OperandType.LabelDirect;
                 if (constList.ContainsKey(s)) return OperandType.ConstantDirect;
                 if (varList.ContainsKey(s)) return OperandType.VariableDirect;
                 return OperandType.MemoryNamedDirect;
             }
-            if (s.Length > 1 && s[0] == '(' && ((s[1] >= 'A' && s[1] <= 'Z') || (s[1] == '_')))
+            if (s.Length > 1 && s[0] == '(' && ((s[1] >= 'A' && s[1] <= 'Z') || (s[1] == '_') || (s[1] == '.')))
             {
                 if (lblList.ContainsKey(s.Substring(1, s.Length - 2))) return OperandType.LabelIndirect;
                 if (constList.ContainsKey(s.Substring(1, s.Length - 2))) return OperandType.ConstantIndirect;
@@ -2290,6 +2294,12 @@ namespace Lion_assembler
                 il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0');
                 il.word1 = "0111011" + s1 + "000000";
             }
+            else if (il.op1t == OperandType.RegisterAIndirect)
+            {
+                r1 = is_reg_ref(il.op1);
+                il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0');
+                il.word1 = "01110110000" + s1 + "10";
+            }
             else if (il.op1t == OperandType.ProgramCounter)
             {
                 r1 = is_reg(il.op1);
@@ -2908,6 +2918,8 @@ namespace Lion_assembler
                     return gen5(il, "0111001");
                 case "JRLE":
                     return gen6(il, "1111000");
+                case "JRL":
+                    return gen6(il, "1111110");
                 case "JRG":
                     return gen6(il, "1110101");
                 case "BTST":
@@ -2936,6 +2948,8 @@ namespace Lion_assembler
                     return gen5(il, "0010011");
                 case "JMPX":
                     return gen5(il, "0010100");
+                case "JRX":
+                    return gen6(il, "1111111");
                 case "MOVX":
                     return gen2(il, "0010101");
                 case "SETSP":
@@ -3781,7 +3795,7 @@ namespace Lion_assembler
 
         public void parse()
         {
-            bool res; int i;
+            bool res; 
             instListArr.Clear();
             constList.Clear();
             varList.Clear();

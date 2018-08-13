@@ -33,7 +33,7 @@ SIGNAL X,Y,X1,X2,Y1,Do,Ai,Ao,Ao2: Std_logic_vector(15 downto 0);
 SIGNAL PC:Std_logic_vector(15 downto 0):="0000000000010000";
 SIGNAL IR,Z1: Std_logic_vector(15 downto 0):=ZERO16;
 SIGNAL SR: Std_logic_vector(7 downto 0):=ZERO8;
-SIGNAL ST: Std_logic_vector(15 downto 0):="1111111111111100";
+SIGNAL ST: Std_logic_vector(15 downto 0):="1111111111111110";
 SIGNAL M : Std_logic_vector(31 downto 0);
 SIGNAL FF,R,RR: Std_logic_vector(2 downto 0);
 SIGNAL TT: natural range 0 to 15;
@@ -95,7 +95,7 @@ variable bwb: Std_logic; --  bit to distinguish between word byte operations
 begin
 IF Reset = '1' THEN
 		PC <= "0000000000010000"; SR <= ZERO8; IA<="00"; HOLDA<='0';
-		AS<='1';  DS<='1'; RW<='1'; ST <= "1111111111111110"; --(16382) end of internal ram
+		AS<='1';  DS<='1'; RW<='1'; ST <= "1111111111111110"; --was (16382) end of internal ram
 		AD <= (OTHERS => '0'); IR<=(OTHERS=>'0');	 
 		Wen<='0'; rhalf<='1'; IACK<='0';
 		FF<="000"; TT<=0; add<='0'; sub<='0';  cin<='0'; rdy<='0'; 
@@ -604,7 +604,8 @@ IF Reset = '1' THEN
 			when "0111011" =>              -- PUSH Rn
 					tmp:=ST;
 					AD<=tmp; 	
-					Y1<=X1; ST<=ST-2;  FF<="111";
+					if fetch then Y1<=X; else Y1<=X1; end if;
+					ST<=ST-2;  FF<="111";
 					rest:=true;
 			when "0111100" =>              -- PUSH SR
 					tmp:=ST;
@@ -955,6 +956,13 @@ IF Reset = '1' THEN
 					end if;
 					AS<='1';	rest:=true; FF<="111";
 				end case;
+			when "1111110" =>              -- JRL (Reg,NUM,[reg],[n])
+				If  (SR(3)/=SR(1)) then PC<=Z1; end if;
+				rest2:=true;
+			when "1111111" =>              --JRX 
+				if IDX/=ZERO16 then PC<=Z1; end if;
+				IDX<=IDX-1;
+				rest2:=true;
 
 			when others => -- instructions  NOP	
 				rest2:=true;
