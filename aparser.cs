@@ -118,6 +118,8 @@ namespace Lion_assembler
             colorList.Add("SLA", Color.Blue);
             colorList.Add("SRL", Color.Blue);
             colorList.Add("SLL", Color.Blue);
+            colorList.Add("SRLL", Color.Blue);
+            colorList.Add("SLLL", Color.Blue);
             colorList.Add("ROL", Color.Blue);
             colorList.Add("JMP", Color.Blue);
             colorList.Add("JZ", Color.Blue);
@@ -183,6 +185,7 @@ namespace Lion_assembler
             colorList.Add("JRLE", Color.Blue);
             colorList.Add("JRL", Color.Blue);
             colorList.Add("JRG", Color.Blue);
+            colorList.Add("JRGE", Color.Blue);
             colorList.Add("BTST", Color.Blue);
             colorList.Add("BSET", Color.Blue);
             colorList.Add("BCLR", Color.Blue);
@@ -229,6 +232,8 @@ namespace Lion_assembler
             instList.Add("SLA", 2);
             instList.Add("SRL", 2);
             instList.Add("SLL", 2);
+            instList.Add("SRLL", 2);
+            instList.Add("SLLL", 2);
             //ilist.Add("ROR", 2);
             instList.Add("ROL", 2);
             instList.Add("JMP", 1);
@@ -296,6 +301,7 @@ namespace Lion_assembler
             instList.Add("JG", 1);
             instList.Add("JRLE", 1);
             instList.Add("JRG", 1);
+            instList.Add("JRGE", 1);
             instList.Add("BTST", 2);
             instList.Add("BSET", 2);
             instList.Add("BCLR", 2);
@@ -2042,7 +2048,7 @@ namespace Lion_assembler
                     case OperandType.RegisterADirect:
                         r2 = is_reg(il.op2);
                         il.len = 2; s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
-                        il.word1 = "111110" + bwb + "000" + bwb + s2 + "11";
+                        il.word1 = "1111100"  + "000" + bwb + s2 + "11";
                         r2 = r2 - ii - 4;
                         il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                         il.word2 = il.word2.Substring(il.word2.Length - 16);
@@ -2105,7 +2111,7 @@ namespace Lion_assembler
                     case OperandType.RegisterADirect:
                         r2 = is_reg(il.op2);
                         il.len = 2; s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
-                        il.word1 = "111110" + bwb + "000" + bwb + s2 + "11";
+                        il.word1 = "1111100" + "000" + bwb + s2 + "11";
                         r1 = r1 - ii - 4;
                         il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                         il.word2 = il.word2.Substring(il.word2.Length - 16);
@@ -2143,7 +2149,7 @@ namespace Lion_assembler
                     case OperandType.RegisterADirect:
                         r2 = is_reg(il.op2);
                         il.len = 2; s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
-                        il.word1 = "111110" + bwb + "000" + bwb + s2 + "11";
+                        il.word1 = "1111100" + "000" + bwb + s2 + "11";
                         //il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                         //il.word2 = il.word2.Substring(il.word2.Length - 16);
                         break;
@@ -2817,6 +2823,10 @@ namespace Lion_assembler
                     return gen3(il, "0011010");
                 case "SRL":
                     return gen3(il, "0011011");
+                case "SLLL":
+                    return gen4(il, "1001011");
+                case "SRLL":
+                    return gen4(il, "1011001");
                 case "SLL":
                     return gen3(il, "0011100");
                 //case "ROR":
@@ -2922,6 +2932,8 @@ namespace Lion_assembler
                     return gen6(il, "1111110");
                 case "JRG":
                     return gen6(il, "1110101");
+                case "JRGE":
+                    return gen6(il, "1111101");
                 case "BTST":
                     return gen3(il, "0010110");
                 case "BSET":

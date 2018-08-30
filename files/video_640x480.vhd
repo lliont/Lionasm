@@ -392,6 +392,7 @@ process (clk,reset,wr)
 		   Aud<='0'; c3<=0;  inter<='1'; i<=0; count<=(others=>'0'); play<='0'; dur<=0;
 		elsif  Clk'EVENT AND Clk = '1' then
 			if wr='0' then 
+			   play<='1';
 				CASE f(15 downto 14) is
 					when "00" =>
 						dur<=100000;  -- 2 sec
@@ -417,7 +418,7 @@ process (clk,reset,wr)
 						if c2/="000000000000" then Aud<=not Aud; end if;
 						c2<=(others => '0');			
 					end if;
-					play<='1';
+					--play<='1';
 				end if;
 				if i=99 then inter<='0'; i<=0; count<=count+'1'; else i<=i+1; end if;
 			else
@@ -463,6 +464,7 @@ process (clk,reset,wr)
 		   Aud<='0'; c3<=0;  play<='0'; dur<=0;
 		elsif  Clk'EVENT AND Clk = '1' then
 			if wr='0' then 
+				play<='1';
 				CASE f(15 downto 14) is
 					when "00" =>
 						dur<=100000;  -- 2 sec
@@ -488,7 +490,6 @@ process (clk,reset,wr)
 						if c2/="000000000000" then Aud<=not Aud; end if;
 						c2<=(others => '0');			
 					end if;
-					play<='1';
 				end if;
 			end if;
 		end if;
