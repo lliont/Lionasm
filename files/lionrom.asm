@@ -547,7 +547,6 @@ PHX2:		MOVI	A0,4
 		RET 
 
 
-
 ;---------------------------------
 ; INT5 A0=1  fixed point 16.16 
 ; Div A2 by A1 res in A1 (FRAC1),   restoring division 9/5/2017
@@ -578,46 +577,32 @@ FDIV3:	MOV		A3,(FRAC1)
 		SETX		15            ; shift dividend as left as possible
 FDC1:		BTST		A2,15
 		JNZ		FDC2
-		SLL		A2,1
-		SLL		A4,1
-		ADC		A2,0
-		JMPx		FDC1
-FDC2:		
-		MOVX		A0
+		SLLL		A2,A4
+		JMPX		FDC1
+FDC2:		MOVX		A0
 		CMPI		A0,6
 		JBE		FDC3
 		SETX		9
 		BTST		A3,0
 		JNZ		FDC9
-FDC5:		SRL		A3,1
-		SRL		A1,1
-		JNC		FDC4
-		BSET		A3,15
-FDC4:		DEC		A0
+FDC5:		SRLL		A1,A3
+		DEC		A0
 		JMPX		FDC5		
 FDC9:		SETX		A0
-FDC3:
-		PUSHX		
+FDC3:		PUSHX		
 
 		NOT		A1
 		NEG		A3
 		ADC		A1,0
 		MOV		A7,A1    ; store -M
 		MOV		(FRAC2),A3
-		
 		MOVI		A1,0
 		MOVI		A3,0	   	; A1A3 = A
 		SETX		30
-		 
 FD_INTER:
-		SLL		A1,1           ; shift AQ left
-		SLL		A3,1
-		ADC		A1,0
-		SLL		A2,1
+		SLLL		A1,A3           ; shift AQ left
+		SLLL		A2,A4
 		ADC		A3,0
-		SLL		A4,1
-		ADC		A2,0
-		
 		PUSH		A1
 		PUSH		A3
 		ADD		A3,(FRAC2)   	;A=A-M
@@ -630,26 +615,20 @@ FD_INTER:
 FD_COND1:	POP		A0
 		POP		A0	
 		BSET		A4,0       
-FD_COND2:	
-		JMPX		FD_INTER
+FD_COND2:	JMPX		FD_INTER
 		
 		POP		A0          ; shift left as needed
 		ADDI		A0,1
 		;SUBI		A0,1
 		JN		FDC6
 		SETX		A0
-FDLP:		SLL		A2,1
-		SLL		A4,1
-		ADC		A2,0
+FDLP:		SLLL		A2,A4
 		JMPX		FDLP
 		JMP		FDC7
 
 FDC6:		INC		A0
 		JZ		FDC7
-		SRL		A4,1        ; or shift right as needed
-		SRL		A2,1
-		JNC		FDC8
-		BSET		A4,15
+		SRLL		A2,A4        ; or shift right as needed
 FDC8:		JMP		FDC6
 
 FDC7:		MOV		A1,A2	     ; integer result in A1
@@ -1343,7 +1322,6 @@ MULEND:	POP		A3
 ; Div A2 by A1 res in A1,A0
 
 DIV:		STI
-		PUSHX
 		PUSH		A3
 		MOV		A3,A1
 		MOV		A1,32767
@@ -1384,35 +1362,32 @@ DIV12:	MOV		A3,A1
 		MOV		A1,A2
 		POP		A2  ; Get no of shifts
 		SUB		A1,A2
-		CMPI		A2,1
-		JB		DIV9
-		DEC		A2  
-		SETX		A2 
-DIV10:	SRL		A3,1  ; align back
+DIV10:	CMPI		A2,0
+		JZ		DIV9
+		SRL		A3,1  ; align back
 		SRL		A0,1
-		JMPX		DIV10
-DIV9:		SETX		A1
+		DEC		A2
+		JMP		DIV10
+DIV9:		MOV         A2,A1
 		MOVI		A1,0     ; quotient
-DIV11:	SLL		A1,1       
-		CMP		A0,A3  ; compare remainder with divisor
+DIV11:	CMP		A0,A3  ; compare remainder with divisor
 		JC		DIV8		
-		BSET		A1,0
+		BSET		A1,A2
 		SUB		A0,A3
 DIV8:		SRL		A3,1
-		JMPX		DIV11
+		DEC		A2
+		JP		DIV11 
 DIV14:	POP		A3
 		OR		A3,A3
 		JZ		DIVE
 		NEG		A1
 DIVE:		POP		A3
-		POPX
 		RETI
 
 ;-------------------------------------------------------------
 ; unsigned Div A2 by A1 res in A1,A0
 
 UDIV:		STI
-		PUSHX
 		PUSH		A3
 		MOV		A3,A1
 		MOV		A1,65535
@@ -1443,25 +1418,22 @@ UDIV12:	MOV		A3,A1
 		MOV		A1,A2
 		POP		A2  ; Get no of shifts
 		SUB		A1,A2
-		CMPI		A2,0
-		JZ		UDIV9
-		DEC		A2
-		SETX		A2
-UDIV10:	SRL		A3,1
+UDIV10:	CMPI		A2,0
+		JZ          UDIV9
+		SRL		A3,1
 		SRL		A0,1
-		JMPX		UDIV10
-UDIV9:	MOV		A2,A0  ; new dividend = remainder
-		SETX		A1
+		DEC		A2
+		JMP		UDIV10
+UDIV9:	MOV		A2,A1  
 		MOVI		A1,0       ; quotient
-UDIV11:	SLL		A1,1       
-		CMP		A0,A3  ; compare remainder with divisor
+UDIV11:	CMP		A0,A3  ; compare remainder with divisor
 		JC		UDIV8		
-		BSET		A1,0
+		BSET		A1,A2
 		SUB		A0,A3
 UDIV8:	SRL		A3,1
-		JMPX		UDIV11
+		DEC		A2
+		JP		UDIV11
 UDIVE:	POP		A3
-		POPX
 		RETI
 
 
