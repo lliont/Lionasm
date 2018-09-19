@@ -104,7 +104,7 @@ INT4T5	DA		PSTR     ; Print zero & cr terminated string
 INT4T6	DA		SCROLL   ; Scrolls screen 1 char (8 points) up
 INT4T7	DA		SKEYBIN  ; Serial Keyboard port in A1 A0(2)=1
 INT4T8	DA		MULT     ; Multiplcation A1*A2 res in A2A1, a0<>0 overflow 
-INT4T9	DA		DIV      ; integer Div A2 by A1 res in A1,A0
+INT4T9	DA		DIV      ; 16bit  Div A2 by A1 res in A1,A0
 INT4T10	DA		KEYB     ; converts to ascii the codes from serial keyboard
 INT4T11	DA		SPI_INIT ; initialize spi sd card
 INT4T12	DA		SPISEND  ; spi send/rec byt in A1 mode A2 1=CS low 3=CS h res a0
@@ -119,8 +119,9 @@ INT5T2	DA		FILELD   ; Load file A4 points to filename, at A3
 INT5T3	DA		VMOUNT   ; Load First Volume, return A0=fat root 1st cluster
 INT5T4	DA		FILEDEL  ; Delete file A4 points to filename
 INT5T5	DA		FILESAV  ; Save memory range to file A4 points to filename
-INT5T6	DA		UDIV     ; Unsigned int Div A2 by A1 res in A1,A0
-
+INT5T6	DA		UDIV     ; Unsigned 16bit  Div A2 by A1 res in A1,A0
+INT5T7      DA		LDIV     ; 32bit div A1A2/A3A4 res A1A2 rem A3A4
+INT5T8      DA		LMUL     ; 32bit mult A1A2*A3A4 res A1A2 
 
 ;Hardware interrupt
 HINT:		INC		(COUNTER)
@@ -1436,6 +1437,154 @@ UDIV8:	SRL		A3,1
 UDIVE:	POP		A3
 		RETI
 
+;------------------------------
+; A1A2 / A3A4 res A1A2, rem A3A4
+; long divide
+LDIV:
+  PUSH A5
+  PUSH A7
+  PUSHX
+  MOV A0,A1
+  XOR A0,A3
+  PUSH A0   ;save result sign
+  BTST A1,15
+  JZ _DL1
+  NOT A1
+  NEG A2
+  ADC A1,0
+_DL1:
+  BTST A3,15
+  JZ _DL2
+  NOT A3
+  NEG A4
+  ADC A3,0
+_DL2:
+  MOVI A0,0
+  MOVI A7,0
+  CMP A1,A3   ;   // compare if A1A2 <= A3A4 
+  JC _DL4
+  JA _DL8
+  CMP A2,A4
+  JBE _DL4
+_DL8: 
+  BTST A3,14  ;  // left align divisor
+  JNZ _DL3
+  SLLL A3,A4
+  INC A0
+  JMP _DL8
+_DL3:          ;   left align dividend
+  BTST A1,14
+  JNZ _DL6
+  SLLL A1,A2
+  INC A7
+  JMP _DL3
+_DL6:
+  SUB A0,A7       ;  // shift difference   
+  CMPI A7,0
+  JZ _DL12
+_DL11:           ;       // shift right
+  SRLL A1,A2
+  SRLL A3,A4
+  DEC A7
+  JNZ _DL11
+_DL12:
+  MOVI A5,0    ;  // main
+  MOVI A7,0
+  SETX A0    ;    //steps = length difference+1
+_DL7:
+  SLLL A5,A7
+  CMP A1,A3
+  JC _DL5
+  JA _DL9
+  CMP A2,A4
+  JC _DL5
+_DL9:
+  SUB A2,A4    ;  //A1A2 >= A3A4 then sub A3A4 and set 1
+  JC  _DL20
+  ADDI A1,1
+_DL20:
+  SUBI A1,1
+  SUB A1,A3
+  BSET A7,0
+_DL5: 
+  SRLL A3,A4  ;   // shift right
+  JMPX _DL7
+  MOV A3,A1        ;  // store remainder
+  MOV A4,A2
+  MOV A1,A5    ;  // store result
+  MOV A2,A7
+  JMP _DLEXIT
+_DL4:          ; //beq
+  MOV A3,A1
+  MOV A4,A2
+  MOVI A1,0
+  MOVI A2,0
+  JNZ _DLEXIT   ;  // if eq
+  MOVI A2,1
+  MOVI A3,0
+  MOVI A4,0
+_DLEXIT:
+  POP A0
+  BTST A0,15
+  JZ _DL14
+  NOT A1
+  NEG A2
+  ADC A1,0
+_DL14:
+  POPX
+  POP A7
+  POP A5
+  RETI
+
+;------------------------------
+; A1A2 * A3A4 res A1A2
+; long multiply
+
+LMUL:
+  PUSH A5
+  PUSH A7
+  PUSH A6
+  MOV A0,A1
+  XOR A0,A3
+  PUSH A0        ;   // shave result sign
+  BTST A1,15
+  JZ _ML1
+  NOT A1
+  NEG A2
+  ADC A1,0
+_ML1:
+  BTST A3,15
+  JZ _ML2
+  NOT A3
+  NEG A4
+  ADC A3,0
+_ML2:
+  MOV A6,A2
+  MOV A0,A4
+  MULU A6,A0
+  MOV A5,A0   ;   // 4 of 4
+  MOV A0,A2
+  MOV A7,A3
+  MULU A0,A7
+  ADD A5,A0   ;  // 3 of 4
+  MOV A0,A1
+  MOV A7,A4
+  MULU A0,A7
+  ADD A5,A0   ;// 2 of 4
+  MOV A1,A5
+  MOV A2,A6
+  POP A0       ;  // restore sign
+  BTST A0,15
+  JZ _MLEXIT
+  NOT A1
+  NEG A2
+  ADC A1,0
+_MLEXIT:
+  POP A6
+  POP A7
+  POP A5
+  RETI
+
 
 ROMEND:
 ; Charcter table Font
@@ -1476,7 +1625,7 @@ C124_125 	DB	54,0,0,0,0,0,0,34,62,8,0,0
 C126  	DB	64,128,64,128,0,0
 
 
-KEYBCD	DB    $29,$16,$71,$26,$25,$2E,$3D,$52,$46,$45,$3E,$79,$41,$4E,$49,$4A,$70,$69,$72,$7A
+KEYBCD	DB    $29,$16,$52,$26,$25,$2E,$3D,$71,$46,$45,$3E,$79,$41,$4E,$49,$4A,$70,$69,$72,$7A
 		DB    $6B,$73,$74,$6C,$75,$7D,$7C,$4C,$7E,$55,$E1,$78,$1E,$1C,$32,$21,$23,$24,$2B,$34
 		DB	$33,$43,$3B,$42,$4B,$3A,$31,$44,$4D,$15,$2D,$1B,$2C,$3C,$2A,$1D,$22,$35,$1A,$54
 		DB	$5D,$58,$36,$3,$0B,$83,$0A,0

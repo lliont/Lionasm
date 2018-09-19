@@ -320,6 +320,7 @@ namespace Lion_assembler
             par = new aparser(this);
             if (!changed) MakeColorSyntaxForAll();
             changed = false;
+            comboBox1.Text = "COM3";
         }
 
 
@@ -617,5 +618,90 @@ namespace Lion_assembler
             Cursor.Current = Cursors.Default;
         }
 
+        private void SSend_Click(object sender, EventArgs e)
+        {
+            BinaryReader br = null;
+            byte[] bt = new byte[2];
+            try
+            {
+                br = new BinaryReader(new FileStream(fname + ".bin", FileMode.Open));
+            }
+            catch (IOException ex)
+            {
+                errorbox.Text += "Can't open Binary File! \r\n";
+                errorbox.Text += ex.Message + "\r\n";
+                return;
+            }
+            try
+            {
+                serialPort1.Open();
+            }
+            catch (IOException ex)
+            {
+                errorbox.Text += "Can't open Serial Port \r\n";
+                errorbox.Text += ex.Message + "\r\n";
+                return;
+            }
+            serialPort1.Write("GCODE BTOP+2,"+BinSize.Text);
+            bt[0] = 13;  serialPort1.Write(bt, 0, 1);
+            for (int j = 0; j < 16; j++)  for (int i = 0; i < 300000; i++) { int k = i * 3; }
+            while (true)
+            {
+                try
+                {
+                    bt[0] = br.ReadByte();
+                }
+                catch (IOException ex)
+                { break; }
+                serialPort1.Write(bt,0,1);
+                for (int i = 0; i < 500000; i++) { int k = i * 3; }
+            }
+            br.Close();
+            serialPort1.Close();
+        }
+
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            serialPort1.PortName = comboBox1.Text;
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            byte[] bt = new byte[2];
+            try
+            {
+                serialPort1.Open();
+            }
+            catch (IOException ex)
+            {
+                errorbox.Text += "Can't open Serial Port \r\n";
+                errorbox.Text += ex.Message + "\r\n";
+                return;
+            }
+            serialPort1.Write("RCODE BTOP+2");
+            for (int i = 0; i < 500000; i++) { int k = i * 3; }
+            bt[0] = 13; serialPort1.Write(bt, 0, 1);
+            serialPort1.Close();
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            byte[] bt = new byte[2];
+            try
+            {
+                serialPort1.Open();
+            }
+            catch (IOException ex)
+            {
+                errorbox.Text += "Can't open Serial Port \r\n";
+                errorbox.Text += ex.Message + "\r\n";
+                return;
+            }
+            serialPort1.Write(scmnd.Text);
+            for (int i = 0; i < 500000; i++) { int k = i * 3; }
+            bt[0] = 13; serialPort1.Write(bt, 0, 1);
+            serialPort1.Close();
+        }
     }
 }
