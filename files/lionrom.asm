@@ -122,6 +122,10 @@ INT5T5	DA		FILESAV  ; Save memory range to file A4 points to filename
 INT5T6	DA		UDIV     ; Unsigned 16bit  Div A2 by A1 res in A1,A0
 INT5T7      DA		LDIV     ; 32bit div A1A2/A3A4 res A1A2 rem A3A4
 INT5T8      DA		LMUL     ; 32bit mult A1A2*A3A4 res A1A2 
+INT5T9      DA		FLMUL     ; float mult A1A2*A3A4 res A1A2 
+INT5T10     DA		FLDIV     ; float div A1A2/A3A4 res A1A2 rem A3A4
+INT5T11     DA		FLADD     ; float add A1A2+A3A4 res A1A2 
+INT5T12     DA		FCMP     ; float cmp  A1A2,A3A4 res A0 
 
 ;Hardware interrupt
 HINT:		INC		(COUNTER)
@@ -134,6 +138,297 @@ INTR4:	SLL		A0,1
 INTR5:	SLL		A0,1
 		ADD		A0,INT5T0
 		JMP		(A0)
+;---------------------------------------------------
+
+FCMP:
+  PUSH A1
+  PUSH A2
+  PUSH A3
+  PUSH A4
+  PUSH A5
+  PUSH A7
+  BTST A1,15
+  JZ CFLT_1
+  BTST A3,15
+  JZ CFLT_2
+CFLP_4:  
+  XCHG A1,A3
+  XCHG A2,A4
+  JMP CFLT_3
+CFLT_1:
+  BTST A3,15
+  JZ CFLT_3
+  MOVI A0,1
+  JMP CFLT_E
+CFLT_2:
+  BTST A3,15
+  JNZ CFLP_4
+  MOV A0,-1
+  JMP CFLT_E
+CFLT_3:  
+  BCLR A1,15
+  BCLR A3,15
+  MOV A5,A3
+  SRL A5,7
+  AND A3,$007F
+  MOV A7,A1
+  SRL A7,7
+  AND A1,$007F
+  CMP A7,A5
+  JL CFLT_5
+CFLT_7:
+  MOVI A0,1
+  JMP CFLT_E
+CFLT_5:
+  JZ CFLT_6
+  MOV A0,-1
+  JMP CFLT_E
+CFLT_6:
+  SUB A2,A4
+  ADC A3,0
+  SUB A1,A3
+  JL CFLT_5
+  JNZ CFLT_7
+  MOVI A0,0
+CFLT_E:
+  POP A7
+  POP A5
+  POP A4
+  POP A3
+  POP A2
+  POP A1
+  RETI
+
+
+FLMUL:
+  PUSH A5
+  PUSH A6
+  PUSH A7
+  PUSHX
+  MOV A6,A3
+  XOR A6,A1
+  AND A6,$8000
+  MOV A5,A3
+  AND A3,$007F
+  BCLR A5,15
+  SRL A5,7
+  MOV A0,A3
+  OR A0,A5
+  OR A0,A4
+  JRNZ 8
+  MOVI A1,0
+  MOVI A2,0
+  JMP FMUL_E
+  BSET A3,7
+  SUB A5,127
+  MOV A7,A1
+  AND A1,$007F
+  BCLR A7,15
+  SRL A7,7
+  MOV A0,A1
+  OR A0,A7
+  OR A0,A2
+  JZ FMUL_E
+  BSET A1,7
+  SUB A7,127
+FMUL_1:
+  ADD A7,A5
+  SETX 7
+FMUL_2:
+  SRLL A1,A2
+  SRLL A3,A4
+  JMPX FMUL_2
+  MOVI A0,8
+  INT 5
+  SETX 7
+FMUL_3:
+  SRLL A1,A2
+  JMPX FMUL_3
+FMUL_4:
+  BTST A1,7
+  JNZ FMUL_5
+  SLLL A1,A2
+  DEC A7
+  JMP FMUL_4
+FMUL_5:
+  INC A7
+  ADD A7,127
+  AND A1,$007F
+  SLL A7,7
+  OR A1,A7
+  OR A1,A6
+FMUL_E:
+  POPX
+  POP A7
+  POP A6
+  POP A5
+  RETI
+
+FLDIV: 
+  PUSH A5
+  PUSH A6
+  PUSH A7
+  PUSHX
+  MOV A6,A3
+  XOR A6,A1
+  AND A6,$8000
+  MOV A5,A3
+  AND A3,$007F
+  BCLR A5,15
+  SRL A5,7
+  MOV A0,A3
+  OR A0,A5
+  OR A0,A4
+  JRNZ 10
+  MOV A1,$7F00
+  MOVI A2,0
+  JMP FDIV_E
+  BSET A3,7
+  MOV A7,A1
+  AND A1,$007F
+  BCLR A7,15
+  SRL A7,7
+  MOV A0,A1
+  OR A0,A7
+  OR A0,A2
+  JZ FDIV_E
+  BSET A1,7
+FDIV_1:
+  SUB A7,A5
+  ADD A7,127
+  SETX 6
+FDIV_2:
+  SLLL A1,A2
+  SRLL A3,A4
+  ADDI A7,1
+  JMPX FDIV_2
+  SRLL A3,A4
+  MOVI A0,7
+  INT 5
+FDIV_4:
+  BTST A1,7
+  JNZ FDIV_5
+  SLLL A1,A2
+  DEC A7
+  JMP FDIV_4
+FDIV_5:
+  ADDI A7,1
+  AND A1,$007F
+  SLL A7,7
+  OR A1,A7
+  OR A1,A6
+FDIV_E:
+  POPX
+  POP A7
+  POP A6
+  POP A5
+  RETI
+
+FLADD: 
+  PUSH A5
+  PUSH A6
+  PUSH A7
+  PUSHX
+  MOV A6,A3
+  MOV A5,A3
+  AND A3,$007F
+  BCLR A5,15
+  SRL A5,7
+  MOV A0,A3
+  OR A0,A5
+  OR A0,A4
+  JZ FADD_E
+  BSET A3,7
+  MOV A0,A1
+  MOV A7,A1
+  AND A1,$007F
+  BCLR A7,15
+  SRL A7,7
+  PUSH A0
+  MOV A0,A1
+  OR A0,A7
+  OR A0,A2
+  POP A0
+  JNZ FADD_9
+  MOV A1,A3
+  MOV A2,A4
+  JMP FADD_E
+FADD_9:
+  BSET A1,7
+  CMP A7,A5
+  JA FADD_3
+  JZ FADD_4
+  XCHG A1,A3
+  XCHG A2,A4
+  XCHG A7,A5
+  XCHG A0,A6
+FADD_3:
+  CMP A7,A5
+  JZ FADD_4
+  SRLL A3,A4
+  INC A5
+  JMP FADD_3
+FADD_4:
+  BTST A0,15
+  JZ FADD_1
+  BTST A6,15
+  JZ FADD_2
+  MOV A0,$8000
+FADD_6:
+  ADD A2,A4
+  ADC A1,A3
+  JMP FADD_5
+FADD_1:
+  BTST A6,15
+  MOVI A0,0
+  JZ FADD_6
+FADD_7:
+  MOV A0,$8000
+  SUB A2,A4
+  ADC A3,0
+  SUB A1,A3
+  JC FADD_8
+  MOVI A0,0
+  JMP FADD_10
+FADD_8:
+  NOT A1
+  NEG A2
+  ADC A1,0
+  JMP FADD_10
+FADD_2:
+  XCHG A1,A3
+  XCHG A2,A4
+  JMP FADD_7
+FADD_5:
+  BTST A1,8
+  JRZ 4
+  SRLL A1,A2
+  INC A7
+  JMP FADD_11
+FADD_10:
+  MOV A5,A1
+  OR A5,A2
+  JRNZ 2
+  MOVI A7,0
+  JZ FADD_E
+FADD_12:
+  BTST A1,7
+  JNZ FADD_11
+  SLLL A1,A2
+  DEC A7
+  JMP FADD_12
+FADD_11:
+  AND A1,$007F
+  SLL A7,7
+  OR A1,A7
+  OR A1,A0
+FADD_E:
+  POPX
+  POP A7
+  POP A6
+  POP A5
+  RETI
+
 
 ;---------INT5 A0=5 Save -----------------------------
 ; A4 filename, a6 address, a7 size
@@ -1546,7 +1841,7 @@ LMUL:
   PUSH A6
   MOV A0,A1
   XOR A0,A3
-  PUSH A0        ;   // shave result sign
+  PUSH A0        ;   // save result sign
   BTST A1,15
   JZ _ML1
   NOT A1
