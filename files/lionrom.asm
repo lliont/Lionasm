@@ -152,38 +152,40 @@ FCMP:
   BTST A3,15
   JZ CFLT_2
 CFLP_4:  
-  XCHG A1,A3
+  XCHG A1,A3  ;// both negative
   XCHG A2,A4
   JMP CFLT_3
 CFLT_1:
   BTST A3,15
   JZ CFLT_3
-  MOVI A0,1
+  MOVI A0,1  ;// 1st  pos  2nd neg
   JMP CFLT_E
 CFLT_2:
   BTST A3,15
   JNZ CFLP_4
-  MOV A0,-1
+  MOV A0,-1  ;// 1st neg  2nd pos
   JMP CFLT_E
-CFLT_3:  
+CFLT_3:      ; // both pos
   BCLR A1,15
   BCLR A3,15
   MOV A5,A3
-  SRL A5,7
-  AND A3,$007F
+  SRL A5,7    ;// A5 has exponent 2
+  AND A3,$007F  ;// A3 has hi part of fraction A4 the rest
   MOV A7,A1
   SRL A7,7
   AND A1,$007F
-  CMP A7,A5
+  ;SUB A5,127
+  ;SUB A7,127  ;// A7 has exponent 1
+  CMP A7,A5    ; // A1 has hi part of fraction A2 the rest
   JL CFLT_5
+  JZ CFLT_6
 CFLT_7:
   MOVI A0,1
   JMP CFLT_E
 CFLT_5:
-  JZ CFLT_6
-  MOV A0,-1
+  MOV A0,-1  
   JMP CFLT_E
-CFLT_6:
+CFLT_6:      ;// equal exp compare mantisa
   SUB A2,A4
   ADC A3,0
   SUB A1,A3
@@ -209,22 +211,22 @@ FLMUL:
   XOR A6,A1
   AND A6,$8000
   MOV A5,A3
-  AND A3,$007F
+  AND A3,$007F  ;// A3 has hi part of fraction A4 the rest
   BCLR A5,15
-  SRL A5,7
+  SRL A5,7   ;// A5 has exponent 2
   MOV A0,A3
   OR A0,A5
   OR A0,A4
-  JRNZ 8
+  JRNZ 8     ;// if num2 = 0 exit result = num1
   MOVI A1,0
   MOVI A2,0
   JMP FMUL_E
   BSET A3,7
   SUB A5,127
   MOV A7,A1
-  AND A1,$007F
+  AND A1,$007F   ;// A1 has hi part of fraction A2 the rest
   BCLR A7,15
-  SRL A7,7
+  SRL A7,7      ;// A7 has exponent 1
   MOV A0,A1
   OR A0,A7
   OR A0,A2
@@ -253,10 +255,10 @@ FMUL_4:
 FMUL_5:
   INC A7
   ADD A7,127
-  AND A1,$007F
+  AND A1,$007F  ;// build float 
   SLL A7,7
   OR A1,A7
-  OR A1,A6
+  OR A1,A6     ;// Set sign
 FMUL_E:
   POPX
   POP A7
@@ -273,21 +275,21 @@ FLDIV:
   XOR A6,A1
   AND A6,$8000
   MOV A5,A3
-  AND A3,$007F
+  AND A3,$007F  ;// A3 has hi part of fraction A4 the rest
   BCLR A5,15
-  SRL A5,7
+  SRL A5,7     ;// A5 has exponent 2
   MOV A0,A3
   OR A0,A5
   OR A0,A4
-  JRNZ 10
+  JRNZ 10       ;// if num2 = 0 exit
   MOV A1,$7F00
   MOVI A2,0
   JMP FDIV_E
   BSET A3,7
   MOV A7,A1
-  AND A1,$007F
+  AND A1,$007F    ;// A1 has hi part of fraction A2 the rest
   BCLR A7,15
-  SRL A7,7
+  SRL A7,7       ;// A7 has exponent 1
   MOV A0,A1
   OR A0,A7
   OR A0,A2
@@ -312,11 +314,11 @@ FDIV_4:
   DEC A7
   JMP FDIV_4
 FDIV_5:
-  ADDI A7,1
-  AND A1,$007F
+  ADDI A7,1     
+  AND A1,$007F  ;// build float 
   SLL A7,7
   OR A1,A7
-  OR A1,A6
+  OR A1,A6   ; // Set sign
 FDIV_E:
   POPX
   POP A7
@@ -331,38 +333,38 @@ FLADD:
   PUSHX
   MOV A6,A3
   MOV A5,A3
-  AND A3,$007F
+  AND A3,$007F  ;// A3 has hi part of fraction A4 the rest
   BCLR A5,15
-  SRL A5,7
+  SRL A5,7    ;// A5 has exponent 2
   MOV A0,A3
   OR A0,A5
   OR A0,A4
-  JZ FADD_E
+  JZ FADD_E      ;// if num2 = 0 exit result = num1
   BSET A3,7
   MOV A0,A1
   MOV A7,A1
-  AND A1,$007F
+  AND A1,$007F  ; // A1 has hi part of fraction A2 the rest
   BCLR A7,15
-  SRL A7,7
+  SRL A7,7    ;// A7 has exponent 1
   PUSH A0
   MOV A0,A1
   OR A0,A7
   OR A0,A2
   POP A0
   JNZ FADD_9
-  MOV A1,A3
+  MOV A1,A6
   MOV A2,A4
   JMP FADD_E
 FADD_9:
   BSET A1,7
-  CMP A7,A5
+  CMP A7,A5   ;//  make A1A2 the bigger number
   JA FADD_3
   JZ FADD_4
   XCHG A1,A3
   XCHG A2,A4
   XCHG A7,A5
   XCHG A0,A6
-FADD_3:
+FADD_3:      ;// make exps equal
   CMP A7,A5
   JZ FADD_4
   SRLL A3,A4
@@ -373,9 +375,9 @@ FADD_4:
   JZ FADD_1
   BTST A6,15
   JZ FADD_2
-  MOV A0,$8000
+  MOV A0,$8000   ;//both negative add
 FADD_6:
-  ADD A2,A4
+  ADD A2,A4     ;// both positive add
   ADC A1,A3
   JMP FADD_5
 FADD_1:
@@ -383,8 +385,8 @@ FADD_1:
   MOVI A0,0
   JZ FADD_6
 FADD_7:
-  MOV A0,$8000
-  SUB A2,A4
+  MOV A0,$8000  ;// 1st positive 2nd negative subtract
+  SUB A2,A4     ; // or the oposite
   ADC A3,0
   SUB A1,A3
   JC FADD_8
@@ -400,7 +402,7 @@ FADD_2:
   XCHG A2,A4
   JMP FADD_7
 FADD_5:
-  BTST A1,8
+  BTST A1,8   ;//normalaize 
   JRZ 4
   SRLL A1,A2
   INC A7
@@ -410,15 +412,15 @@ FADD_10:
   OR A5,A2
   JRNZ 2
   MOVI A7,0
-  JZ FADD_E
+  JZ FADD_E   ; // is subtraction result zero then exit
 FADD_12:
-  BTST A1,7
+  BTST A1,7     ;// matanormalaize
   JNZ FADD_11
   SLLL A1,A2
   DEC A7
   JMP FADD_12
 FADD_11:
-  AND A1,$007F
+  AND A1,$007F  ; // build float 
   SLL A7,7
   OR A1,A7
   OR A1,A0
