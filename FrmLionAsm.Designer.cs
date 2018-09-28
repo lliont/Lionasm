@@ -415,13 +415,15 @@
             "LCODE \"\"",
             "LOAD \"\"",
             "SAVE \"\""});
-            this.scmnd.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
+            this.scmnd.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
             this.scmnd.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.CustomSource;
             this.scmnd.CharacterCasing = System.Windows.Forms.CharacterCasing.Upper;
             this.scmnd.Location = new System.Drawing.Point(930, 10);
             this.scmnd.Name = "scmnd";
             this.scmnd.Size = new System.Drawing.Size(129, 18);
             this.scmnd.TabIndex = 20;
+            this.scmnd.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.scmnd_KeyPress);
+            this.scmnd.KeyUp += new System.Windows.Forms.KeyEventHandler(this.scmnd_KeyUp);
             // 
             // fftxtSource
             // 

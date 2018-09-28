@@ -703,5 +703,32 @@ namespace Lion_assembler
             bt[0] = 13; serialPort1.Write(bt, 0, 1);
             serialPort1.Close();
         }
+
+        private void scmnd_KeyPress(object sender, KeyPressEventArgs e)
+        {
+        
+        }
+
+        private void scmnd_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (e.KeyData == Keys.Return)
+            {
+                byte[] bt = new byte[2];
+                try
+                {
+                    serialPort1.Open();
+                }
+                catch (IOException ex)
+                {
+                    errorbox.Text += "Can't open Serial Port \r\n";
+                    errorbox.Text += ex.Message + "\r\n";
+                    return;
+                }
+                serialPort1.Write(scmnd.Text);
+                for (int i = 0; i < 500000; i++) { int k = i * 3; }
+                bt[0] = 13; serialPort1.Write(bt, 0, 1);
+                serialPort1.Close();
+            }
+        }
     }
 }

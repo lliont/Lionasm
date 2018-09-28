@@ -3925,7 +3925,7 @@ namespace Lion_assembler
             else if (t == "TEXT")
             {
                 il.opcode = t;
-                t = string.Empty; il.merge = false;
+                t = string.Empty; il.merge = false; 
                 il.values = new List<int>();
                 res = get_first_char();
                 if (t != "\"" || !res) { error = -2; return false; }
@@ -4249,7 +4249,10 @@ namespace Lion_assembler
 
             //sourceLinesArr = (LionAsmForm.fftxtSource.Lines.Select(s => s.Substring(0, s.IndexOf(';') > -1 ? s.IndexOf(';') : s.Length).ToUpper().Trim()).ToArray()).Where(w => !string.IsNullOrEmpty(w)).ToArray(); //don't count comment lines, only instruction lines and the InstructionLine.lno's will NOT be consistent to source text lines
 
-            sourceLinesArr = LionAsmForm.fftxtSource.Lines.Select(s => s.Substring(0, s.IndexOf(';') > -1 ? s.IndexOf(';') : s.Length).ToUpper().Trim()).ToArray(); // comment lines will be in the list as blanks and each InstructionLine.lno will be consistent to source text lines
+            sourceLinesArr = LionAsmForm.fftxtSource.Lines.Select(s => s.Substring(0, s.IndexOf(';') > -1 ? s.IndexOf(';') : s.Length).Trim()).ToArray(); // comment lines will be in the list as blanks and each InstructionLine.lno will be consistent to source text lines
+
+            sourceLinesArr = sourceLinesArr.Select(s => (s.ToUpper().IndexOf("TEXT") > -1) ? s.Substring(0, s.ToUpper().IndexOf("TEXT")+4).ToUpper() + s.Substring(s.ToUpper().IndexOf("TEXT")+4, 
+                             s.Length - s.ToUpper().IndexOf("TEXT")-4) : s.ToUpper()).ToArray();
 
             LionAsmForm.VHDL.Text = "-- Copy to LionSystem VHDL Rom or Ram init function\r\n";
             address = 32;

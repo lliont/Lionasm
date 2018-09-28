@@ -1363,33 +1363,24 @@ SERIN:	IN		A0,6  ;Read serial byte if availiable
 		BTST		A0,1  ;Result in A1, A0(1)=0 if not avail
 		JZ		INTEXIT
 		IN		A1,4
-		;MOVI		A0,2
 		OUT		2,2
-		;MOVI		A0,0
 		OUT		2,0
-		;MOVI		A0,2
 		RETI
 ;----------------------------------------
 SEROUT:	IN		A0,6  ;Wite serial byte if ready
 		BTST		A0,0  ; A0(0)=0 if not ready
 		JZ		INTEXIT
 		OUT		0,A1
-		;MOVI		A0,1
 		OUT		2,1
-		;MOVI		A0,0
 		OUT		2,0
-		;MOVI		A0,1
 		RETI
 ; -------------------------------------
 SKEYBIN:	IN		A0,6  ;Read serial byte if availiable
 		BTST		A0,2  ;Result in A1, A0(2)=0 if not avail
 		JZ		INTEXIT
 		IN		A1,14
-		;MOVI		A0,2
 		OUT		15,2
-		;MOVI		A0,0
 		OUT		15,0
-		;MOVI		A0,4
 		RETI
 
 ;----------------------------------------
@@ -1398,12 +1389,12 @@ PUTC:		STI
 		PUSH		A4
 		PUSH		A1
 		AND		A1,$00FF
-		CMP.B		A1,96  
-		JBE		LAB1
-		SUB.B		A1,32
-		CMP.B		A1,90
-		JLE		LAB1
-		ADDI		A1,6
+		;CMP.B		A1,96  
+		;JBE		LAB1
+		;SUB.B		A1,32
+		;CMP.B		A1,90
+		;JLE		LAB1
+		;ADDI		A1,6
 LAB1:		SUB.B		A1,32    
 		MULU		A1,6
 		ADD		A1,CTABLE
@@ -1493,7 +1484,6 @@ PLOT:		STI
 		MULU		A2,XDIM2
 		ADD		A2,A1
 		ADD		A2,VBASE 
-		;MOV.B		A1,(A2)
 		IN		A1,A2
 		BTST		A2,0
 		JNZ		PL6
@@ -1544,7 +1534,6 @@ PIM3:		SWAP		A3
 		XOR		A1,A3
 		OUT.B		A2,A1
 		MOV		A0,XDIM2
-		;SLL		A0,1
 		ADD		A0,A2
 		IN.B		A1,A0
 		SWAP		A3
@@ -1917,7 +1906,20 @@ C88_89	DB	34,20,8,20,34,0,48,8,6,8,48,0
 C90_91	DB	34,38,42,50,34,0,62,34,0,0,0,0
 C92_93	DB	48,8,6,0,0,0,34,62,0,0,0,0
 C94_95	DB	0,64,128,64,0,0,2,2,2,2,2,2
-C96_123	DB	0,128,0,0,0,0,0,8,62,34,0,0
+C96_97	DB	0,128,0,0,0,0,46,42,42,62,0,0
+C98_99	DB	254,34,34,62,0,0,62,34,34,54,0,0
+C100_101	DB	62,34,34,254,0,0,0,62,42,42,58,0
+C102_103	DB	0,254,160,128,0,0,61,37,37,63,0,0
+C104_105	DB	254,32,32,62,0,0,0,0,190,0,0,0
+C106_107	DB	0,1,191,0,0,0,254,32,32,94,0,0
+C108_109	DB	0,254,0,0,0,0,62,32,62,32,62,0
+C110_111	DB	62,32,32,62,0,0,62,34,34,62,0,0
+C112_113	DB	63,34,34,62,0,0,62,34,34,63,0,0
+C114_115	DB	62,32,32,48,0,0,58,42,42,46,0,0
+C116_117	DB	254,34,34,6,0,0,62,2,2,62,0,0
+C118_119	DB	62,4,8,48,0,0,62,2,62,2,62,0
+C120_121	DB	54,8,8,54,0,0,61,5,5,63,0,0
+C122_123	DB	38,42,42,50,0,0,0,8,62,34,0,0
 C124_125 	DB	54,0,0,0,0,0,0,34,62,8,0,0
 C126  	DB	64,128,64,128,0,0
 
