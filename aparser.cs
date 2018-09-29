@@ -4251,8 +4251,10 @@ namespace Lion_assembler
 
             sourceLinesArr = LionAsmForm.fftxtSource.Lines.Select(s => s.Substring(0, s.IndexOf(';') > -1 ? s.IndexOf(';') : s.Length).Trim()).ToArray(); // comment lines will be in the list as blanks and each InstructionLine.lno will be consistent to source text lines
 
-            sourceLinesArr = sourceLinesArr.Select(s => (s.ToUpper().IndexOf("TEXT") > -1) ? s.Substring(0, s.ToUpper().IndexOf("TEXT")+4).ToUpper() + s.Substring(s.ToUpper().IndexOf("TEXT")+4, 
-                             s.Length - s.ToUpper().IndexOf("TEXT")-4) : s.ToUpper()).ToArray();
+            sourceLinesArr = sourceLinesArr.Select(s => s.Replace((char) 9,' ')).ToArray() ; // replace tabs with space
+
+            sourceLinesArr = sourceLinesArr.Select(s => (s.ToUpper().IndexOf("TEXT ") > -1) ? s.Substring(0, s.ToUpper().IndexOf("TEXT")+4).ToUpper() + s.Substring(s.ToUpper().IndexOf("TEXT")+4, 
+                             s.Length - s.ToUpper().IndexOf("TEXT")-4) : s.ToUpper()).ToArray(); // leave lines after TEXT lower case
 
             LionAsmForm.VHDL.Text = "-- Copy to LionSystem VHDL Rom or Ram init function\r\n";
             address = 32;
