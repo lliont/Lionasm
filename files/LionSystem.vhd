@@ -239,20 +239,14 @@ vs<=VSYN;
 IACK<=IAC;
 
 -- Video Ram 
-process (clock,reset)
+process (clock)
 begin 
-if reset='1' then
-	w1<='0'; w2<='0'; 
-elsif clock'EVENT AND clock = '1' AND AS='0' and DS='0' and IO='1' then 
-	if AD(15 downto 14)="11" then --61440
+if falling_edge(clock) AND AS='0' and DS='0' and IO='1' and AD(15 downto 14)="11" then --61440
 		w1<=not RW;
 		qi<=Do; --(7 downto 0)&Do(15 downto 8);
-	else	
+	elsif falling_edge(clock) then
 	   w1<='0';
 	end if;
-else 
-	if clock'EVENT AND clock = '1' then w1<='0'; end if;
-end if;
 end process ;
 
 -- UART SKEYB SPI IO decoding
@@ -265,7 +259,7 @@ SPICS<=Do(1) when addr=19 and IO='1' and AS='0' and DS='0' and RW='0' and fallin
 spi_in<=Do(7 downto 0) when addr=18 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 spb<=Do(1) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 sdb<=Do(0) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
-adxy<=Do(2) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
+--adxy<=Do(2) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 --spb<=not spb when rising_edge(vs) ;
  --Sound IO decoding 
 aq<=Do when IO='1' and AD="0000000000001000" and falling_edge(clock); -- port 8
@@ -275,30 +269,28 @@ Waud<='0' when AD="0000000000001000" and IO='1' and AS='0' and DS='0' and RW='0'
 Waud2<='0' when AD="0000000000001010" and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
 
 -- Read decoder
-di<=	
-	"00000000"&sdo when falling_edge(clock) AND AD="0000000000000100" and IO='1' -- serial 
-                         and RW='1' and AS='0' else
-	"00000000"&sdo2 when falling_edge(clock) AND AD="0000000000001110" and IO='1' -- serial keyboard
-                         and RW='1' and AS='0' else
-	"0000000000000" & sdready2 & sdready & sready  when falling_edge(clock)          -- serial status
-								and RW='1' AND AD="0000000000000110" and IO='1' and AS='0' else
-	"00000000"&spi_out when falling_edge(clock) AND AD="000000000010000" and IO='1'  --spi 
-                         and RW='1' and AS='0' else	
-	"000000000000000" & spi_rdy  when falling_edge(clock)          -- spi status
-								and RW='1' AND AD="000000000010001" and IO='1' and AS='0' else   -- 17
-	"00000000000000"& play2 & play  when falling_edge(clock)          
-								and RW='1' AND AD="000000000001001" and IO='1' and AS='0' else   -- 9
-	"000"&JOYST2&"000"& JOYST1  when falling_edge(clock)          
-								and RW='1' AND AD="000000000010110" and IO='1' and AS='0' else   -- 22
-	"00000000000000"&Vsyn&hsyn when falling_edge(clock)          
-								and RW='1' AND AD="000000000010101" and IO='1' and AS='0' else   -- 21
-	count  when falling_edge(clock)          -- spi status
-								and RW='1' AND AD="000000000010100" and IO='1' and AS='0' else   -- 20
-	--qa when addr>=8192 and addr<16384 and RW='1' and IO='0' and AS='0' and falling_edge(clock) else   --ram
-	q16 when AD(15 downto 14)="11" and (RW='1') and (AS='0') 
-	                     and falling_edge(clock) and (IO='1') else  --read video ram 
-	qro when (addr<8192) and (RW='1') and (IO='0') and (AS='0') and falling_edge(clock) else  --rom
-	D when falling_edge(clock) AND (RW='1') and (AS='0'); 
+process (clock)
+begin 
+if falling_edge(clock) and RW='1' and AS='0' then
+	if IO='0' then
+		if (addr<8192) then Di<=qro; 
+		else Di<=D; end if;
+	else
+		if AD(15 downto 14)="11" then Di<=q16;
+		elsif AD="0000000000000100" then Di<="00000000"&sdo;  -- serial1
+		elsif AD="0000000000001110" then Di<="00000000"&sdo2;  -- serial2 keyboard
+		elsif AD="0000000000000110" then Di<="0000000000000" & sdready2 & sdready & sready;  -- serial status
+		elsif AD="000000000010000" then Di<="00000000"&spi_out;   --spi 
+		elsif AD="000000000010001" then Di<="000000000000000" & spi_rdy;  --spi 
+		elsif AD="000000000001001" then Di<="00000000000000"& play2 & play; -- audio status
+		elsif AD="000000000010110" then Di<="000"&JOYST2&"000"& JOYST1;     -- joysticks
+		elsif AD="000000000010100" then Di<=count;
+		--elsif AD="000000000010101" then Di<="00000000000000"&Vsyn&hsyn;    -- VSYNCH HSYNCH STATUS
+		else Di<=ZERO16;
+		end if;
+	end if;
+end if;
+end process ;
 	
 Mdecod1 <= '0' when (AD(15 downto 13)/="000") and (AS='0') and (IO='0') AND (HOLDA='0') else '1';  -- External 56K ram chip select 
 
@@ -372,8 +364,6 @@ architecture rtl of true_dual_port_ram_single_clock is
 	shared variable ram : memory_t;
 
 begin
-
-
 	-- Port A
 	process(clk)
 	begin
@@ -450,7 +440,6 @@ begin
 			if (WE = '0') and (DS='0') then
 				ram(ad2) <= data;
 			end if;
-			
 			-- Register the address for reading
 			addr_reg <= ad2;
 		end if;

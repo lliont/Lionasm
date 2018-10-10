@@ -402,7 +402,7 @@ FADD_2:
   XCHG A2,A4
   JMP FADD_7
 FADD_5:
-  BTST A1,8   ;//normalaize 
+  BTST A1,8   ;//normalize 
   JRZ 4
   SRLL A1,A2
   INC A7
@@ -414,7 +414,7 @@ FADD_10:
   MOVI A7,0
   JZ FADD_E   ; // is subtraction result zero then exit
 FADD_12:
-  BTST A1,7     ;// matanormalaize
+  BTST A1,7     ;// matanormalize
   JNZ FADD_11
   SLLL A1,A2
   DEC A7

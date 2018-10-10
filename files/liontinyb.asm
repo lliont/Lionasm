@@ -1417,7 +1417,7 @@ LD3:	POP	A1
 	POPX
 	POP	A4
 	POP	A5
-	JMP	RSTART
+	JMP	FINISH
 	
 ;--------------------------
 
@@ -1873,10 +1873,12 @@ RND1:
 	PUSH  A2
 	MOV 	A2,997
 	MULU	A2,A0
-	ADD   A2,(COUNTER)
+      IN    A0,20
+      ADD   A2,A0
+	;ADD   A2,(COUNTER)
       MOV   (RAND),A2
-	MOVI	A0,9
-	INT	4     ; DIV by A1
+	MOVI	A0,6
+	INT	5     ; DIV by A1
 	MOV	A1,A0
 	INC	A1
       POP   A2
@@ -2618,15 +2620,15 @@ FNAME       TEXT	"        BAS"
 		DB	13
 FNAME2      TEXT	"        BIN"
 		DB	13
-TITLE		TEXT	"Tiny Basic for Lion System 2016"
+TITLE		TEXT	"TINY BASIC for LION SYSTEM 2016"
 		DB	13
-how		TEXT  "how?"
+how		TEXT  "How?"
 		DB	$0d
 OK		TEXT	"OK"
 		DB	13
-what		TEXT    "what?"
+what		TEXT    "What?"
 		DB	$0d
-sorry		TEXT    "sorry"
+sorry		TEXT    "Sorry"
 		DB    $0d,0
 
 SER		DB	0

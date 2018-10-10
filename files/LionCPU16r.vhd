@@ -30,9 +30,16 @@ constant ZR:natural:=2;
 constant NG:natural:=3; 
 constant ZERO8 : std_logic_vector(7 downto 0):= (OTHERS => '0');
 constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
+constant InitialState:Std_logic_vector(2 downto 0):="000";
+constant FetchState:Std_logic_vector(2 downto 0):="001";
+constant Fetch2State:Std_logic_vector(2 downto 0):="010";
+constant IndirectState:Std_logic_vector(2 downto 0):="011";
+constant RelativeState:Std_logic_vector(2 downto 0):="100";
+constant ExecutionState:Std_logic_vector(2 downto 0):="110";
+constant StoreState:Std_logic_vector(2 downto 0):="111";
 
 SIGNAL IDX: Std_logic_vector(15 downto 0):=ZERO16;
-SIGNAL X,Y,X1,X2,Y1,Do,Ai,Ao,Ao2: Std_logic_vector(15 downto 0);
+SIGNAL X,Y,X1,X2,Y1,Do,Ai,Ao,AoII: Std_logic_vector(15 downto 0);
 SIGNAL PC:Std_logic_vector(15 downto 0):="0000000000010000";
 SIGNAL IR,Z1: Std_logic_vector(15 downto 0):=ZERO16;
 SIGNAL SR: Std_logic_vector(7 downto 0):=ZERO8;
@@ -52,7 +59,7 @@ END COMPONENT ;
 
 COMPONENT regs IS
 PORT (Ai : IN STD_logic_vector(15 downto 0);
-		Ao, Ao2 : OUT STD_logic_vector(15 downto 0);
+		Ao, AoII : OUT STD_logic_vector(15 downto 0);
 		clk,Wen,half: IN Std_logic;
 		R,RR: IN std_logic_vector(2 downto 0) ) ;
 END COMPONENT;
@@ -85,7 +92,7 @@ begin
 	ALU: ALU_D_LA2
 	PORT MAP ( X1,Y1,Z1, add, sub, half, cin, clock, carry, overflow, zero, neg ) ;
 	REG:REGs
-	PORT MAP ( Ai,Ao,Ao2,clock,Wen,rhalf,R,RR ) ;	
+	PORT MAP ( Ai,Ao,AoII,clock,Wen,rhalf,R,RR ) ;	
 
 DOo<=DO; DSo<=DS; ASo<=AS; RWo<=RW;
 
@@ -100,49 +107,51 @@ IF Reset = '1' THEN
 		PC <= "0000000000010000"; SR <= ZERO8; IA<="00"; HOLDA<='0';
 		AS<='1';  DS<='1'; RW<='1'; ST <= "1111111111111110"; --was (16382) end of internal ram
 		AD <= (OTHERS => '0'); IR<=(OTHERS=>'0');	 
-		Wen<='0'; rhalf<='1'; IACK<='0';
-		FF<="000"; TT<=0; add<='0'; sub<='0';  cin<='0'; rdy<='0'; 
-	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='0' AND FF="000" AND TT=0  then
+		Wen<='0'; rhalf<='0'; IACK<='0';
+		FF<=InitialState; TT<=0; add<='0'; sub<='0';  cin<='0'; rdy<='0'; 
+	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='0' AND FF=InitialState AND TT=0  then
 		HOLDA<='1'; Wen<='0';
 	ELSIF Clock'EVENT AND Clock = '1' AND RD='0' THEN 
 	   rdy<='1'; Wen<='0';
-	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='1' and INT='0' AND FF="000" AND TT=0 and SR(7)='0' THEN   -- Interrupts
+	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='1' and INT='0' AND FF=InitialState AND TT=0 and SR(7)='0' THEN   -- Interrupts
 		IR<="100000100000"&I&"00";
-		FF<="110"; TT<=0; Wen<='0';
+		FF<=ExecutionState; TT<=0; Wen<='0';
 		IA<=I; IACK<='1';
 		HOLDA<='0';
 	ELSIF Clock'EVENT AND Clock = '1'  THEN   
 		rest:=false; rest2:=false; HOLDA<='0'; 
 		case  FF is -- Fetch Instruction 
-		when "000" =>
+		when InitialState =>
 			case TT is
 			when 0 =>
-				fetch:=false; fetch1:=false; fetch2:=false; fetch3:=false; rel:=false; setreg:=true;
-				AD<=PC;  AS<='0'; RW<='1'; half<='0'; Wen<='0'; rhalf<='1'; cin<='0'; add<='0'; sub<='0';
+				fetch:=false; fetch1:=false; fetch2:=false; rel:=false; setreg:=true;
+				AD<=PC; half<='0';  cin<='0'; add<='0'; sub<='0';
+				 AS<='0'; 
 			when 1 =>
+				Wen<='0'; rhalf<='0';
 			when 2 =>
 				PC<=PC+2;
 				 AS<='1'; 
 				IR<=Di;
 				RR<=Di(4 downto 2); R<=Di(8 downto 6);
 			when others =>
-				r2:=RR; r1:=R;	X1<=Ao;	Y1<=Ao2;
+				r2:=RR; r1:=R;	X1<=Ao;	Y1<=AoII;
 				bt:=to_integer(unsigned(IR(5 downto 2)));
 				bwb:= IR(5);
 				rel:= IR(15 downto 13)="111"; --'1' and IR(14)='1' and IR(13)='1';
 				fetch3:=IR(15 downto 13)="110"; --'1' and IR(14)='1' and IR(13)='0';
 				if IR(0)='1' then
-					FF<="001"; AD<=PC; AS<='0'; 
+					FF<=FetchState; AD<=PC; AS<='0'; 
 				else 
 					if IR(1)='1' then	
-						FF<="011";
+						FF<=IndirectState;
 					else	
-						if rel then FF<="100"; else FF<="110"; end if;
+						if rel then FF<=RelativeState; else FF<=ExecutionState; end if;
 					end if;
 				end if;
 				rest:=true;
 			end case;
-		when "001" =>              -- Fetch next word into X
+		when FetchState =>              -- Fetch next word into X
 			case TT is 
 			when 0 =>
 				fetch1:=true;
@@ -150,27 +159,27 @@ IF Reset = '1' THEN
 			when others =>
 				X<=Di;  AS<='1'; 
 				if fetch3 then 
-					FF<="010";
+					FF<=Fetch2State;
 				else	
 					if IR(1)='1' then	
-						if rel then FF<="100"; else FF<="011"; end if;
+						if rel then FF<=RelativeState; else FF<=IndirectState; end if;
 					else	
-						if rel then FF<="100"; else FF<="110"; end if;
+						if rel then FF<=RelativeState; else FF<=ExecutionState; end if;
 					end if;
 				end if;
 				rest:=true;
 			end case;
-		when "010" =>             -- fetch one more into Y
+		when Fetch2State =>             -- fetch one more into Y
 			case TT is
 			when 0 =>
 				AD<=PC;  AS<='0';
 			when 1 =>
 			when others =>
 				Y<=Di; PC<=PC+2; AS<='1'; 
-				if IR(1)='1' then	FF<="011"; else FF<="110";	end if;
+				if IR(1)='1' then	FF<=IndirectState; else FF<=ExecutionState;	end if;
 				rest:=true;
 			end case;
-		when "011" =>              -- indirect
+		when IndirectState =>              -- indirect
 			case TT is
 			when 0 =>
 				fetch2:=true; AS<='0';  
@@ -183,25 +192,26 @@ IF Reset = '1' THEN
 				else
 					X<=Di; 
 				end if;
-				AS<='1';	FF<="110";
+				AS<='1';	FF<=ExecutionState;
 				rest:=true;
 			end case;
-		when "100" =>              -- relative
+		when RelativeState =>              -- relative
 			case TT is
 			when 0 =>
-				tmp2:=Y1;
-				if fetch1 or fetch2 then Y1<=X; else Y1<=X1; end if;
-			when 1=>
+				tmp2:=Y1; tmp:=X1;
+				if fetch1 or fetch2 then Y1<=X; else Y1<=tmp; end if;
 				X1<=PC; add<='1';
-			when 2  =>
+			when 1  =>
 			when others =>
 				 Y1<=tmp2; add<='0';
-				 rest:=true; if IR(1)='1' then FF<="011"; else FF<="110"; end if;
+				 rest:=true; if IR(1)='1' then FF<=IndirectState; else FF<=ExecutionState; end if;
 			end case;
 		when "101" =>
-		when "110" =>               --- F="110" Operation execution cycles 
+		when ExecutionState =>               --- F="110" Operation execution cycles 
 			fetch:=fetch1 or fetch2;  
 			case IR(15 downto 9) is
+			when "0000000" =>              -- NOP
+				rest2:=true;
 			when "0000001" =>              -- MOV Reg,(Reg,NUM,[reg],[n])
 				if fetch then	tmp:=X; else tmp:=Y1; end if;
 				set_reg(r1,tmp,'0','0');
@@ -209,7 +219,7 @@ IF Reset = '1' THEN
 			when "0000010" =>              -- MOV <Reg>,(Reg,NUM,[reg],[n])
 				AD<=X1;  
 				if fetch then Y1<=X;	end if;
-				FF<="111";
+				FF<=StoreState;
 				rest:=true;
 			when "0000011" =>              --ADD & ADD.B Reg,(Reg,NUM,[reg],[n])
 				case TT is
@@ -250,7 +260,7 @@ IF Reset = '1' THEN
 					DS<='0'; 
 				when 2 =>
 				when others =>
-					IO<='0';	DS<='1'; AS<='1'; RW<='1';
+					--IO<='0';	DS<='1'; AS<='1'; RW<='1';
 					rest2:=true;
 				end case;
 			when "0001000" =>              --SWAP R
@@ -263,18 +273,23 @@ IF Reset = '1' THEN
 			when "0001010" =>            --MULU Reg,Reg	MULU.B Reg,(Reg,NUM,[reg],[n])
 				case TT is
 				when 0 =>
-					if fetch then Y1 <= X; end if;
+					SR(CA)<='0'; SR(NG) <= '0';
+					if fetch then
+						if bwb='0' then
+							M<=std_logic_vector(unsigned(X1) * unsigned(X));
+						else
+							M<=std_logic_vector(unsigned("00000000"&X1(7 downto 0)) * unsigned("00000000"&X(7 downto 0)));
+						end if;
+					else 
+						if bwb='0' then
+							M<=std_logic_vector(unsigned(X1) * unsigned(Y1));
+						else
+							M<=std_logic_vector(unsigned("00000000"&X1(7 downto 0)) * unsigned("00000000"&Y1(7 downto 0)));
+						end if;
+					end if;				
 				when 1 =>
-					if bwb='0' then
-						M<=std_logic_vector(unsigned(X1) * unsigned(Y1));
-					else
-						M<=std_logic_vector(unsigned("00000000"&X1(7 downto 0)) * unsigned("00000000"&Y1(7 downto 0)));
-					end if;
-				when 2 =>
-					SR(CA)<='0';  
 					if bwb='1' then 
 						SR(OV) <='0'; --neg & zero & overflow & carry
-						SR(NG) <= M(15);
 						if M(15 downto 0) = ZERO16 then SR(ZR) <= '1'; else SR(ZR) <='0'; end if;
 					else
 						if not fetch then
@@ -286,12 +301,12 @@ IF Reset = '1' THEN
 								SR(OV)<='1';
 							end if;
 						end if;
-						SR(NG) <= M(31);
 						if (M(15 downto 0) OR M(31 downto 16)) = ZERO16 then SR(ZR) <= '1'; else SR(ZR) <='0'; end if;
 					end if;
 					tmp:=M(15 downto 0); set_reg(r1,tmp,'0','0'); 
 					rest2:=fetch or bwb='1';
-				when 3 =>
+				when 2 =>
+					Wen<='0';
 				when others =>
 					tmp:=M(31 downto 16); set_reg(r2,tmp,'0','0');
 					rest2:=true;
@@ -300,7 +315,7 @@ IF Reset = '1' THEN
 			when "0001100" =>           -- MOV.B <Reg>,(Reg,NUM,[reg],[n])
 				case TT is
 				when 0 =>
-					AD<=X1 ; AS<='0'; --RW<='1'; 
+					AD<=X1 ; AS<='0';  
 				when 1 =>
 				when others =>
 					if AD(0)='1' then	
@@ -316,7 +331,7 @@ IF Reset = '1' THEN
 							Y1<= Y1(7 downto 0) & Di(7 downto 0);
 						end if;
 					end if;
-					AS<='1';	rest:=true; FF<="111";
+					AS<='1';	rest:=true; FF<=StoreState;
 				end case;
 			when "0001101" =>               -- CMP & CMP.B (n),Reg
 					half<=bwb;
@@ -403,6 +418,7 @@ IF Reset = '1' THEN
 					tmp:=X1;
 					set_reg(r2,tmp,'0','0');
 				when 1 =>
+					Wen<='0';
 				when others =>
 					tmp:=Y1;
 					set_reg(r1,tmp,'0','0');
@@ -417,7 +433,7 @@ IF Reset = '1' THEN
 				when 0 =>
 					half<=bwb;
 					IF fetch then Y1<= X; end if; 
-					AD<=X1; AS<='0'; --RW<='1';
+					AD<=X1; AS<='0';
 				when 1 =>
 				when 2 =>
 					if bwb='1' then
@@ -436,7 +452,6 @@ IF Reset = '1' THEN
 					tmp(7 DOWNTO 0):="0000"&IR(5 downto 2);
 					set_reg(r1,tmp,'1','0'); --A(r1)<=tmp;
 					rest2:=true;		
-
 			when "0100101" =>              -- JMP (Reg,NUM,[reg],[n])
 					if fetch then PC<=X;
 					else	PC<=Y1; end if;
@@ -524,8 +539,7 @@ IF Reset = '1' THEN
 				half<='1';
 				X1(7 downto 0)<=X1(15 downto 8);
 				if fetch then Y1<=X;	end if;
-				sub<='1'; 
-				setreg:=false;
+				sub<='1'; setreg:=false;
 				IR(15 downto 9)<="0000011"; -- continue as in ADD
        
 			when "0110101" =>              -- JSR Reg  /NUM / <reg>/<n>
@@ -536,7 +550,7 @@ IF Reset = '1' THEN
 					DS<='0'; 
 				when 2 =>
 				when others =>
-					RW<='1'; AS<='1'; ST<=ST-2; DS<='1';
+					ST<=ST-2; --RW<='1'; AS<='1';  DS<='1';
 					if fetch then tmp:=X;
 					else	tmp:=Y1; end if;
 					PC<=tmp;	rest2:=true;
@@ -549,13 +563,12 @@ IF Reset = '1' THEN
 			when "0110111" =>              -- RET
 				case TT is
 				when 0 =>
-					ST<=ST+2; --RW<='1';
+					ST<=ST+2; 
 				when 1 =>
 					AD<=ST; AS<='0';  
 				when 2 =>
 				when others =>
 					PC<=Di;
-					AS<='1';
 					rest2:=true;
 				end case;
 			when "0111000" =>              -- JLE (Reg,NUM,[reg],[n])
@@ -574,16 +587,16 @@ IF Reset = '1' THEN
 					tmp:=ST;
 					AD<=tmp; 	
 					if fetch then Y1<=X; else Y1<=X1; end if;
-					ST<=ST-2;  FF<="111";
+					ST<=ST-2;  FF<=StoreState;
 					rest:=true;
 			when "0111100" =>              -- PUSH SR
 					tmp:=ST;
 					AD<=tmp; Y1(7 downto 0)<=SR; ST<=ST-2;
-					rest:=true;  FF<="111";
+					rest:=true;  FF<=StoreState;
 			when "0111101" =>              -- PUSHX
 					tmp:=ST;
 					AD<=tmp;	Y1<=IDX; ST<=ST-2;
-					rest:=true; FF<="111";
+					rest:=true; FF<=StoreState;
 			when "0111110" =>              -- POPX 
 				case TT is
 				when 0 =>
@@ -593,7 +606,6 @@ IF Reset = '1' THEN
 				when 2 =>
 				when others =>
 					IDX<=Di; 
-					AS<='1';
 					rest2:=true;
 				end case;
 			when "0111111" =>              -- POP SR
@@ -605,7 +617,6 @@ IF Reset = '1' THEN
 				when 2 =>
 				when others =>
 					SR<=Di(7 downto 0); 
-					AS<='1';
 					rest2:=true;
 				end case;
 			when "1000000" =>              -- POP Rn
@@ -618,7 +629,6 @@ IF Reset = '1' THEN
 				when others =>
 					tmp:=Di;
 					set_reg(r1,tmp,'0','0');
-					AS<='1';
 					rest2:=true;
 				end case;		
 			when "1000001" =>              -- INT n  don't change opcode
@@ -629,10 +639,10 @@ IF Reset = '1' THEN
 				when 1 =>
 					ST<=ST-2;
 				when 2 =>
-						AS<='1';  DS<='1';
+					AS<='1';  DS<='1';
 				when 3 =>
-						AD<=ST; Do(7 downto 0)<=SR;
-					 AS<='0';  RW<='0';   DS<='0'; 
+					AD<=ST; Do(7 downto 0)<=SR;
+					AS<='0';  RW<='0';   DS<='0'; 
 				when 4 =>
 					ST<=ST-2;
 				when 5 =>
@@ -643,7 +653,7 @@ IF Reset = '1' THEN
 					AS<='0'; 
 				when 7 =>
 				when others =>
-					PC<=Di; SR(5)<='0'; AS<='1'; 
+					PC<=Di; SR(5)<='0'; 
 					rest2:=true; 
 				end case;
 			when "1000010" =>              -- RETi  don't change opcode
@@ -654,12 +664,12 @@ IF Reset = '1' THEN
 					AD<=ST; AS<='0';   
 				when 2 =>
 				when 3 =>
-					SR<=Di( 7 downto 0); ST<=ST+2;  -- AS<='1';
+					SR<=Di( 7 downto 0); ST<=ST+2;   AS<='1';
 				when 4 =>
-					AD<=ST;	--AS<='0';  
+					AD<=ST;	AS<='0';  
 				when 5 =>
 				when others =>	
-					PC<=Di; AS<='1'; IA<="00"; IACK<='0';
+					PC<=Di;  IA<="00"; IACK<='0'; --AS<='1';
 					rest2:=true;
 				end case;
 			when "1000011" =>              -- CLI
@@ -684,7 +694,7 @@ IF Reset = '1' THEN
 					else
 						tmp:=Di;
 					end if;
-					set_reg(r1,tmp,bwb,'0'); AS<='1'; 
+					set_reg(r1,tmp,bwb,'0'); --AS<='1'; 
 					IO<='0'; rest2:=true;
 				end case;
 			when "1000111" | "1001000" =>              -- INC DEC & INC.B DEC.B Rn
@@ -694,7 +704,7 @@ IF Reset = '1' THEN
 					IR(15 downto 9)<="0000011"; -- continue as in ADD
 					
 			when "1001001" =>              -- MOV (n),Reg 
-					AD<=X; FF<="111";
+					AD<=X; FF<=StoreState;
 					rest:=true;
 			when "1001010" =>              -- MOV.B (n),Reg	
 					AD<=X2 ;  
@@ -704,7 +714,7 @@ IF Reset = '1' THEN
 						tmp:= Y1(7 downto 0) & X(15 downto 8);
 					end if;
 						Y1<=tmp;
-					rest:=true; FF<="111";    
+					rest:=true; FF<=StoreState;    
 
 			when "1001100" =>              -- MOVHL Reg,(Reg,NUM,[reg],[n])
 				if fetch2 then
@@ -722,8 +732,8 @@ IF Reset = '1' THEN
 				set_reg(r1,tmp,'1','0'); 
 				rest2:=true;
 			when "1001110" =>              -- MOVHH Reg,(Reg,NUM,[reg],[n])
-					if fetch then	tmp:=X(15 downto 8)&X1(7 downto 0);
-					else tmp:=Y1(15 downto 8)&X1(7 downto 0); end if;
+				if fetch then	tmp:=X(15 downto 8)&X1(7 downto 0);
+				else tmp:=Y1(15 downto 8)&X1(7 downto 0); end if;
 				set_reg(r1,tmp,'0','0'); 
 				rest2:=true;
 			when "1001111" =>              --SRL.B Reg
@@ -768,7 +778,7 @@ IF Reset = '1' THEN
 				case TT is
 				when 0 =>
 					if fetch then AD<=X; else AD<=X1; end if;
-					IO<='1'; AS<='0';   RW<='1';	
+					IO<='1'; AS<='0';  
 				when 1 =>
 				when 2 =>
 					if AD(0)='0' then
@@ -781,43 +791,49 @@ IF Reset = '1' THEN
 					RW<='0'; AS<='0'; IO<='1'; DS<='0'; 
 				when 4 =>
 				when others =>
-					IO<='0';	DS<='1'; AS<='1'; RW<='1';
+					--IO<='0';	DS<='1'; AS<='1'; RW<='1';
 					rest2:=true;
 				end case;
 				
-			when "1011000" =>              -- OUT.B Reg,n	
-					AD<=X1; IO<='1'; AS<='0';   RW<='1';	Y1<=X;
+			when "1011000" =>                     -- OUT.B Reg,n	
+					AD<=X1; IO<='1'; AS<='0'; Y1<=X;
 					IR(15 downto 9)<="1010111";  -- as OUT.B
 								
-			when "1011001" =>              --SRLL Reg
-				   case TT is
-					when 0 =>
-						SR(CA)<=Y1(0);
-						tmp:="0"&X1(15 downto 1);
-						set_reg(r1,tmp);       
-					when others =>
-						tmp:=X1(0)&Y1(15 downto 1);
-						set_reg(r2,tmp);		
-						rest2:=true;  
-					end case;
 			when "1001011" =>    --SLLL Reg
 			      case TT is
 					when 0 =>
-				   SR(CA)<=X1(15);
-					tmp:=X1(14 downto 0)&Y1(15);
-					set_reg(r1,tmp); 
+						SR(CA)<=X1(15);
+						tmp:=X1(14 downto 0)&Y1(15);
+						set_reg(r1,tmp); 
+					when 1 => 
+						Wen<='0';
 					when others =>
 						tmp:=Y1(14 downto 0)&"0";
 						set_reg(r2,tmp);		
 						rest2:=true;  
 					end case;
+			when "1011001" =>              --SRLL Reg
+				   case TT is
+					when 0 =>
+						SR(CA)<=Y1(0);
+						tmp:="0"&X1(15 downto 1);
+						set_reg(r1,tmp);  
+					when 1 =>  -- for stupid size !!!
+					when 2 =>
+						Wen<='0';
+					when others =>
+						tmp:=X1(0)&Y1(15 downto 1);
+						rest2:=true;  
+						set_reg(r2,tmp);		
+					end case;
+
 			when "1011100" | "1011101" =>              -- ADD SUB [n],reg  ADD.B [n],reg
 					X1<=X; sub<=IR(9); add<=NOT IR(9); 
 					half<=bwb;	AD<=X2;
 					IR(15 downto 9)<="1100100"; -- continue ADD [n],n
 					
 			when "1011110" | "1011111" =>              -- ADD SUB [reg],reg  ADD.B [reg],reg
-					X1<=Ao2;  Y1<=X; -- compiler reverses X1,Y1 
+					X1<=AoII;  Y1<=X; -- assembler reverses X1,Y1 
 					sub<=IR(9); add<=NOT IR(9); 
 					half<=bwb; AD<=X2;
 					IR(15 downto 9)<="1100100"; -- continue ADD [n],n
@@ -841,7 +857,7 @@ IF Reset = '1' THEN
 					else 
 						Y1<=Z1;
 					end if;    
-					set_flags;	FF<="111";	rest:=true;
+					set_flags;	FF<=StoreState;	rest:=true;
 				end case;
 				
 			when "0100011" =>              -- JGE (Reg,NUM,[reg],[n])
@@ -863,18 +879,15 @@ IF Reset = '1' THEN
 					add<='0'; sub<='0';
 					ST<=Z1;
 					rest2:=true;
-				end case;			
-			
---			when "0111010" | "0110011" =>              -- ADDX SUBX [reg]  ADDX.B [reg]
---					add<=IR(10); sub<=IR(11); 
---					half<=bwb; Y1<=IDX;
---					IR(15 downto 9)<="0000011"; -- continue as in ADD
+				end case;	
+--		when "0110011" =>
+--			rest2:=true;
 			
      
 ------instructions equal or between 1100... and 11100.... cause double fetch -----------------			
 
 			when "1100000" =>              -- MOV (n),n
-				AD<=X; Y1<=Y; FF<="111";
+				AD<=X; Y1<=Y; FF<=StoreState;
 				rest:=true;
 			when "1100001" =>              -- MOV.B (n),n
 				tmp:=X; 	AD<=X2;
@@ -883,7 +896,7 @@ IF Reset = '1' THEN
 				else 
 					Y1<= Y(7 downto 0) & tmp(15 downto 8);
 				end if;
-				rest:=true; FF<="111";
+				rest:=true; FF<=StoreState;
 			when "1100010" =>               -- CMP & CMP.B (n),n
 				Y1<=Y;
 				half<=bwb;				
@@ -914,7 +927,7 @@ IF Reset = '1' THEN
 					else 
 						Y1<=Z1;
 					end if;    
-					set_flags;	FF<="111";	rest:=true;
+					set_flags;	FF<=StoreState;	rest:=true;
 				end case;
 				
 		-----------    instructions after "11100..." relative 
@@ -944,7 +957,7 @@ IF Reset = '1' THEN
 					DS<='0'; 
 				when 2 =>
 				when others =>
-					AS<='1'; ST<=ST-2; DS<='1'; RW<='1';
+					ST<=ST-2; --DS<='1'; RW<='1'; AS<='1';
 					PC<=Z1;
 					rest2:=true;
 				end case;	
@@ -968,14 +981,13 @@ IF Reset = '1' THEN
 				when others =>
 					if fetch2 then	tmp:=Di; else tmp:=Z1;	end if;
 					set_reg(r1,tmp,bwb,'0');       
-					rest2:=true;	
-					AS<='1';
+					rest2:=true;	--AS<='1';
 				end case;
 			when "1111100" =>              -- MOVR MOVR.B([n],[R]),Reg	   
 				case TT is
 				when 0 =>
 					AD<=Z1;  --RW<='1'; 
-					if bwb='0' then rest:=true; FF<="111"; else AS<='0'; end if;
+					if bwb='0' then rest:=true; FF<=StoreState; else AS<='0'; end if;
 				when 1 =>
 				when others =>
 					if AD(0)='1' then	
@@ -983,7 +995,7 @@ IF Reset = '1' THEN
 					else 
 						Y1<= Y1(7 downto 0) & Di(7 downto 0);
 					end if;
-					AS<='1';	rest:=true; FF<="111";
+					AS<='1';	rest:=true; FF<=StoreState;
 				end case;
 			when "1111101" =>   -- JRGE ! 
             AD<=Z1; -- for size reduction !!!			
@@ -996,7 +1008,6 @@ IF Reset = '1' THEN
 				if IDX/=ZERO16 then PC<=Z1; end if;
 				IDX<=IDX-1;
 				rest2:=true;
-
 			when others => -- instructions  NOP	
 				rest2:=true;
 			end case;
@@ -1008,7 +1019,7 @@ IF Reset = '1' THEN
 				DS<='0'; 
 			when	1 =>
 			when others =>	
-				DS<='1'; AS<='1'; RW<='1';
+				--DS<='1'; AS<='1'; RW<='1';
 				rest2:=true;
 			end case;
 		end case;
@@ -1016,11 +1027,12 @@ IF Reset = '1' THEN
 		if (rest=true) or (rest2=true) then
 			TT<=0;
 			if rest2=true then 
+				RW<='1'; IO<='0'; DS<='1'; AS<='1';
 				if SR(5)='1' and IR(15 downto 9)/="1000010"  then  -- SR(5) = trace flag reti
 					IR<="1000001000111100";  --INT 
-					FF<="110";
+					FF<=ExecutionState;
 				else	
-					FF<="000";
+					FF<=InitialState;
 				end if;
 			end if;
 		else
