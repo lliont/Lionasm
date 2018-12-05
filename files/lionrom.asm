@@ -2,10 +2,13 @@
 ;  (C) 2015-2018 Theodoulos Liontakis 
 
 VBASE		EQU		49152
-XDIM2		EQU		384    ; XDIM Screen Horizontal Dim. 
-YDIM		EQU		248    ; Screen Vertical Dimention
-XCC		EQU	64   ; Horizontal Lines
-YCC		EQU	31     ; Vertical Rows
+VBASE1	EQU		32768
+XDIM2		EQU		320    ; XDIM Screen Horizontal Dim. 
+YDIM		EQU		240    ; Screen Vertical Dimention
+XCC		EQU	53   ; Horizontal Lines
+YCC		EQU	30     ; Vertical Rows
+YDIM2		EQU	200
+YCC2		EQU	25
 
 	  	ORG 		0    ; Rom 
 INT0_3      DA		RHINT0 ; hardware interrupts (ram)
@@ -26,9 +29,11 @@ INT14		DA          INTEXIT
 INT15		DA		RINT15   ; trace interrupt in ram	
 
 BOOTC:	MOV		(SDFLAG),0
-		MOV		A1,65534
+		MOV		A1,65300
 		SETSP		A1
-		SETX		992       ; Set default color 
+		MOV.B		(VMODE),0
+		MOV.B		(SCOL),$1F
+		SETX		809       ; Set default color 
 		MOV		A1,61152 ; was 65144
 COLINI:	OUT		A1,$3939
 		ADDI		A1,2
@@ -60,7 +65,7 @@ SDRETR:	MOVI		A0,11        ; sd card init
 		JMP		SDNOT
 SDOKO:	MOVI		A0,5        ; sd card ok
 		MOV		A1,SDOK
-		MOV		A2,$0105
+		MOV		A2,$0103
 		INT		4            ; print ok
 		MOVI		A0,3
 		INT		5            ; mount volume, get params
@@ -75,7 +80,7 @@ SDOKO:	MOVI		A0,5        ; sd card ok
 		JSR		PRNHEX
 		MOVI		A0,5           
 		MOV		A1,SDBOK
-		MOV		A2,$0106
+		MOV		A2,$0104
 		INT		4	         ; print 
 		POP		A0
 		MOV		A3,START
@@ -123,7 +128,7 @@ INT5T6	DA		UDIV     ; Unsigned 16bit  Div A2 by A1 res in A1,A0
 INT5T7      DA		LDIV     ; 32bit div A1A2/A3A4 res A1A2 rem A3A4
 INT5T8      DA		LMUL     ; 32bit mult A1A2*A3A4 res A1A2 
 INT5T9      DA		FLMUL     ; float mult A1A2*A3A4 res A1A2 
-INT5T10     DA		FLDIV     ; float div A1A2/A3A4 res A1A2 rem A3A4
+INT5T10     DA		FLDIV     ; float div A1A2/A3A4 res A1A2
 INT5T11     DA		FLADD     ; float add A1A2+A3A4 res A1A2 
 INT5T12     DA		FCMP     ; float cmp  A1A2,A3A4 res A0 
 
@@ -824,7 +829,7 @@ PRNHEX:	; print num in A0 in hex for debugging
 		PUSH	A2
 		PUSH	A3
 		MOV	A3,A0
-		MOV	A2,$3205
+		MOV	A2,$2805
 		SETX	3
 PHX1:		MOV	A1,A3
 		AND	A1,$000F
@@ -1385,17 +1390,13 @@ SKEYBIN:	IN		A0,6  ;Read serial byte if availiable
 
 ;----------------------------------------
 PUTC:		STI
-		PUSHX                    ;  PRINT Character in A1 at A2 (XY)
+		CMP.B		(VMODE),1
+		JZ		PUTC1
+		PUSHX                 ; VMODE0 PRINT Character in A1 at A2 (XY)
 		PUSH		A4
 		PUSH		A1
 		AND		A1,$00FF
-		;CMP.B		A1,96  
-		;JBE		LAB1
-		;SUB.B		A1,32
-		;CMP.B		A1,90
-		;JLE		LAB1
-		;ADDI		A1,6
-LAB1:		SUB.B		A1,32    
+		SUB.B		A1,32    
 		MULU		A1,6
 		ADD		A1,CTABLE
 		MOV		A4,A1       ; character table address
@@ -1416,6 +1417,72 @@ LP1:		OUT		A0,(A4)
 		POP		A4
 		POPX	
 		RETI
+
+PUTC1:       ; VMODE1 PRINT Character in A1 at A2 (XY)
+		PUSHX
+		PUSH		A7
+		PUSH		A6
+		PUSH		A5
+		PUSH		A4
+		PUSH 		A3
+		PUSH		A2
+		PUSH		A1
+		AND		A1,$00FF
+		SUB.B		A1,32    
+		MULU		A1,6
+		ADD		A1,CTABLE
+		MOV		A4,A1       ; character table address
+		MOVI		A0,0
+		MOV.B		A0,A2
+		MULU		A0,1280  ;XDIM/2 * 8
+		MOVI		A1,0
+          	MOVLH 	A1,A2
+		MULU.B	A1,3   ; 6/2
+		ADD		A0,A1
+		ADD		A0,VBASE1   ; video base
+		MOV.B		A1,(SCOL)
+		MOV.B		A2,A1
+		AND		A1,$000F
+		AND		A2,$00F0
+		SRL		A2,4
+		SETX		2 ; 3 font words
+P2C:		PUSH		A0
+		MOVI		A6,0
+		MOV		A7,(A4) ; get font word
+		ADDI		A4,2
+P1C:		MOVI		A5,0
+		MOVI		A3,15
+            SUB		A3,A6
+		BTST		A7,A3
+		JZ		P4C
+		MOV.B		A5,A1
+		JMP		P5C
+P4C:		MOV.B		A5,A2
+P5C:		SLL		A5,4
+		SUBI		A3,8
+		BTST		A7,A3
+		JZ		P6C
+		OR.B		A5,A1
+		JMP		P3C
+P6C:		OR.B		A5,A2
+P3C:		OUT.B		A0,A5
+		ADD		A0,160
+		INC		A6
+		CMPI		A6,7
+		JBE		P1C
+		POP		A0
+		ADDI		A0,1
+		JMPX		P2C
+		POP		A1
+		POP		A2
+		POP		A3
+		POP		A4
+		POP		A5
+		POP		A6
+		POP		A7
+		POPX
+		RETI
+
 ;----------------------------------------
 PSTR:		STI
 		MOVI		A0,0     ; PRINT A 0 OR 13 TERM. STRING POINTED BY A1 AT A2
@@ -1440,21 +1507,24 @@ PSTR2:	PUSH 		A1
 PSTR3:	INC		A1
 		JMP		PSTR
 STREXIT:	RETI
+
 ;----------------------------------------
 
 SCROLL:	STI
+		CMP.B		(VMODE),1
+		JZ		SCROLL1
 		PUSHX
 		PUSH		A1
 		PUSH		A4
-		SETX		5759       ;7499	
+		SETX		4639          ;5759	
 		MOV		A0,VBASE
-		MOV		A1,49536   ; 49152+384
+		MOV		A1,49472   ; 49152+384
 SC1:		IN		A4,A1
 		OUT		A0,A4  ;  word access to video ram
 		ADDI		A0,2
 		ADDI		A1,2
 		JMPX		SC1
-		SETX		191
+		SETX		159
 SC2:		OUT		A0,0
 		ADDI		A0,2
 		JMPX		SC2
@@ -1462,19 +1532,65 @@ SC2:		OUT		A0,0
 		POP		A1
 		POPX
 		RETI
+
+SCROLL1:	PUSHX
+		PUSH		A1
+		PUSH		A4
+		SETX		15359          ;5759	
+		MOV		A0,VBASE1
+		MOV		A1,34048   ; 49152+384
+S1C1:		IN		A4,A1
+		OUT		A0,A4  ;  word access to video ram
+		ADDI		A0,2
+		ADDI		A1,2
+		JMPX		S1C1
+		MOV.B		A1,(SCOL)
+		SLL		A1,4
+		MOV.B		A1,(SCOL)
+		SRL		A1,4
+		MOVHL		A1,A1
+		SETX		639
+S1C2:		OUT		A0,A1
+		ADDI		A0,2
+		JMPX		S1C2
+		POP		A4		
+		POP		A1
+		POPX
+		RETI
 ;----------------------------------------
 
 CLRSCR:	STI
+		CMP.B	(VMODE),1
+		JZ	CLRSCR1
 		PUSHX
-		SETX	5952	;7799	
+		SETX	4799      ;5952	
 		MOV	A0,VBASE
 CLRS1:	OUT	A0,0
 		ADDI	A0,2
 		JMPX	CLRS1
 		POPX
 		RETI
+
+CLRSCR1:	PUSHX
+		PUSH	A1
+		MOV.B		A1,(SCOL)
+		SLL		A1,4
+		MOV.B		A1,(SCOL)
+		SRL		A1,4
+		MOVHL		A1,A1
+		SETX	15999    ;5952	
+		MOV	A0,VBASE1
+CLR1S1:	OUT	A0,A1
+		ADDI	A0,2
+		JMPX	CLR1S1
+		POP	A1
+		POPX
+		RETI
+
 ;----------------------------------------
 PLOT:		STI
+		CMP.B	(VMODE),1
+		JZ	PLOT1
 		PUSH		A1
 		PUSH		A2        ; PLOT at A1,A2 mode in A4
 		MOV		A0,A2
@@ -1503,6 +1619,41 @@ PL4:		OUT		A2,A1
 		POP		A2
 		POP		A1
 		RETI
+
+PLOT1:	PUSH		A1
+		PUSH		A2        ; PLOT at A1,A2 mode in A4
+		PUSH		A3
+		MULU		A2,160 ;XDIM2
+		MOV		A0,A1		
+		SRL		A1,1
+		ADD		A2,A1
+		ADD		A2,VBASE1
+		IN.B		A1,A2
+		MOV.B		A3,(SCOL)
+		AND	 	A3,$0F
+		BTST		A0,0
+		JNZ		P1L6
+		SLL		A3,4
+		AND		A1,$F0
+		JMP		P1L7
+P1L6:		AND		A1,$0F
+P1L7:		OR		A4,A4
+		JNZ		P1L3
+		BCLR		A1,A0   ; mode 0  clear
+		JMP		P1L4
+P1L3:		CMPI		A4,2
+		JNZ		PL5
+		BTST		A1,A0  ; mode 2  not
+		JZ		P1L5
+		BCLR		A1,A0
+		JMP		P1L4
+P1L5:		OR.B		A1,A3    ; mode 1  set
+P1L4:		OUT.B		A2,A1
+		POP		A3
+		POP		A2
+		POP		A1
+		RETI
+
 ;----------------------------------------
 PIMG:		STI
 		PUSHX
@@ -2012,6 +2163,7 @@ RINT7		DS	4
 RINT8		DS	4
 RINT9		DS	4
 RINT15	DS	4 ; TRACE INT service routine
-
+VMODE		DS	1
+SCOL		DS    1
 START:	
 

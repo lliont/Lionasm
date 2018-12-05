@@ -1,6 +1,7 @@
 -- Lion Computer 
 -- Theodoulos Liontakis (C) 2015 
 
+
 Library ieee;
 USE ieee.std_logic_1164.all;
 USE ieee.std_logic_unsigned.all ;
@@ -15,7 +16,7 @@ entity LionSystem is
 		RD,Reset,Clock,Int,HOLD: IN Std_Logic;
 		IOo, Holdao : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
-		IACK: OUT std_logic;
+		--IACK: OUT std_logic;
 		IA : OUT std_logic_vector(1 downto 0);
 		R,G,B,VSYN,HSYN : OUT std_Logic;
 		Tx  : OUT std_logic ;
@@ -24,8 +25,7 @@ entity LionSystem is
 		AUDIO,AUDIOB,NOIS: OUT std_logic;
 		SCLK,MOSI,SPICS: OUT std_logic;
 		MISO: IN std_logic;
-		LED: OUT std_logic_vector(7 downto 0);
-		JOYST1,JOYST2: IN std_logic_vector(4 downto 0)
+		JOYST1: IN std_logic_vector(4 downto 0)
 	);
 end LionSystem;
 
@@ -68,19 +68,30 @@ Component VideoRGB is
 	(
 		sclk : IN std_logic;
 		R,G,B,VSYN,HSYN,VSINT : OUT std_logic;
-		reset, pbuffer, dbuffer, addxy : IN std_logic;
-		addr : OUT natural range 0 to 8191;
+		reset, pbuffer, dbuffer: IN std_logic;
+		addr : OUT natural range 0 to 16383;
 		Q : IN std_logic_vector(15 downto 0)
 	);
 end Component;
 
-
+Component VideoRGB1 is
+	port
+	(
+		sclk : IN std_logic;
+		R,G,B,BRI,VSYN,HSYN,VSINT : OUT std_logic;
+		reset, pbuffer, dbuffer : IN std_logic;
+		addr : OUT natural range 0 to 16383;
+		Q : IN std_logic_vector(15 downto 0);
+		spaddr: OUT natural range 0 to 16383;
+		SPQ: IN std_logic_vector(15 downto 0)
+	);
+end Component;
 
 Component true_dual_port_ram_single_clock is
 
 	generic 
 	(
-		DATA_WIDTH : natural := 8;
+		DATA_WIDTH : natural := 16;
 		ADDR_WIDTH : natural := 14
 	);
 
@@ -158,7 +169,7 @@ end component;
 --	port 
 --	(
 --		clk		: in std_logic;
---		addr	: in natural range 0 to 65535;
+--		addr	: in natural range 0 to 32767;
 --		data	: in std_logic_vector(15 downto 0);
 --		we,DS		: in std_logic := '1';
 --		q		: out std_logic_vector(15 downto 0)
@@ -177,30 +188,39 @@ COMPONENT SPI is
 	);
 end COMPONENT;
 
+Signal Vmod,R0,B0,G0,R1,G1,B1,hsyn0,vsyn0,hsyn1,vsyn1,vint0,vint1,BRI: std_logic;
 Signal qi1,vq : std_logic_vector (15 downto 0);
 Signal di,do,AD,qa,qro,aq,aq2 : std_logic_vector(15 downto 0);
 Signal qi,q16,count : std_logic_vector(15 downto 0);
 Signal w1, w2, Int_in, AS, DS, RW, IO, HOLDA, WAud, WAud2,inter,vint : std_logic;
+Signal spw1, spw2: std_logic;
+Signal spqi,spqi1,spq16,spvq: std_logic_vector(15 downto 0);
 Signal Ii : std_logic_vector(1 downto 0);
 Signal qi2 : std_logic_vector(7 downto 0);
-Signal ad1 :  natural range 0 to 16383;
+Signal ad1,vad0,vad1,spad1 :  natural range 0 to 16383;
 Signal ad2 :  natural range 0 to 16383;
 Signal sr,sw,sdready,sready,sr2,sdready2, vs, IAC, noise: std_Logic;
 Signal nen, ne: std_Logic:='0';
 Signal sdi,sdo,sdo2 : std_logic_vector (7 downto 0);
-SIGNAL addr,addr1 : natural range 0 to 65535;
+SIGNAL addr : natural range 0 to 65535;
+Signal addr1 : natural range 0 to 32767;
 SIGNAL Spi_in,Spi_out: STD_LOGIC_VECTOR (7 downto 0);
-Signal Spi_w, spi_rdy, play, play2, AUDIO1, AUDIO2, spb, sdb, adxy : std_logic;
+Signal Spi_w, spi_rdy, play, play2, AUDIO1, AUDIO2, spb, sdb : std_logic;
 constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 
 begin
 CPU: LionCPU16 
 	PORT MAP ( Di, Do, AD, RW,AS,DS,RD,Reset,Clock,Int_in,Hold,IO,Holda,Ii,Iac,IA ) ; 
 VRAM: true_dual_port_ram_single_clock
-	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 13)
-	PORT MAP ( clock, ad1, ad2, qi1, qi, w2, w1,    vq, q16  );
-VIDEO: videoRGB
-	PORT MAP ( Clock,R,G,B,VSYN, HSYN, vint, reset, spb, sdb, adxy, ad1, vq);
+	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 14)
+	PORT MAP ( clock, ad1, ad2, qi1, qi, w2, w1,vq, q16  );
+SPRAM: true_dual_port_ram_single_clock
+	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 12)
+	PORT MAP ( clock, spad1, ad2, spqi1, spqi, spw2, spw1, spvq, spq16  );
+VIDEO0: videoRGB
+	PORT MAP ( Clock,R0,G0,B0,VSYN0, HSYN0, vint0, reset, spb, sdb, vad0, vq);
+VIDEO1: videoRGB1
+	PORT MAP ( Clock,R1,G1,B1,BRI,VSYN1, HSYN1, vint1, reset, spb, sdb, vad1, vq, spad1, spvq);
 Serial: UART
 	PORT MAP ( Tx, Rx, Clock, reset, sr, sw, sdready, sready, sdi, sdo );
 SERKEYB: SKEYB
@@ -221,6 +241,7 @@ NOIZ:lfsr
 --	PORT MAP (iClock,Clock);
 
 -- data out 
+
 HOLDAo<=HOLDA;
 ASo<=AS when HOLDA='0' else 'Z'; 
 DSo<=DS when HOLDA='0' else 'Z'; 
@@ -230,22 +251,40 @@ D<= Do when (RW='0' and DS='0') AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 ADo<= AD when AS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 addr<=to_integer(unsigned(AD)) when AS='0';
 addr1<=to_integer(unsigned(AD(15 downto 1))) when AS='0';
-ad2<=to_integer(unsigned(AD(13 downto 1))) when AS='0';
+ad2<=to_integer(unsigned(AD(14 downto 1))) when AS='0';
 ne<='1' when (nen='1') and (aq(11 downto 0)/="000000000000") else '0';
 AUDIO<= AUDIO1 ;
-NOIS<=NOISE and play and ne;
+NOIS<=NOISE and (play or play2) and ne;
 audiob<=audio2;
 vs<=VSYN;
-IACK<=IAC;
+R<=R1 when Vmod='1' else R0;
+G<=G1 when Vmod='1' else G0;
+B<=B1 when Vmod='1' else B0;
+ad1<=vad1 when Vmod='1' else vad0;
+HSYN<=HSYN1 when Vmod='1' else HSYN0;
+VSYN<=VSYN1 when Vmod='1' else VSYN0;
+Vint<=Vint1 when Vmod='1' else Vint0;
+--IACK<=IAC;
 
 -- Video Ram 
 process (clock)
 begin 
-if falling_edge(clock) AND AS='0' and DS='0' and IO='1' and AD(15 downto 14)="11" then --61440
+if falling_edge(clock) AND AS='0' and DS='0' and IO='1' and AD(15)='1' then --61440
 		w1<=not RW;
 		qi<=Do; --(7 downto 0)&Do(15 downto 8);
 	elsif falling_edge(clock) then
 	   w1<='0';
+	end if;
+end process ;
+
+-- Sprite Ram 
+process (clock)
+begin 
+if falling_edge(clock) AND AS='0' and DS='0' and IO='1' and addr>=24576 and AD(15)='0' then --61440
+		spw1<=not RW;
+		spqi<=Do; --(7 downto 0)&Do(15 downto 8);
+	elsif falling_edge(clock) then
+	   spw1<='0';
 	end if;
 end process ;
 
@@ -261,12 +300,13 @@ spb<=Do(1) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_
 sdb<=Do(0) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 --adxy<=Do(2) when addr=20 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
 --spb<=not spb when rising_edge(vs) ;
+Vmod<='0' when reset='1' else Do(0) when addr=24 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
  --Sound IO decoding 
-aq<=Do when IO='1' and AD="0000000000001000" and falling_edge(clock); -- port 8
-aq2<=Do when IO='1' and AD="0000000000001010" and falling_edge(clock); -- port 10
-nen<=Do(0) when IO='1' and AD="0000000000001011" and falling_edge(clock);  -- noise enable
-Waud<='0' when AD="0000000000001000" and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
-Waud2<='0' when AD="0000000000001010" and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
+aq<=Do when addr=8 and IO='1' and RW='0' and AS='0' and DS='0'  and falling_edge(clock); -- port 8
+aq2<=Do when  addr=10 and IO='1' and RW='0' and AS='0' and DS='0' and falling_edge(clock); -- port 10
+nen<=Do(0) when  addr=11 and IO='1' and RW='0' and AS='0' and DS='0'  and falling_edge(clock);  -- noise enable
+Waud<='0' when addr=8  and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
+Waud2<='0' when addr=10 and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
 
 -- Read decoder
 process (clock)
@@ -274,18 +314,20 @@ begin
 if falling_edge(clock) and RW='1' and AS='0' then
 	if IO='0' then
 		if (addr<8192) then Di<=qro; 
-		else Di<=D; end if;
+		--elsif (addr<=16383+16384)  then Di<=qa; 
+		else Di<=D;end if;
 	else
-		if AD(15 downto 14)="11" then Di<=q16;
-		elsif AD="0000000000000100" then Di<="00000000"&sdo;  -- serial1
-		elsif AD="0000000000001110" then Di<="00000000"&sdo2;  -- serial2 keyboard
-		elsif AD="0000000000000110" then Di<="0000000000000" & sdready2 & sdready & sready;  -- serial status
-		elsif AD="000000000010000" then Di<="00000000"&spi_out;   --spi 
-		elsif AD="000000000010001" then Di<="000000000000000" & spi_rdy;  --spi 
-		elsif AD="000000000001001" then Di<="00000000000000"& play2 & play; -- audio status
-		elsif AD="000000000010110" then Di<="000"&JOYST2&"000"& JOYST1;     -- joysticks
-		elsif AD="000000000010100" then Di<=count;
-		--elsif AD="000000000010101" then Di<="00000000000000"&Vsyn&hsyn;    -- VSYNCH HSYNCH STATUS
+		if AD(15)='1' then Di<=q16;  --video
+		elsif addr>=24576 then Di<=spq16;
+		elsif addr=4 then Di<="00000000"&sdo;  -- serial1
+		elsif addr=14 then Di<="00000000"&sdo2;  -- serial2 keyboard
+		elsif addr=6 then Di<="0000000000000" & sdready2 & sdready & sready;  -- serial status
+		elsif addr=16 then Di<="00000000"&spi_out;   --spi 
+		elsif addr=17 then Di<="000000000000000" & spi_rdy;  --spi 
+		elsif addr=9 then Di<="00000000000000"& play2 & play; -- audio status
+		elsif addr=22 then Di<="000"&"00000"&"000"& JOYST1;     -- joysticks
+		elsif addr=20 then Di<=count;
+		elsif addr=21 then Di<="00000000000000"&Vsyn&hsyn;    -- VSYNCH HSYNCH STATUS
 		else Di<=ZERO16;
 		end if;
 	end if;
@@ -298,11 +340,11 @@ Mdecod1 <= '0' when (AD(15 downto 13)/="000") and (AS='0') and (IO='0') AND (HOL
 --Int_in <= '1' whe n sdready='1' or Int='1' else '0'; 
 --Ii <= "11" when sdready='1' else I;
 
-Int_in <= (Int and VINT) when rising_edge(clock) and reset='0' else '1' when rising_edge(clock) and reset='1';
---Int_in <= (Int or Inter) when rising_edge(clock) and reset='0' else '0' when rising_edge(clock) and reset='1';
-Ii<="11" when VINT='0' and rising_edge(clock) else 
-		Ii	when int='0' and  rising_edge(clock) else
-		"11" when rising_edge(clock);
+Int_in <= (Int and VINT) when falling_edge(clock) and reset='0' else '1' when falling_edge(clock) and reset='1';
+--Int_in <= (Int or Inter) when falling_edge(clock) and reset='0' else '0' when falling_edge(clock) and reset='1';
+Ii<="11" when VINT='0' and falling_edge(clock) else 
+		Ii	when int='0' and  falling_edge(clock) else
+		"11" when falling_edge(clock);
 		
 --LED(7)<=Inter;
 --LED(6)<=INT;
@@ -335,8 +377,8 @@ entity true_dual_port_ram_single_clock is
 
 	generic 
 	(
-		DATA_WIDTH : natural := 8;
-		ADDR_WIDTH : natural := 6
+		DATA_WIDTH : natural := 16;
+		ADDR_WIDTH : natural := 14
 	);
 
 	port 
@@ -389,6 +431,8 @@ begin
 end rtl;
 
 
+
+
 -- Quartus II VHDL Template
 -- Single port RAM with single read/write address 
 
@@ -401,7 +445,7 @@ entity single_port_ram is
 	port 
 	(
 		clk	: in std_logic;
-		addr	: in natural range 0 to 65535;
+		addr	: in natural range 0 to 32767;
 		data	: in std_logic_vector(15 downto 0);
 		we,DS		: in std_logic := '1';
 		q		: out std_logic_vector(15 downto 0)
@@ -412,7 +456,7 @@ architecture rtl of single_port_ram is
 
 	-- Build a 2-D array type for the RAM
 	subtype word_t is std_logic_vector(15 downto 0);
-	type memory_t is array(4095 downto 0) of word_t;
+	type memory_t is array(8191+8192 downto 0) of word_t;
 
 	function init_ram
 		return memory_t is 
@@ -425,17 +469,17 @@ architecture rtl of single_port_ram is
 	-- Declare the RAM signal.	
 	signal ram : memory_t; --:=init_ram;
 	--attribute ram_init_file : string;
-	--attribute ram_init_file of ram : signal is "C:\altera\LionSys_EP4_4 D\Lionasm\bin\Debug\liontinyb.asm.mif";
+	--attribute ram_init_file of ram : signal is "Lionasm\bin\Debug\liontinyb.asm.mif";
 	-- Register to hold the address 
-	signal addr_reg : natural range 0 to 4095;
+	signal addr_reg : natural range 0 to 32767;
 
 begin
 
 	process(clk)
-		variable ad2: natural range 0 to 4095;
+		variable ad2: natural range 0 to 32767;
 	begin
 	if (Clk'EVENT AND Clk = '1') then
-		if (addr>=4096) and (addr<8192) then
+		if (addr>=4096) and (addr<=8191+8192+4096) then
 			ad2:=addr-4096;
 			if (WE = '0') and (DS='0') then
 				ram(ad2) <= data;
@@ -486,7 +530,7 @@ architecture rtl of single_port_rom is
 
 signal rom : memory_t; --:= init_rom;
 	attribute ram_init_file : string;
-	attribute ram_init_file of rom : signal is "C:\altera\LionSys_EP4_4 D\Lionasm\bin\Debug\lionrom.asm.mif";
+	attribute ram_init_file of rom : signal is "C:\intelFPGA_lite\LionSys_EP4_15\Lionasm\bin\Debug\lionrom.asm.mif";
 	
 begin
 	process(clk,addr)
