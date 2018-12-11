@@ -13,7 +13,8 @@ entity LionSystem is
 		D  : INOUT  Std_logic_vector(15 downto 0);
 		ADo  : OUT  Std_logic_vector(15 downto 0); 
 		RWo,ASo,DSo : OUT Std_logic;
-		RD,Reset,Clock,Int,HOLD: IN Std_Logic;
+		RD,Reset,Clock,HOLD: IN Std_Logic;
+		Int: IN Std_Logic;
 		IOo, Holdao : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
 		--IACK: OUT std_logic;
@@ -199,6 +200,7 @@ Signal Ii : std_logic_vector(1 downto 0);
 Signal qi2 : std_logic_vector(7 downto 0);
 Signal ad1,vad0,vad1,spad1 :  natural range 0 to 16383;
 Signal ad2 :  natural range 0 to 16383;
+Signal spad2 :  natural range 0 to 16383;
 Signal sr,sw,sdready,sready,sr2,sdready2, vs, IAC, noise: std_Logic;
 Signal nen, ne: std_Logic:='0';
 Signal sdi,sdo,sdo2 : std_logic_vector (7 downto 0);
@@ -216,7 +218,7 @@ VRAM: true_dual_port_ram_single_clock
 	PORT MAP ( clock, ad1, ad2, qi1, qi, w2, w1,vq, q16  );
 SPRAM: true_dual_port_ram_single_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 12)
-	PORT MAP ( clock, spad1, ad2, spqi1, spqi, spw2, spw1, spvq, spq16  );
+	PORT MAP ( clock, spad1, spad2, spqi1, spqi, spw2, spw1, spvq, spq16  );
 VIDEO0: videoRGB
 	PORT MAP ( Clock,R0,G0,B0,VSYN0, HSYN0, vint0, reset, spb, sdb, vad0, vq);
 VIDEO1: videoRGB1
@@ -252,6 +254,7 @@ ADo<= AD when AS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 addr<=to_integer(unsigned(AD)) when AS='0';
 addr1<=to_integer(unsigned(AD(15 downto 1))) when AS='0';
 ad2<=to_integer(unsigned(AD(14 downto 1))) when AS='0';
+spad2<=to_integer(unsigned(AD(12 downto 1))) when AD(15 downto 13)="010";
 ne<='1' when (nen='1') and (aq(11 downto 0)/="000000000000") else '0';
 AUDIO<= AUDIO1 ;
 NOIS<=NOISE and (play or play2) and ne;
@@ -280,7 +283,7 @@ end process ;
 -- Sprite Ram 
 process (clock)
 begin 
-if falling_edge(clock) AND AS='0' and DS='0' and IO='1' and addr>=24576 and AD(15)='0' then --61440
+if falling_edge(clock) AND AS='0' and DS='0' and IO='1' and AD(15 downto 13)="010" then --61440
 		spw1<=not RW;
 		spqi<=Do; --(7 downto 0)&Do(15 downto 8);
 	elsif falling_edge(clock) then
@@ -318,7 +321,7 @@ if falling_edge(clock) and RW='1' and AS='0' then
 		else Di<=D;end if;
 	else
 		if AD(15)='1' then Di<=q16;  --video
-		elsif addr>=24576 then Di<=spq16;
+		elsif AD(15 downto 13)="010" then Di<=spq16;
 		elsif addr=4 then Di<="00000000"&sdo;  -- serial1
 		elsif addr=14 then Di<="00000000"&sdo2;  -- serial2 keyboard
 		elsif addr=6 then Di<="0000000000000" & sdready2 & sdready & sready;  -- serial status

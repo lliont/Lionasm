@@ -461,7 +461,6 @@ IF Reset = '1' THEN
 					end if;
 					sub<='1'; AS<='1'; 
 				when 3  =>
-				
 					sub<='0';	set_flags;
 					rest2:=true;
 				when others =>
@@ -546,7 +545,7 @@ IF Reset = '1' THEN
 				sub<='1'; 
 				setreg:=false;
 				IR(15 downto 9)<="0000011"; -- continue as in ADD
-	
+				
 			when "0110001" =>              -- JL (Reg,NUM,[reg],[n])
 				If  (SR(NG)/=SR(OV)) then
 					if fetch then PC<=X;
@@ -628,8 +627,7 @@ IF Reset = '1' THEN
 			when "0111111" =>              -- POP SR
 				case TT is
 				when 0 =>
-					ST<=stmp;
-					AD<=stmp;	AS<='0';
+					ST<=stmp; AD<=stmp;	AS<='0';
 				when 1 =>
 				when others =>
 					SR<=Di(7 downto 0); 
@@ -638,8 +636,7 @@ IF Reset = '1' THEN
 			when "1000000" =>              -- POP Rn
 				case TT is
 				when 0 =>
-					ST<=stmp;
-					AS<='0'; AD<=stmp;
+					ST<=stmp; AS<='0'; AD<=stmp;
 				when 1 =>
 				when others =>
 					tmp:=Di;

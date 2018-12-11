@@ -1630,25 +1630,21 @@ PLOT1:	PUSH		A1
 		ADD		A2,VBASE1
 		IN.B		A1,A2
 		MOV.B		A3,(SCOL)
-		AND	 	A3,$0F
+		OR.B		A4,A4
+		JNZ		P1L7
+		SRL		A3,4	; mode 0  clear		   
+P1L7:		AND	 	A3,$000F
 		BTST		A0,0
 		JNZ		P1L6
 		SLL		A3,4
-		AND		A1,$F0
-		JMP		P1L7
-P1L6:		AND		A1,$0F
-P1L7:		OR		A4,A4
-		JNZ		P1L3
-		BCLR		A1,A0   ; mode 0  clear
-		JMP		P1L4
-P1L3:		CMPI		A4,2
-		JNZ		PL5
-		BTST		A1,A0  ; mode 2  not
-		JZ		P1L5
-		BCLR		A1,A0
-		JMP		P1L4
+		AND.B		A1,$0F
+		JMP		P1L3
+P1L6:		AND.B		A1,$F0
+P1L3:		CMPI		A4,2   ; mode 2
+		JNZ		P1L5
+		; what to do here ?
 P1L5:		OR.B		A1,A3    ; mode 1  set
-P1L4:		OUT.B		A2,A1
+		OUT.B		A2,A1
 		POP		A3
 		POP		A2
 		POP		A1

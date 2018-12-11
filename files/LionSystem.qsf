@@ -132,7 +132,7 @@ set_global_assignment -name BDF_FILE ALU_LA2.bdf
 set_global_assignment -name BDF_FILE ALU_LA4.bdf
 set_global_assignment -name VHDL_FILE video_640x480_N.vhd
 set_global_assignment -name OPTIMIZATION_TECHNIQUE SPEED
-set_global_assignment -name PLACEMENT_EFFORT_MULTIPLIER 4.9
+set_global_assignment -name PLACEMENT_EFFORT_MULTIPLIER 7.8
 set_location_assignment PIN_103 -to R
 set_location_assignment PIN_104 -to G
 set_location_assignment PIN_105 -to B
