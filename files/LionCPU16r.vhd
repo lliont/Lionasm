@@ -28,6 +28,7 @@ constant CA:natural:=0;
 constant OV:natural:=1;
 constant ZR:natural:=2;
 constant NG:natural:=3; 
+constant JXAD:natural:=4;  
 constant ZERO8 : std_logic_vector(7 downto 0):= (OTHERS => '0');
 constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 constant InitialState:Std_logic_vector(2 downto 0):="000";
@@ -154,8 +155,8 @@ IF Reset = '1' THEN
 				r2:=RR; r1:=R;	X1<=Ao;	Y1<=AoII;
 				bt:=to_integer(unsigned(IR(5 downto 2)));
 				bwb:= IR(5);
-				rel:= IR(15 downto 13)="111"; --'1' and IR(14)='1' and IR(13)='1';
-				fetch3:=IR(15 downto 13)="110"; --'1' and IR(14)='1' and IR(13)='0';
+				rel:= (IR(15 downto 13)="111") or (IR(15 downto 12)="1101");  --'1' and IR(14)='1' and IR(13)='1';
+				fetch3:=IR(15 downto 12)="1100"; --'1' and IR(14)='1' and IR(13)='0';
 				if IR(0)='1' then
 					FF<=FetchState; AD<=PC; AS<='0'; 
 				else 
@@ -221,8 +222,9 @@ IF Reset = '1' THEN
 				X1<=PC; add<='1';
 			--when 1  =>
 			when others =>
-				 Y1<=tmp2; add<='0';
-				 rest:=true; if IR(1)='1' then FF<=IndirectState; else FF<=ExecutionState; end if;
+				 Y1<=tmp2; add<='0'; X1<=tmp;
+				 if IR(1)='1' then FF<=IndirectState; else FF<=ExecutionState; end if;
+				 rest:=true; 
 			end case;
 		when "101" =>
 		when ExecutionState =>               --- F="110" Operation execution cycles 
@@ -829,7 +831,7 @@ IF Reset = '1' THEN
 						SR(CA)<=Y1(0);
 						tmp:="0"&X1(15 downto 1);
 						set_reg(r1,tmp);  
-					--when 1 =>  -- for stupid size !!!
+
 					when 1 =>
 						Wen<='0';
 					when others =>
@@ -889,11 +891,27 @@ IF Reset = '1' THEN
 					ST<=Z1;
 					rest2:=true;
 				end case;	
-			when "0110011" =>
-				rest2:=true;
+			when "0110011" =>   --JXAB JXAW
+				case TT is
+				when 0 =>
+					if fetch then tmp:=X; else tmp:=Y1; end if;
+					QX1<=X1; 
+					if bwb='1' then
+						QY1<="0000000000000001";
+					else
+						QY1<="0000000000000010";
+					end if;
+					qsub<=SR(JXAD);
+				when others =>
+					IDX<=IDX-1;	
+					if (IDX/=ZERO16) then PC<=tmp; set_reg(r1,QZ1,'0','0');  end if;
+					--qsub='0'; add<='0'; sub<='0';
+					rest2:=true;
+				end case;
+				
 			
      
-------instructions equal or between 1100... and 11100.... cause double fetch -----------------			
+------instructions  between 1100... and 11010.... cause double fetch -----------------			
 
 			when "1100000" =>              -- MOV (n),n
 				AD<=X; Y1<=Y; FF<=StoreState;
@@ -940,6 +958,22 @@ IF Reset = '1' THEN
 				end case;
 				
 		-----------    instructions after "11100..." relative 
+			when "1101001" =>   --JRXAB JRXAW
+				case TT is
+				when 0 =>
+					QX1<=X1; 
+					if bwb='1' then
+						QY1<="0000000000000001";
+					else
+						QY1<="0000000000000010";
+					end if;
+					qsub<=SR(JXAD);
+				when others =>
+					IDX<=IDX-1;	
+					if (IDX/=ZERO16) then PC<=Z1; set_reg(r1,QZ1,'0','0'); end if;
+					--qsub='0'; add<='0'; sub<='0';
+					rest2:=true;
+				end case;
 			when "1110000" =>              -- JR (Reg,NUM,[reg],[n])
 				PC<=Z1; 
 				rest2:=true;

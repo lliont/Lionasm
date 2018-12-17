@@ -36,8 +36,8 @@ BOOTC:	MOV		(SDFLAG),0
 		SETX		809       ; Set default color 
 		MOV		A1,61152 ; was 65144
 COLINI:	OUT		A1,$3939
-		ADDI		A1,2
-		JMPX		COLINI
+		;ADDI		A1,2
+		JXAW		A1,COLINI
 		MOV		A2,32767
 		SETX		56*1024-2    ;  memory test
 		MOV		A1,8192
@@ -54,8 +54,8 @@ MEMTST:     MOV.B		A2,(A1)
 		INT		4
 		POP		A1
 		JMP		MEMNOK
-MEMOK:	INC		A1
-		JMPX		MEMTST
+MEMOK:	;INC		A1
+		JXAB		A1,MEMTST
 MEMNOK:	SETX		80
 SDRETR:	MOVI		A0,11        ; sd card init
 		INT		4
@@ -307,8 +307,9 @@ FDIV_1:
 FDIV_2:
   SLLL A1,A2
   SRLL A3,A4
-  ADDI A7,1
-  JMPX FDIV_2
+  ;ADDI A7,1
+  JXAB A7,FDIV_2
+  INC	A7
   SRLL A3,A4
   MOVI A0,7
   INT 5
@@ -582,8 +583,8 @@ FSV2:	                 ; Found free slot
 	SETX	10
 FSV5:	MOV	(A2),(A4)
 	INC	A2
-	INC	A4
-	JMPX	FSV5
+	;INC	A4
+	JXAB	A4,FSV5
 	MOV.B	(A2),32    ;set archive bit
 	ADD	A2,17
 	SWAP	A7	     ;store FILE SIZE
@@ -794,8 +795,8 @@ TFF1:		CMP.B (A2),0
 TFF2:		CMP.B	(A2),(A4)
 		JNZ	TFF3
 		INC	A2
-		INC	A4
-		JMPX	TFF2
+		;INC	A4
+		JXAB	A4,TFF2
 		POP	A4
 		POP	A2
 		ADD	A2,26
@@ -1072,8 +1073,8 @@ WSEC:
 	SETX	511        ; WRITE DATA 512 BYTES + 2 CRC bytes
 WRI6:	MOV.B	A1,(A3)
 	JSR	SPIS
-	INC	A3
-	JMPX	WRI6
+	;INC	A3
+	JXAB	A3,WRI6
 	MOVI	A1,0
 	JSR	SPIS
 	MOVI	A1,0
@@ -1175,8 +1176,8 @@ SDRD2:
 RDI6:	MOV	A1,$FF
 	JSR	SPIS
 	MOV.B	(A3),A0
-	INC	A3
-	JMPX	RDI6
+	;INC	A3
+	JXAB	A3,RDI6
 
 	MOVI	A2,3
 	MOV 	A1,$FF  ; send dummy with cs high
@@ -1348,8 +1349,8 @@ SDRD:	CMP.B	A0,$FE
 SPI6:	MOV	A1,$FF
 	JSR	SPIS 
 	MOV.B	(A3),A0
-	INC	A3
-	JMPX	SPI6
+	;INC	A3
+	JXAB	A3,SPI6
 
 	MOVI	A2,3
 	MOV 	A1,$FF  ; send dummy with cs high
@@ -1389,13 +1390,14 @@ SKEYBIN:	IN		A0,6  ;Read serial byte if availiable
 		RETI
 
 ;----------------------------------------
+ ; VMODE0 PRINT Character in A1 at A2 (XY)
 PUTC:		STI
-		CMP.B		(VMODE),1
-		JZ		PUTC1
-		PUSHX                 ; VMODE0 PRINT Character in A1 at A2 (XY)
+		PUSHX   
 		PUSH		A4
 		PUSH		A1
-		AND		A1,$00FF
+		CMP.B		(VMODE),1
+		JZ		PUTC1             
+		AND		A1,$00FF  
 		SUB.B		A1,32    
 		MULU		A1,6
 		ADD		A1,CTABLE
@@ -1411,22 +1413,19 @@ PUTC:		STI
 		SETX		2          ; 6 bytes
 LP1:		OUT		A0,(A4)
 		ADDI		A4,2
-		ADDI		A0,2          ; next   
-		JMPX		LP1
+		;ADDI		A0,2          ; next   
+		JXAW		A0,LP1
 		POP		A1
 		POP		A4
 		POPX	
 		RETI
 
 PUTC1:       ; VMODE1 PRINT Character in A1 at A2 (XY)
-		PUSHX
 		PUSH		A7
 		PUSH		A6
 		PUSH		A5
-		PUSH		A4
 		PUSH 		A3
 		PUSH		A2
-		PUSH		A1
 		AND		A1,$00FF
 		SUB.B		A1,32    
 		MULU		A1,6
@@ -1437,7 +1436,7 @@ PUTC1:       ; VMODE1 PRINT Character in A1 at A2 (XY)
 		MULU		A0,1280  ;XDIM/2 * 8
 		MOVI		A1,0
           	MOVLH 	A1,A2
-		MULU.B	A1,3   ; 6/2
+		MULU		A1,3   ; 6/2
 		ADD		A0,A1
 		ADD		A0,VBASE1   ; video base
 		MOV.B		A1,(SCOL)
@@ -1471,15 +1470,15 @@ P3C:		OUT.B		A0,A5
 		CMPI		A6,7
 		JBE		P1C
 		POP		A0
-		ADDI		A0,1
-		JMPX		P2C
-		POP		A1
+		;ADDI		A0,1
+		JXAB		A0,P2C
 		POP		A2
 		POP		A3
-		POP		A4
 		POP		A5
 		POP		A6
 		POP		A7
+		POP		A1
+		POP		A4
 		POPX
 		RETI
 
@@ -1521,13 +1520,14 @@ SCROLL:	STI
 		MOV		A1,49472   ; 49152+384
 SC1:		IN		A4,A1
 		OUT		A0,A4  ;  word access to video ram
-		ADDI		A0,2
+		;ADDI		A0,2
 		ADDI		A1,2
-		JMPX		SC1
+		JXAW		A0,SC1
+		ADDI		A0,2
 		SETX		159
 SC2:		OUT		A0,0
-		ADDI		A0,2
-		JMPX		SC2
+		;ADDI		A0,2
+		JXAW		A0,SC2
 		POP		A4		
 		POP		A1
 		POPX
@@ -1541,9 +1541,10 @@ SCROLL1:	PUSHX
 		MOV		A1,34048   ; 49152+384
 S1C1:		IN		A4,A1
 		OUT		A0,A4  ;  word access to video ram
-		ADDI		A0,2
+		;ADDI		A0,2
 		ADDI		A1,2
-		JMPX		S1C1
+		JXAW		A0,S1C1
+		ADDI		A0,2
 		MOV.B		A1,(SCOL)
 		SLL		A1,4
 		MOV.B		A1,(SCOL)
@@ -1551,8 +1552,8 @@ S1C1:		IN		A4,A1
 		MOVHL		A1,A1
 		SETX		639
 S1C2:		OUT		A0,A1
-		ADDI		A0,2
-		JMPX		S1C2
+		;ADDI		A0,2
+		JXAW		A0,S1C2
 		POP		A4		
 		POP		A1
 		POPX
@@ -1566,8 +1567,8 @@ CLRSCR:	STI
 		SETX	4799      ;5952	
 		MOV	A0,VBASE
 CLRS1:	OUT	A0,0
-		ADDI	A0,2
-		JMPX	CLRS1
+		;ADDI	A0,2
+		JXAW	A0,CLRS1
 		POPX
 		RETI
 
@@ -1581,8 +1582,8 @@ CLRSCR1:	PUSHX
 		SETX	15999    ;5952	
 		MOV	A0,VBASE1
 CLR1S1:	OUT	A0,A1
-		ADDI	A0,2
-		JMPX	CLR1S1
+		;ADDI	A0,2
+		JXAW	A0,CLR1S1
 		POP	A1
 		POPX
 		RETI
@@ -1687,9 +1688,9 @@ PIM3:		SWAP		A3
 		XOR		A1,A3
 		OUT.B		A0,A1
 		INC		A2
-		INC		A5
+		;INC		A5
 		POP		A0	
-		JMPX		PIM1
+		JXAB		A5,PIM1
 		POP		A3
 		POP		A2
 		POP		A1
@@ -1714,8 +1715,8 @@ KB1:		SETX 		67           ; Convert Keyboard scan codes to ASCII
 		MOV		A0,KEYBCD
 LP3:		CMP.B		A1,(A0)
 		JZ		LP4
-		INC		A0
-		JMPX		LP3
+		;INC		A0
+		JXAB		A0,LP3
 		MOV		A1,0
 		JMP		LP10
 LP4:		MOVX		A0
