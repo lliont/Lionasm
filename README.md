@@ -1,7 +1,7 @@
 Lionasm
 -------
 
-An assembler for Lion 16-bit FPGA based CPU.
+An assembler for Lion 16-bit FPGA based CPU & the Lion project sources.
 
 Lion CPU and Lion Computer which is a homebrew 16-bit computer based on this cpu, are made by Theodoulos Liontakis.
 
