@@ -81,7 +81,6 @@ variable sldata: sprite_line_data;
 variable d1,d2:dist;
 variable	bl: bool;
 variable pixi, lin, p16, pd4, pm4: natural range 0 to 1023;
---variable divp, modp: natural range 0 to 15;
 variable ldata: std_logic_vector(7 downto 0);
 variable blvec:std_logic_vector(4 downto 0);
 
@@ -132,10 +131,6 @@ begin
 						if Q(m78)='1' then R<=FG(2); G<=FG(1); B<=FG(0);
 						else  R<=BG(2); G<=BG(1); B<=BG(0); end if;
 					end case;
---				else
---					if Q(m78)='1' then R<=FG(2); G<=FG(1); B<=FG(0);
---					else  R<=BG(2); G<=BG(1); B<=BG(0); end if;
---				end if;
 			else  -- vsync  0.01 us = 1 pixels
 				B<='0'; R<='0'; G<='0';
 				if lines<2 then VSYN<='0';	else	VSYN<='1';	end if;
@@ -288,29 +283,26 @@ Signal addr2: natural range 0 to 16383;
 signal m8,p6: natural range 0 to 31;
 Signal vidc: boolean:=false;
 Signal SX,SY: sprite_dim;
---Signal scolorR,scolorG,ScolorB: sprite_color;  -- ,sdx,sdy
 Signal sen:sprite_enable;
-Signal d1,d2,d1pd4,d1pm4:dist;
+
 
 begin
 
 vidc<=not vidc when falling_edge(sclk);
 
 process (sclk)
-variable m78: natural range 0 to 31;
+
 variable PCOL,BRGB: std_logic_vector(3 downto 0);
 variable sldata: sprite_line_data; 
-
+variable d1,d2,d1pd4,d1pm4:dist;
 variable	bl: bool;
 variable p16: natural range 0 to 4095;
 variable pixi, lin, pd4, pm4, d2pm4, pixm4, pixd4: natural range 0 to 1023;
---variable divp, modp: natural range 0 to 15;
 variable blvec:std_logic_vector(3 downto 0);
-Variable pix: natural range 0 to 1023;
+variable pix: natural range 0 to 1023;
 
 begin
 	if  falling_edge(sclk) then
-		--p2:=p1+pno*2; l2:=l1+lno*2;
 		if  vidc then 
 			if pixel=799 then
 				pixel<=0; pix:=0; p16:=0; 
@@ -350,8 +342,8 @@ begin
 						BRGB:='0'&SLData(32+d1pd4(8))(2+d1pm4(8) downto d1pm4(8));
 					when "1001" => 
 						BRGB:='0'&SLData(36+d1pd4(9))(2+d1pm4(9) downto d1pm4(9));
---					when "01010" => 
---						R<=SLData(40+d1pd4(10))(2+d1pm4(10)); G<=SLData(40+d1pd4(10))(1+d1pm4(10)); B<=SLData(40+d1pd4(10))(d1pm4(10)); BRI<='0';
+--					when "1010" => 
+--						BRGB:='0'&SLData(40+d1pd4(10))(2+d1pm4(10) downto d1pm4(10));
 					when others =>
 						 BRGB:=PCOL;  --B<=PCOL(2); G<=PCOL(1); B<=PCOL(0);
 					end case;
@@ -377,48 +369,48 @@ begin
 		else   ------ vidc false ---------------------------------------
 			
 			if (lines>=l1) and (lines<l2) and (pixel>=p1) and (pixel<p2) then
-				if (pixel mod 2)=0 then 
-					addr<= pix/4 + addr2;
-					pix:=pix+1;   -- (pixel-85) * 8
+				if (pixel mod 2)=1 then 
+					pix:=pix+1; 
 				end if;
+				addr<= pix/4 + addr2;
 			end if;
 			
 			lin:=(lines-l1)/2; pixi:=(pixel-p1)/2;
 			
-			d1(0)<=pixi-to_integer(unsigned(SX(0))); 
-			d2(0)<=lin-to_integer(unsigned(SY(0)));
-			d1(1)<=pixi-to_integer(unsigned(SX(1))); 
-			d2(1)<=lin-to_integer(unsigned(SY(1)));
-			d1(2)<=pixi-to_integer(unsigned(SX(2))); 
-			d2(2)<=lin-to_integer(unsigned(SY(2)));
-			d1(3)<=pixi-to_integer(unsigned(SX(3))); 
-			d2(3)<=lin-to_integer(unsigned(SY(3)));
-			d1(4)<=pixi-to_integer(unsigned(SX(4))); 
-			d2(4)<=lin-to_integer(unsigned(SY(4)));
-			d1(5)<=pixi-to_integer(unsigned(SX(5))); 
-			d2(5)<=lin-to_integer(unsigned(SY(5)));
-			d1(6)<=pixi-to_integer(unsigned(SX(6))); 
-			d2(6)<=lin-to_integer(unsigned(SY(6)));
-			d1(7)<=pixi-to_integer(unsigned(SX(7))); 
-			d2(7)<=lin-to_integer(unsigned(SY(7)));
-			d1(8)<=pixi-to_integer(unsigned(SX(8))); 
-			d2(8)<=lin-to_integer(unsigned(SY(8)));
-			d1(9)<=pixi-to_integer(unsigned(SX(9))); 
-			d2(9)<=lin-to_integer(unsigned(SY(9)));
+			d1(0):=pixi-to_integer(unsigned(SX(0))); 
+			d2(0):=lin-to_integer(unsigned(SY(0)));
+			d1(1):=pixi-to_integer(unsigned(SX(1))); 
+			d2(1):=lin-to_integer(unsigned(SY(1)));
+			d1(2):=pixi-to_integer(unsigned(SX(2))); 
+			d2(2):=lin-to_integer(unsigned(SY(2)));
+			d1(3):=pixi-to_integer(unsigned(SX(3))); 
+			d2(3):=lin-to_integer(unsigned(SY(3)));
+			d1(4):=pixi-to_integer(unsigned(SX(4))); 
+			d2(4):=lin-to_integer(unsigned(SY(4)));
+			d1(5):=pixi-to_integer(unsigned(SX(5))); 
+			d2(5):=lin-to_integer(unsigned(SY(5)));
+			d1(6):=pixi-to_integer(unsigned(SX(6))); 
+			d2(6):=lin-to_integer(unsigned(SY(6)));
+			d1(7):=pixi-to_integer(unsigned(SX(7))); 
+			d2(7):=lin-to_integer(unsigned(SY(7)));
+			d1(8):=pixi-to_integer(unsigned(SX(8))); 
+			d2(8):=lin-to_integer(unsigned(SY(8)));
+			d1(9):=pixi-to_integer(unsigned(SX(9))); 
+			d2(9):=lin-to_integer(unsigned(SY(9)));
 			--d1(10):=pixi-to_integer(unsigned(SX(10))); 
 			--d2(10):=lin-to_integer(unsigned(SY(10)));
 			
-			d1pd4(0)<=d1(0)/4; d1pm4(0)<=(d1(0) mod 4)*4;
-			d1pd4(1)<=d1(1)/4; d1pm4(1)<=(d1(1) mod 4)*4;
-			d1pd4(2)<=d1(2)/4; d1pm4(2)<=(d1(2) mod 4)*4;
-			d1pd4(3)<=d1(3)/4; d1pm4(3)<=(d1(3) mod 4)*4;
-			d1pd4(4)<=d1(4)/4; d1pm4(4)<=(d1(4) mod 4)*4;
-			d1pd4(5)<=d1(5)/4; d1pm4(5)<=(d1(5) mod 4)*4;
-			d1pd4(6)<=d1(6)/4; d1pm4(6)<=(d1(6) mod 4)*4;
-			d1pd4(7)<=d1(7)/4; d1pm4(7)<=(d1(7) mod 4)*4;
-			d1pd4(8)<=d1(8)/4; d1pm4(8)<=(d1(8) mod 4)*4;
-			d1pd4(9)<=d1(9)/4; d1pm4(9)<=(d1(9) mod 4)*4;
---			d1pd4(10):=40+d1(10)/4; d1pm4(10):=(3-d1(10) mod 4)*4;
+			d1pd4(0):=d1(0)/4; d1pm4(0):=(d1(0) mod 4)*4;
+			d1pd4(1):=d1(1)/4; d1pm4(1):=(d1(1) mod 4)*4;
+			d1pd4(2):=d1(2)/4; d1pm4(2):=(d1(2) mod 4)*4;
+			d1pd4(3):=d1(3)/4; d1pm4(3):=(d1(3) mod 4)*4;
+			d1pd4(4):=d1(4)/4; d1pm4(4):=(d1(4) mod 4)*4;
+			d1pd4(5):=d1(5)/4; d1pm4(5):=(d1(5) mod 4)*4;
+			d1pd4(6):=d1(6)/4; d1pm4(6):=(d1(6) mod 4)*4;
+			d1pd4(7):=d1(7)/4; d1pm4(7):=(d1(7) mod 4)*4;
+			d1pd4(8):=d1(8)/4; d1pm4(8):=(d1(8) mod 4)*4;
+			d1pd4(9):=d1(9)/4; d1pm4(9):=(d1(9) mod 4)*4;
+			--d1pd4(10):=40+d1(10)/4; d1pm4(10):=(3-d1(10) mod 4)*4;
 			
 			
 			if (pixel<=(1+spno)*4) then 
@@ -435,11 +427,13 @@ begin
 				end if;
 			end if;
 			
-			
-			if pixm4=1 then PCOL:=Q(15 downto 12); end if;  --Q(12)&Q(13)&Q(14)&Q(15);
-			if pixm4=2 then PCOL:=Q(11 downto 8); end if; --Q(8)&Q(9)&Q(10)&Q(11);
-			if pixm4=3 then PCOL:=Q(7 downto 4); end if; -- Q(4)&Q(5)&Q(6)&Q(7);
-			if pixm4=0 then PCOL:=Q(3 downto 0); end if; --Q(0)&Q(1)&Q(2)&Q(3);
+			case pixm4 is
+			when 0 => PCOL:=Q(15 downto 12);  --end if;  --Q(12)&Q(13)&Q(14)&Q(15);
+			when 1 => PCOL:=Q(11 downto 8);  --end if; --Q(8)&Q(9)&Q(10)&Q(11);
+			when 2 => PCOL:=Q(7 downto 4); --end if; -- Q(4)&Q(5)&Q(6)&Q(7);
+			when 3 => PCOL:=Q(3 downto 0); --end if; --Q(0)&Q(1)&Q(2)&Q(3);
+			when others=>
+			end case;
 			pixm4:=pix mod 4;
 			-- sprites
 			
@@ -454,7 +448,7 @@ begin
 			if (d1(7)<maxd) and (d2(7)<maxd) and (SEN(7)='1') and (SLData(28+d1pd4(7))(3+d1pm4(7))='0') then blvec:="0111"; end if;
 			if (d1(8)<maxd) and (d2(8)<maxd) and (SEN(8)='1') and (SLData(32+d1pd4(8))(3+d1pm4(8))='0') then blvec:="1000"; end if;
 			if (d1(9)<maxd) and (d2(9)<maxd) and (SEN(9)='1') and (SLData(36+d1pd4(9))(3+d1pm4(9))='0') then blvec:="1001"; end if;
---			if (d1(10)<maxd) and (d2(10)<maxd) and (SEN(10)='1') and (SLData(40+d1pd4(10))(3+d1pm4(10))='0') then blvec:="01010"; end if;
+			--if (d1(10)<maxd) and (d2(10)<maxd) and (SEN(10)='1') and (SLData(40+d1pd4(10))(3+d1pm4(10))='0') then blvec:="1010"; end if;
 		end if;
 	end if; --reset
 end process;

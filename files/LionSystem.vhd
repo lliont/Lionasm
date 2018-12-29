@@ -15,18 +15,18 @@ entity LionSystem is
 		RWo,ASo,DSo : OUT Std_logic;
 		RD,Reset,Clock,HOLD: IN Std_Logic;
 		Int: IN Std_Logic;
-		IOo, Holdao : OUT std_logic;
-		I  : IN std_logic_vector(1 downto 0);
-		--IACK: OUT std_logic;
-		IA : OUT std_logic_vector(1 downto 0);
-		R,G,B,VSYN,HSYN : OUT std_Logic;
+		IOo,A16o,A17o,Holdao : OUT std_logic;
+		--I  : IN std_logic_vector(1 downto 0);
+		IACK: OUT std_logic;
+		--IA : OUT std_logic_vector(1 downto 0);
+		R,G,B,VSYN,HSYN, BRI : OUT std_Logic;
 		Tx  : OUT std_logic ;
 		Rx, Rx2  : IN std_logic ;
 		Mdecod1: OUT std_logic;
 		AUDIO,AUDIOB,NOIS: OUT std_logic;
 		SCLK,MOSI,SPICS: OUT std_logic;
 		MISO: IN std_logic;
-		JOYST1: IN std_logic_vector(4 downto 0)
+		JOYST1,JOYST2: IN std_logic_vector(4 downto 0)
 	);
 end LionSystem;
 
@@ -39,8 +39,8 @@ Component LionCPU16 is
 		DOo  : OUT  Std_logic_vector(15 downto 0);
 		AD   : OUT  Std_logic_vector(15 downto 0); 
 		RWo, ASo, DSo : OUT Std_logic;
-		RD, Reset, Clock, Int, HOLD: IN Std_Logic;
-		IO, HOLDA : OUT std_logic;
+		RD, Reset, Clock, Int,HOLD: IN Std_Logic;
+		IO,A16,HOLDA : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
 		IACK: OUT std_logic;
 		IA : OUT std_logic_vector(1 downto 0)
@@ -189,14 +189,14 @@ COMPONENT SPI is
 	);
 end COMPONENT;
 
-Signal Vmod,R0,B0,G0,R1,G1,B1,hsyn0,vsyn0,hsyn1,vsyn1,vint0,vint1,BRI: std_logic;
+Signal Vmod,R0,B0,G0,R1,G1,B1,BRI1,hsyn0,vsyn0,hsyn1,vsyn1,vint0,vint1: std_logic;
 Signal qi1,vq : std_logic_vector (15 downto 0);
 Signal di,do,AD,qa,qro,aq,aq2 : std_logic_vector(15 downto 0);
 Signal qi,q16,count : std_logic_vector(15 downto 0);
-Signal w1, w2, Int_in, AS, DS, RW, IO, HOLDA, WAud, WAud2,inter,vint : std_logic;
+Signal w1, w2, Int_in, AS, DS, RW, IO, A16, HOLDA, WAud, WAud2,inter,vint : std_logic;
 Signal spw1, spw2: std_logic;
 Signal spqi,spqi1,spq16,spvq: std_logic_vector(15 downto 0);
-Signal Ii : std_logic_vector(1 downto 0);
+Signal Ii,IA : std_logic_vector(1 downto 0);
 Signal qi2 : std_logic_vector(7 downto 0);
 Signal ad1,vad0,vad1,spad1 :  natural range 0 to 16383;
 Signal ad2 :  natural range 0 to 16383;
@@ -212,7 +212,7 @@ constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 
 begin
 CPU: LionCPU16 
-	PORT MAP ( Di, Do, AD, RW,AS,DS,RD,Reset,Clock,Int_in,Hold,IO,Holda,Ii,Iac,IA ) ; 
+	PORT MAP ( Di, Do, AD, RW,AS,DS,RD,Reset,Clock,Int_in,Hold,IO,A16,Holda,Ii,Iac,IA ) ; 
 VRAM: true_dual_port_ram_single_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 14)
 	PORT MAP ( clock, ad1, ad2, qi1, qi, w2, w1,vq, q16  );
@@ -222,7 +222,7 @@ SPRAM: true_dual_port_ram_single_clock
 VIDEO0: videoRGB
 	PORT MAP ( Clock,R0,G0,B0,VSYN0, HSYN0, vint0, reset, spb, sdb, vad0, vq);
 VIDEO1: videoRGB1
-	PORT MAP ( Clock,R1,G1,B1,BRI,VSYN1, HSYN1, vint1, reset, spb, sdb, vad1, vq, spad1, spvq);
+	PORT MAP ( Clock,R1,G1,B1,BRI1,VSYN1, HSYN1, vint1, reset, spb, sdb, vad1, vq, spad1, spvq);
 Serial: UART
 	PORT MAP ( Tx, Rx, Clock, reset, sr, sw, sdready, sready, sdi, sdo );
 SERKEYB: SKEYB
@@ -245,6 +245,7 @@ NOIZ:lfsr
 -- data out 
 
 HOLDAo<=HOLDA;
+A16o<=A16;
 ASo<=AS when HOLDA='0' else 'Z'; 
 DSo<=DS when HOLDA='0' else 'Z'; 
 IOo<=IO when HOLDA='0' else 'Z'; 
@@ -263,11 +264,12 @@ vs<=VSYN;
 R<=R1 when Vmod='1' else R0;
 G<=G1 when Vmod='1' else G0;
 B<=B1 when Vmod='1' else B0;
+BRI<=BRI1 when Vmod='1' else '1';
 ad1<=vad1 when Vmod='1' else vad0;
 HSYN<=HSYN1 when Vmod='1' else HSYN0;
 VSYN<=VSYN1 when Vmod='1' else VSYN0;
 Vint<=Vint1 when Vmod='1' else Vint0;
---IACK<=IAC;
+IACK<=IAC;
 
 -- Video Ram 
 process (clock)
@@ -331,6 +333,7 @@ if falling_edge(clock) and RW='1' and AS='0' then
 		elsif addr=22 then Di<="000"&"00000"&"000"& JOYST1;     -- joysticks
 		elsif addr=20 then Di<=count;
 		elsif addr=21 then Di<="00000000000000"&Vsyn&hsyn;    -- VSYNCH HSYNCH STATUS
+		elsif addr=24 then Di<="000000000000000"&Vmod;
 		else Di<=ZERO16;
 		end if;
 	end if;
@@ -346,7 +349,7 @@ Mdecod1 <= '0' when (AD(15 downto 13)/="000") and (AS='0') and (IO='0') AND (HOL
 Int_in <= (Int and VINT) when falling_edge(clock) and reset='0' else '1' when falling_edge(clock) and reset='1';
 --Int_in <= (Int or Inter) when falling_edge(clock) and reset='0' else '0' when falling_edge(clock) and reset='1';
 Ii<="11" when VINT='0' and falling_edge(clock) else 
-		Ii	when int='0' and  falling_edge(clock) else
+	 "00"	when int='0' and  falling_edge(clock) else
 		"11" when falling_edge(clock);
 		
 --LED(7)<=Inter;

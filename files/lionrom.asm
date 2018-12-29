@@ -34,7 +34,7 @@ BOOTC:	MOV		(SDFLAG),0
 		MOV.B		(VMODE),0
 		MOV.B		(SCOL),$1F
 		SETX		809       ; Set default color 
-		MOV		A1,61152 ; was 65144
+		MOV		A1,61152 
 COLINI:	OUT		A1,$3939
 		;ADDI		A1,2
 		JXAW		A1,COLINI
@@ -131,6 +131,8 @@ INT5T9      DA		FLMUL     ; float mult A1A2*A3A4 res A1A2
 INT5T10     DA		FLDIV     ; float div A1A2/A3A4 res A1A2
 INT5T11     DA		FLADD     ; float add A1A2+A3A4 res A1A2 
 INT5T12     DA		FCMP     ; float cmp  A1A2,A3A4 res A0 
+INT5T13     DA		LDSCR     ; Load Screen A4 fname @A3 
+INT5T14     DA          LINEXY   ; plot a line a1,a2 to a3,a4
 
 ;Hardware interrupt
 HINT:		INC		(COUNTER)
@@ -718,6 +720,59 @@ VMEX:	POP	A2
 	POP	A1
 	RETI
 
+;-------------------------------------------------
+; INT 5,A0=13 Load screen
+LDSCR:	JSR	FINDFN    
+		MOV	A4,A0
+		CMPI	A0,0
+		JZ	INTEXIT
+		JSR	SCLOAD
+		RETI
+
+;-------------------------------------------------
+SCLOAD:	; A4 cluster, A3 Dest address
+	PUSH	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A4
+	PUSH	A5
+	PUSH	A6
+SLD1:	MOV	A6,A4
+	SRL	A6,8   ; DIVIDE BY 256
+	MOV	A1,(FSTFAT)
+	ADD	A1,A6
+	MOVI	A0,13
+	MOV	A2,SDCBUF2
+	INT	4              ; Load FAT
+	MOVI	A0,13          ;
+	MOV	A1,(FSTCLST)
+	ADD	A1,A4
+	SUBI	A1,2
+	MOV	A2,SDCBUF1     ; Dest
+	INT 	4              ; Load sector
+	SETX  255
+	MOV	A2,SDCBUF1
+SLD2:	MOV	A5,(A2)
+	OUT	A3,A5
+	ADDI	A3,2
+	JXAW	A2,SLD2
+	;ADD	A3,512
+	AND	A4,$00FF  ; mod 256
+	SLL	A4,1  
+	MOV	A5,SDCBUF2
+	ADD	A5,A4
+	MOV	A4,(A5)
+	SWAP	A4
+	CMP	A4,$FFFF
+	JNZ	SLD1
+	POP	A6
+	POP	A5
+	POP	A4
+	POP	A3
+	POP	A2
+	POP	A1
+	RET 
+
 
 
 ;---------------------------------------------------
@@ -830,7 +885,7 @@ PRNHEX:	; print num in A0 in hex for debugging
 		PUSH	A2
 		PUSH	A3
 		MOV	A3,A0
-		MOV	A2,$2805
+		MOV	A2,$2804
 		SETX	3
 PHX1:		MOV	A1,A3
 		AND	A1,$000F
@@ -1368,7 +1423,7 @@ SPIF:	POP	A3
 SERIN:	IN		A0,6  ;Read serial byte if availiable
 		BTST		A0,1  ;Result in A1, A0(1)=0 if not avail
 		JZ		INTEXIT
-		IN		A1,4
+		IN		A1,4 
 		OUT		2,2
 		OUT		2,0
 		RETI
@@ -1395,7 +1450,8 @@ PUTC:		STI
 		PUSHX   
 		PUSH		A4
 		PUSH		A1
-		CMP.B		(VMODE),1
+		  IN		A0,24
+		CMPI		A0,1 ;(VMODE),1
 		JZ		PUTC1             
 		AND		A1,$00FF  
 		SUB.B		A1,32    
@@ -1510,7 +1566,8 @@ STREXIT:	RETI
 ;----------------------------------------
 
 SCROLL:	STI
-		CMP.B		(VMODE),1
+		IN		A0,24
+		CMPI		A0,1 ;(VMODE),1
 		JZ		SCROLL1
 		PUSHX
 		PUSH		A1
@@ -1561,7 +1618,8 @@ S1C2:		OUT		A0,A1
 ;----------------------------------------
 
 CLRSCR:	STI
-		CMP.B	(VMODE),1
+		IN	A0,24
+		CMPI	A0,1 ;(VMODE),1
 		JZ	CLRSCR1
 		PUSHX
 		SETX	4799      ;5952	
@@ -1590,7 +1648,8 @@ CLR1S1:	OUT	A0,A1
 
 ;----------------------------------------
 PLOT:		STI
-		CMP.B	(VMODE),1
+		IN	A0,24
+		CMPI	A0,1  ;(VMODE),1
 		JZ	PLOT1
 		PUSH		A1
 		PUSH		A2        ; PLOT at A1,A2 mode in A4
@@ -1649,6 +1708,10 @@ P1L5:		OR.B		A1,A3    ; mode 1  set
 		POP		A3
 		POP		A2
 		POP		A1
+		RETI
+
+;--------------------------------------
+LINEXY:
 		RETI
 
 ;----------------------------------------

@@ -211,6 +211,8 @@ namespace Lion_assembler
             colorList.Add("JXAW", Color.Blue);
             colorList.Add("JRXAB", Color.Blue);
             colorList.Add("JRXAW", Color.Blue);
+            colorList.Add("SRSET", Color.Blue);
+            colorList.Add("SRCLR", Color.Blue);
             colorList.Add("END", Color.DarkMagenta);
             colorList.Add("ORG", Color.DarkMagenta);
             colorList.Add("DB", Color.DarkMagenta);
@@ -339,6 +341,8 @@ namespace Lion_assembler
             instList.Add("JXAW", 2);
             instList.Add("JRXAB", 2);
             instList.Add("JRXAW", 2);
+            instList.Add("SRSET", 1);
+            instList.Add("SRCLR", 1);
         }
 
         public void fill_dlist()
@@ -2283,7 +2287,7 @@ namespace Lion_assembler
             return true;
         }
 
-        private bool gen5(InstructionLine il, string op)  // one param for mainly for jumps
+        private bool gen5(InstructionLine il, string op, char bwb='0')  // one param for mainly for jumps
         {
             int r1 = 0; string s1;
             il.op1t = parameter_type(il.op1);
@@ -2293,22 +2297,22 @@ namespace Lion_assembler
                 case OperandType.RegisterADirect:
                     r1 = is_reg(il.op1);
                     il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0');
-                    il.word1 = op + "0000" + s1 + "00";
+                    il.word1 = op + "000"+ bwb + s1 + "00";
                     break;
                 case OperandType.RegisterAIndirect:
                     r1 = is_reg_ref(il.op1);
                     il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0');
-                    il.word1 = op + "0000" + s1 + "10";
+                    il.word1 = op + "000"+ bwb + s1 + "10";
                     break;
                 case OperandType.MemoryDirect:
                     il.len = 2; r1 = conv_int(il.op1);
-                    il.word1 = op + "0000000" + "01";
+                    il.word1 = op + "000" +bwb+"000" + "01";
                     il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                     il.word2 = il.word2.Substring(il.word2.Length - 16);
                     break;
                 case OperandType.MemoryIndirect:
                     il.len = 2; r1 = conv_int(il.op1.Substring(1, il.op1.Length - 2));
-                    il.word1 = op + "0000000" + "11";
+                    il.word1 = op + "000"+bwb+"000" + "11";
                     il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                     il.word2 = il.word2.Substring(il.word2.Length - 16);
                     break;
@@ -2319,7 +2323,7 @@ namespace Lion_assembler
                     if (il.op1t == OperandType.LabelDirect) r1 = (int)lblList[il.op1];
                     if (il.op1t == OperandType.VariableDirect) r1 = (int)varList[il.op1];
                     if (il.op1t == OperandType.ConstantDirect) r1 = (int)constList[il.op1];
-                    il.word1 = op + "0000000" + "01";
+                    il.word1 = op + "000" +bwb + "000" + "01";
                     il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                     il.word2 = il.word2.Substring(il.word2.Length - 16);
                     break;
@@ -2331,17 +2335,17 @@ namespace Lion_assembler
                     if (il.op1t == OperandType.LabelIndirect) r1 = (int)lblList[s1];
                     if (il.op1t == OperandType.VariableIndirect) r1 = (int)varList[s1];
                     if (il.op1t == OperandType.ConstantIndirect) r1 = (int)constList[s1];
-                    il.word1 = op + "0000000" + "11";
+                    il.word1 = op + "000"+bwb+"000" + "11";
                     il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                     il.word2 = il.word2.Substring(il.word2.Length - 16);
                     break;
                 case OperandType.MemoryNamedDirect:
                     il.len = 2;
-                    il.word1 = op + "0000000" + "01";
+                    il.word1 = op + "000"+bwb+"000" + "01";
                     break;
                 case OperandType.MemoryNamedIndirect:
                     il.len = 2;
-                    il.word1 = op + "0000000" + "11";
+                    il.word1 = op + "000"+bwb+"000" + "11";
                     break;
                 default:
                     return false;
@@ -2829,7 +2833,7 @@ namespace Lion_assembler
             return true;
         }
 
-        private bool inter(InstructionLine il)  // one param for 0-16
+        private bool inter(InstructionLine il, string op)  // one param for 0-16
         {
             int r1 = 0;
             il.op1t = parameter_type(il.op1);
@@ -2839,13 +2843,13 @@ namespace Lion_assembler
                 case OperandType.MemoryDirect:
                     il.len = 1; r1 = conv_int(il.op1);
                     if (r1 > 15 || r1 < 0) { error = -7; return false; }
-                    il.word1 = "1000001" + "000" + Convert.ToString(r1, 2).PadLeft(4, '0') + "00";
+                    il.word1 = op + "000" + Convert.ToString(r1, 2).PadLeft(4, '0') + "00";
                     break;
                 case OperandType.ConstantDirect:
                     il.len = 1;
                     if (il.op1t == OperandType.ConstantDirect) r1 = (int)constList[il.op1];
                     if (r1 > 15 || r1 < 0) { error = -7; return false; }
-                    il.word1 = "1000001" + "000" + Convert.ToString(r1, 2).PadLeft(4, '0') + "00";
+                    il.word1 = op + "000" + Convert.ToString(r1, 2).PadLeft(4, '0') + "00";
                     break;
                 default:
                     return false;
@@ -3430,24 +3434,24 @@ namespace Lion_assembler
                 case "JE":
                     return gen5(il, "0100110");
                 case "JZ":
-                    return gen5(il, "0100110");
+                    return gen5(il, "0100111",'1');
                 case "JNE":
                     return gen5(il, "0100111");
                 case "JNZ":
                     return gen5(il, "0100111");
                 case "JO":
-                    return gen5(il, "0101000");
+                    return gen5(il, "0101001",'1');
                 case "JNO":
                     return gen5(il, "0101001");
                 case "JC":
                 case "JB":
-                    return gen5(il, "0101010");
+                    return gen5(il, "0101011", '1');
                 case "JL":
                     return gen5(il, "0110001");
                 case "JNC":
                     return gen5(il, "0101011");
                 case "JN":
-                    return gen5(il, "0101100");
+                    return gen5(il, "0101101",'1');
                 case "JP":
                     return gen5(il, "0101101");
                 case "JBE":
@@ -3483,7 +3487,7 @@ namespace Lion_assembler
                 case "POP":
                     return pop(il);
                 case "INT":
-                    return inter(il);
+                    return inter(il, "1000001");
                 case "RETI": il.len = 1; il.word1 = "1000010000000000";
                     break;
                 case "CLI": il.len = 1; il.word1 = "1000011000000000";
@@ -3530,6 +3534,10 @@ namespace Lion_assembler
                     return gen3(il, "0010111");
                 case "BCLR":
                     return gen3(il, "0011000");
+                case "SRSET":
+                    return inter(il, "0100110");
+                case "SRCLR":
+                    return inter(il, "0101010");
                 case "MULU.B":
                     return gen1(il, "0001010", '1');
                 case "MULU":
