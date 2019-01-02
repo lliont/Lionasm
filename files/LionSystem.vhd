@@ -271,26 +271,31 @@ VSYN<=VSYN1 when Vmod='1' else VSYN0;
 Vint<=Vint1 when Vmod='1' else Vint0;
 IACK<=IAC;
 
+
 -- Video Ram 
 process (clock)
 begin 
-if falling_edge(clock) AND AS='0' and DS='0' and IO='1' and AD(15)='1' then --61440
-		w1<=not RW;
+if falling_edge(clock) 	then
+	if AS='0' and DS='0' and IO='1' and AD(15)='1' and (RW='0')  then 
+		w1<='1';
 		qi<=Do; --(7 downto 0)&Do(15 downto 8);
-	elsif falling_edge(clock) then
+	else
 	   w1<='0';
 	end if;
+end if;
 end process ;
 
 -- Sprite Ram 
 process (clock)
 begin 
-if falling_edge(clock) AND AS='0' and DS='0' and IO='1' and AD(15 downto 13)="010" then --61440
-		spw1<=not RW;
+if falling_edge(clock) then
+	if (RW='0') AND AS='0' and DS='0' and IO='1' and AD(15 downto 13)="010" then 
+		spw1<='1';
 		spqi<=Do; --(7 downto 0)&Do(15 downto 8);
-	elsif falling_edge(clock) then
+	else
 	   spw1<='0';
 	end if;
+end if;
 end process ;
 
 -- UART SKEYB SPI IO decoding

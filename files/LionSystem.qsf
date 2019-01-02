@@ -131,7 +131,7 @@ set_global_assignment -name CDF_FILE output_files/LionSystem.cdf
 set_global_assignment -name BDF_FILE ALU_LA2.bdf
 set_global_assignment -name BDF_FILE ALU_LA4.bdf
 set_global_assignment -name OPTIMIZATION_TECHNIQUE SPEED
-set_global_assignment -name PLACEMENT_EFFORT_MULTIPLIER 11.84
+set_global_assignment -name PLACEMENT_EFFORT_MULTIPLIER 12.2
 set_location_assignment PIN_103 -to R
 set_location_assignment PIN_104 -to G
 set_location_assignment PIN_105 -to B
@@ -207,4 +207,5 @@ set_location_assignment PIN_50 -to A16o
 set_location_assignment PIN_58 -to Holdao
 set_location_assignment PIN_51 -to IACK
 set_location_assignment PIN_23 -to Int
+set_global_assignment -name MUX_RESTRUCTURE AUTO
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

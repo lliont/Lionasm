@@ -477,10 +477,10 @@ IF Reset = '1' THEN
 					else	PC<=Y1; end if;
 					rest2:=true;
 			when "0100110" =>              -- SRSET  n
-					SR(to_integer(unsigned(Y1(3 downto 0))))<='1'; 
+					SR(to_integer(unsigned(Y1(2 downto 0))))<='1'; 
 					rest2:=true;
 			when "0101010" =>              -- SRCLR  n
-					SR(to_integer(unsigned(Y1(3 downto 0))))<='0';  
+					SR(to_integer(unsigned(Y1(2 downto 0))))<='0';  
 					rest2:=true;
 			when "0100111" =>              -- JZ & JNZ (Reg,NUM,[reg],[n])
 					If SR(ZR)=bwb then
@@ -977,7 +977,7 @@ IF Reset = '1' THEN
 					set_flags;	FF<=StoreState;	rest:=true;
 				end case;
 				
-		-----------    instructions after "11100..." relative 
+		-----------    instructions after "1101..." relative 
 			when "1101001" =>   --JRXAB JRXAW
 				case TT is
 				when 0 =>
