@@ -189,18 +189,29 @@ COMPONENT SPI is
 	);
 end COMPONENT;
 
-Signal Vmod,R0,B0,G0,R1,G1,B1,BRI1,hsyn0,vsyn0,hsyn1,vsyn1,vint0,vint1: std_logic;
-Signal qi1,vq : std_logic_vector (15 downto 0);
+COMPONENT VideoSp is
+	port
+	(
+		sclk: IN std_logic;
+		R,G,B,BRI,SPDET: OUT std_logic;
+		reset, pbuffer, dbuffer : IN std_logic;
+		spaddr: OUT natural range 0 to 16383;
+		SPQ: IN std_logic_vector(15 downto 0)
+	);
+end COMPONENT;
+
+Signal Vmod,R0,B0,G0,R1,G1,B1,BRI1,R2,G2,B2,BRI2,SPDET,hsyn0,vsyn0,hsyn1,vsyn1,vint0,vint1: std_logic;
+Signal qi1,vq,vq2 : std_logic_vector (15 downto 0);
 Signal di,do,AD,qa,qro,aq,aq2 : std_logic_vector(15 downto 0);
 Signal qi,q16,count : std_logic_vector(15 downto 0);
 Signal w1, w2, Int_in, AS, DS, RW, IO, A16, HOLDA, WAud, WAud2,inter,vint : std_logic;
-Signal spw1, spw2: std_logic;
-Signal spqi,spqi1,spq16,spvq: std_logic_vector(15 downto 0);
+Signal spw1, spw2, spw12, spw22: std_logic;
+Signal spqi,spqi1,spq16,spvq,spqi2,spqi12,spq162,spvq2: std_logic_vector(15 downto 0);
 Signal Ii,IA : std_logic_vector(1 downto 0);
 Signal qi2 : std_logic_vector(7 downto 0);
-Signal ad1,vad0,vad1,spad1 :  natural range 0 to 16383;
+Signal ad1,vad0,vad1,vad2,spad1,spad3 :  natural range 0 to 16383;
 Signal ad2 :  natural range 0 to 16383;
-Signal spad2 :  natural range 0 to 16383;
+Signal spad2,spad4 :  natural range 0 to 16383;
 Signal sr,sw,sdready,sready,sr2,sdready2, vs, IAC, noise: std_Logic;
 Signal nen, ne: std_Logic:='0';
 Signal sdi,sdo,sdo2 : std_logic_vector (7 downto 0);
@@ -217,12 +228,17 @@ VRAM: true_dual_port_ram_single_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 14)
 	PORT MAP ( clock, ad1, ad2, qi1, qi, w2, w1,vq, q16  );
 SPRAM: true_dual_port_ram_single_clock
-	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 12)
+	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 11)
 	PORT MAP ( clock, spad1, spad2, spqi1, spqi, spw2, spw1, spvq, spq16  );
+SPRAM2: true_dual_port_ram_single_clock
+	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 11)
+	PORT MAP ( clock, spad3, spad4, spqi12, spqi2, spw22, spw12, spvq2, spq162  );
 VIDEO0: videoRGB
 	PORT MAP ( Clock,R0,G0,B0,VSYN0, HSYN0, vint0, reset, spb, sdb, vad0, vq);
 VIDEO1: videoRGB1
 	PORT MAP ( Clock,R1,G1,B1,BRI1,VSYN1, HSYN1, vint1, reset, spb, sdb, vad1, vq, spad1, spvq);
+SPRTG2: VideoSp
+	PORT MAP ( Clock,R2,G2,B2,BRI2,SPDET, vint1, spb, sdb, spad3, spvq2);
 Serial: UART
 	PORT MAP ( Tx, Rx, Clock, reset, sr, sw, sdready, sready, sdi, sdo );
 SERKEYB: SKEYB
@@ -255,15 +271,16 @@ ADo<= AD when AS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 addr<=to_integer(unsigned(AD)) when AS='0';
 addr1<=to_integer(unsigned(AD(15 downto 1))) when AS='0';
 ad2<=to_integer(unsigned(AD(14 downto 1))) when AS='0';
-spad2<=to_integer(unsigned(AD(12 downto 1))) when AD(15 downto 13)="010";
+spad2<=to_integer(unsigned(AD(11 downto 1))) when AD(15 downto 12)="0100";
+spad4<=to_integer(unsigned(AD(11 downto 1))) when AD(15 downto 12)="0101";
 ne<='1' when (nen='1') and (aq(11 downto 0)/="000000000000") else '0';
 AUDIO<= AUDIO1 ;
 NOIS<=NOISE and (play or play2) and ne;
 audiob<=audio2;
 vs<=VSYN;
-R<=R1 when Vmod='1' else R0;
-G<=G1 when Vmod='1' else G0;
-B<=B1 when Vmod='1' else B0;
+R<=R1 when Vmod='1' and SPDET='0' else R2 when Vmod='1' and SPDET='1' else R0;
+G<=G1 when Vmod='1' and SPDET='0' else G2 when Vmod='1' and SPDET='1' else G0;
+B<=B1 when Vmod='1' and SPDET='0' else B2 when Vmod='1' and SPDET='1' else B0;
 BRI<=BRI1 when Vmod='1' else '1';
 ad1<=vad1 when Vmod='1' else vad0;
 HSYN<=HSYN1 when Vmod='1' else HSYN0;
@@ -289,11 +306,24 @@ end process ;
 process (clock)
 begin 
 if falling_edge(clock) then
-	if (RW='0') AND AS='0' and DS='0' and IO='1' and AD(15 downto 13)="010" then 
+	if (RW='0') AND AS='0' and DS='0' and IO='1' and AD(15 downto 12)="0100" then 
 		spw1<='1';
 		spqi<=Do; --(7 downto 0)&Do(15 downto 8);
 	else
 	   spw1<='0';
+	end if;
+end if;
+end process ;
+
+-- Sprite2 Ram 
+process (clock)
+begin 
+if falling_edge(clock) then
+	if (RW='0') AND AS='0' and DS='0' and IO='1' and AD(15 downto 12)="0101" then 
+		spw12<='1';
+		spqi2<=Do; --(7 downto 0)&Do(15 downto 8);
+	else
+	   spw12<='0';
 	end if;
 end if;
 end process ;
@@ -328,7 +358,8 @@ if falling_edge(clock) and RW='1' and AS='0' then
 		else Di<=D;end if;
 	else
 		if AD(15)='1' then Di<=q16;  --video
-		elsif AD(15 downto 13)="010" then Di<=spq16;
+		elsif AD(15 downto 12)="0100" then Di<=spq16;
+		elsif AD(15 downto 12)="0101" then Di<=spq162;
 		elsif addr=4 then Di<="00000000"&sdo;  -- serial1
 		elsif addr=14 then Di<="00000000"&sdo2;  -- serial2 keyboard
 		elsif addr=6 then Di<="0000000000000" & sdready2 & sdready & sready;  -- serial status
