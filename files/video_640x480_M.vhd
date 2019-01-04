@@ -73,6 +73,9 @@ Signal sen:sprite_enable;
 begin
 
 vidc<=not vidc when falling_edge(sclk);
+--HSYN<='0' when (pixel<96) else '1'; 
+--VSYN<='0' when lines<2 else '1';
+--VSINT<='0' when (lines=0) and (pixel<4) else	'1';
 
 process (sclk)
 variable m78: natural range 0 to 31;
@@ -114,7 +117,6 @@ begin
 			end if;
 			 
 			if (lines>=l1 and lines<l2 and pixel>=p1 and pixel<p2) then
-
 					case blvec is
 					when "00000" =>	R<=SCOLORR(0); G<=SCOLORG(0); B<=SCOLORB(0); 
 					when "00001" =>	R<=SCOLORR(1); G<=SCOLORG(1); B<=SCOLORB(1); 
@@ -131,10 +133,10 @@ begin
 						if Q(m78)='1' then R<=FG(2); G<=FG(1); B<=FG(0);
 						else  R<=BG(2); G<=BG(1); B<=BG(0); end if;
 					end case;
-			else  -- vsync  0.01 us = 1 pixels
-				B<='0'; R<='0'; G<='0';
+			else  
 				if lines<2 then VSYN<='0';	else	VSYN<='1';	end if;
 				if (lines=0) and (pixel<4) then 	VSINT<='0';	else	VSINT<='1';	end if;
+				B<='0'; R<='0'; G<='0';
 			end if;
 			
 		else   ------ vidc false VIDEO 0---------------------------------------
@@ -142,7 +144,7 @@ begin
 			if (lines>=l1) and (lines<l2) and (pixel>=p1) and (pixel<p2) then
 				if (pixel mod 2)=0 then 
 					pix<=pix+1;   -- (pixel-85) * 8
-					if pix(0) = '0' then	m78:=15-m8/2; else m78:=7-m8/2; end if;  -- m78<= not m8
+					if pix(0)='0' then	m78:=15-m8/2; else m78:=7-m8/2; end if;  -- m78<= not m8
 					addr<= to_integer(unsigned(pix(10 downto 1))) + addr2; 
 				end if;
 			end if;
@@ -182,9 +184,7 @@ begin
 			end if;
 
 			-- sprites
-
 			lin:=(lines-l1)/2; pixi:=(pixel-p1)/2;
-
 			d1(0):=pixi-to_integer(unsigned(SX(0))); 
 			d2(0):=lin-to_integer(unsigned(SY(0)));
 			d1(1):=pixi-to_integer(unsigned(SX(1))); 
@@ -248,7 +248,7 @@ entity VideoRGB1 is
 		reset, pbuffer, dbuffer : IN std_logic;
 		addr : OUT natural range 0 to 16383; 
 		Q : IN std_logic_vector(15 downto 0);
-		spaddr: OUT natural range 0 to 16383;
+		spaddr: OUT natural range 0 to 2047;
 		SPQ: IN std_logic_vector(15 downto 0)
 	);
 end VideoRGB1;
@@ -456,7 +456,7 @@ end;
 
 
 -----------------------------------------------------------------------------
--- Multicolor Sprites for Lion Computer Set II
+-- Multicolor Sprites for Lion Computer Set II & III
 -- Theodoulos Liontakis (C) 2018
 
 Library ieee;
@@ -470,7 +470,7 @@ entity VideoSp is
 		sclk: IN std_logic;
 		R,G,B,BRI,SPDET: OUT std_logic;
 		reset, pbuffer, dbuffer : IN std_logic;
-		spaddr: OUT natural range 0 to 16383;
+		spaddr: OUT natural range 0 to 2047;
 		SPQ: IN std_logic_vector(15 downto 0)
 	);
 end VideoSp;
