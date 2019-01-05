@@ -80,7 +80,7 @@ Component VideoRGB1 is
 	(
 		sclk : IN std_logic;
 		R,G,B,BRI,VSYN,HSYN,VSINT : OUT std_logic;
-		reset, pbuffer, dbuffer : IN std_logic;
+		pbuffer, dbuffer : IN std_logic;
 		addr : OUT natural range 0 to 16383;
 		Q : IN std_logic_vector(15 downto 0);
 		spaddr: OUT natural range 0 to 2047;
@@ -204,14 +204,15 @@ Signal Vmod,R0,B0,G0,R1,G1,B1,BRI1,R2,G2,B2,BRI2,SPDET,R3,G3,B3,BRI3,SPDET2,hsyn
 Signal qi1,vq,vq2 : std_logic_vector (15 downto 0);
 Signal di,do,AD,qa,qro,aq,aq2 : std_logic_vector(15 downto 0);
 Signal qi,q16,count : std_logic_vector(15 downto 0);
-Signal w1, w2, Int_in, AS, DS, RW, IO, A16, HOLDA, WAud, WAud2,inter,vint : std_logic;
+Signal w1, w2, Int_in, AS, DS, RW, IO, A16, HOLDA, WAud, WAud2,inter,vint: std_logic;
+Signal rst: std_logic:='1';
 Signal spw1, spw2, spw12, spw22, spw13, spw23: std_logic;
 Signal spqi,spqi1,spq16,spvq,spqi2,spqi12,spq162,spvq2,spqi3,spqi13,spq163,spvq3: std_logic_vector(15 downto 0);
 Signal Ii,IA : std_logic_vector(1 downto 0);
 Signal qi2 : std_logic_vector(7 downto 0);
-Signal ad1,vad0,vad1,vad2,spad1,spad3,spad5 :  natural range 0 to 16383;
+Signal ad1,vad0,vad1,vad2 :  natural range 0 to 16383;
 Signal ad2 :  natural range 0 to 16383;
-Signal spad2,spad4,spad6 :  natural range 0 to 2047;
+Signal spad2,spad4,spad6,spad1,spad3,spad5 :  natural range 0 to 4095;
 Signal sr,sw,sdready,sready,sr2,sdready2, vs, IAC, noise: std_Logic;
 Signal nen, ne: std_Logic:='0';
 Signal sdi,sdo,sdo2 : std_logic_vector (7 downto 0);
@@ -223,7 +224,7 @@ constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 
 begin
 CPU: LionCPU16 
-	PORT MAP ( Di, Do, AD, RW,AS,DS,RD,Reset,Clock,Int_in,Hold,IO,A16,Holda,Ii,Iac,IA ) ; 
+	PORT MAP ( Di, Do, AD, RW,AS,DS,RD,rst,Clock,Int_in,Hold,IO,A16,Holda,Ii,Iac,IA ) ; 
 VRAM: true_dual_port_ram_single_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 14)
 	PORT MAP ( clock, ad1, ad2, qi1, qi, w2, w1,vq, q16  );
@@ -239,7 +240,7 @@ SPRAM3: true_dual_port_ram_single_clock
 VIDEO0: videoRGB
 	PORT MAP ( Clock,R0,G0,B0,VSYN0, HSYN0, vint0, reset, spb, sdb, vad0, vq);
 VIDEO1: videoRGB1
-	PORT MAP ( Clock,R1,G1,B1,BRI1,VSYN1, HSYN1, vint1, reset, spb, sdb, vad1, vq, spad1, spvq);
+	PORT MAP ( Clock,R1,G1,B1,BRI1,VSYN1, HSYN1, vint1, spb, sdb, vad1, vq, spad1, spvq);
 SPRTG2: VideoSp
 	PORT MAP ( Clock,R2,G2,B2,BRI2,SPDET, vint1, spb, sdb, spad3, spvq2);
 SPRTG3: VideoSp
@@ -264,7 +265,7 @@ NOIZ:lfsr
 --	PORT MAP (iClock,Clock);
 
 -- data out 
-
+rst<=reset when falling_edge(clock);
 HOLDAo<=HOLDA;
 A16o<=A16;
 ASo<=AS when HOLDA='0' else 'Z'; 

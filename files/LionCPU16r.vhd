@@ -43,7 +43,7 @@ constant StoreState:Std_logic_vector(2 downto 0):="111";
 
 SIGNAL IDX: Std_logic_vector(15 downto 0):=ZERO16;
 SIGNAL X,Y,X1,X2,Y1,Do,Ai,Ao,AoII,QX1,QY1,QZ1: Std_logic_vector(15 downto 0);
-SIGNAL PC:Std_logic_vector(15 downto 0):="0000000000010000";
+SIGNAL PC,RPC:Std_logic_vector(15 downto 0):="0000000000010000";
 SIGNAL IR,Z1: Std_logic_vector(15 downto 0):=ZERO16;
 SIGNAL SR: Std_logic_vector(7 downto 0):=ZERO8;
 SIGNAL ST: Std_logic_vector(15 downto 0):="1111111111111110";
@@ -218,14 +218,13 @@ IF Reset = '1' THEN
 		when RelativeState =>              -- relative
 			case TT is
 			when 0 =>
-				tmp2:=Y1; tmp:=X1;
-				if fetch1 or fetch2 then Y1<=X; else Y1<=tmp; end if;
-				X1<=PC; add<='1';
+				if fetch1 or fetch2 then QY1<=X; else QY1<=X1; end if;
+				QX1<=PC;
 			--when 1  =>
-			when others =>
-				 Y1<=tmp2; add<='0'; X1<=tmp;
+			when others => 
 				 if IR(1)='1' then FF<=IndirectState; else FF<=ExecutionState; end if;
 				 rest:=true; 
+				 RPC<=QZ1;
 			end case;
 		when "101" =>
 		when ExecutionState =>               --- F="110" Operation execution cycles 
@@ -248,7 +247,7 @@ IF Reset = '1' THEN
 					half<=bwb;
 					if fetch=true then Y1<=X; end if;
 					add<='1';
-				--when 1 =>
+				when 1 =>
 				when others =>
 					add<='0'; sub<='0'; cin<='0';
 					rest2:=true;
@@ -841,6 +840,7 @@ IF Reset = '1' THEN
 				when 1 =>
 				when 2 =>
 					AS<='1'; X1<=Di; sub<= NOT IR(10); add<=IR(10); 
+				when 3 =>
 				when others  =>
 					add<='0'; sub<='0';
 					if half='1' then 
@@ -869,6 +869,7 @@ IF Reset = '1' THEN
 				--when 1  =>
 					if fetch then Y1<=X; end if;
 					add<=IR(9); sub<=NOT IR(9);
+				when 1 =>
 				when others  =>
 					add<='0'; sub<='0';
 					ST<=Z1;
@@ -990,27 +991,27 @@ IF Reset = '1' THEN
 					qsub<=SR(JXAD);
 				when others =>
 					IDX<=IDX-1;	
-					if (IDX/=ZERO16) then PC<=Z1; set_reg(r1,QZ1,'0','0'); end if;
+					if (IDX/=ZERO16) then PC<=RPC; set_reg(r1,QZ1,'0','0'); end if;
 					--qsub='0'; add<='0'; sub<='0';
 					rest2:=true;
 				end case;
 			when "1110000" =>              -- JR (Reg,NUM,[reg],[n])
-				PC<=Z1; 
+				PC<=RPC; 
 				rest2:=true;
 			when "1110001" =>              -- JRZ (Reg,NUM,[reg],[n])
-				if SR(ZR)='1' then PC<=Z1; end if;
+				if SR(ZR)='1' then PC<=RPC; end if;
 				rest2:=true;
 			when "1110010" =>              -- JRN (Reg,NUM,[reg],[n])
-				if SR(NG)='1' then	PC<=Z1; 	end if;
+				if SR(NG)='1' then	PC<=RPC; 	end if;
 				rest2:=true;
 			when "1110011" =>              -- JRO (Reg,NUM,[reg],[n])
-				if SR(OV)='1' then	PC<=Z1; end if;
+				if SR(OV)='1' then	PC<=RPC; end if;
 				rest2:=true;
 			when "1110100" =>              -- JRC (Reg,NUM,[reg],[n])
-				if SR(CA)='1' then	PC<=Z1; end if;
+				if SR(CA)='1' then	PC<=RPC; end if;
 				rest2:=true;
 			when "1110101" =>              -- JRG (Reg,NUM,[reg],[n])
-				If SR(ZR)='0' and (SR(NG)=SR(OV)) then	PC<=Z1; end if;
+				If SR(ZR)='0' and (SR(NG)=SR(OV)) then	PC<=RPC; end if;
 				rest2:=true;
 			when "1110110" =>              -- JRSR (Reg,NUM,[reg],[n])
 				case TT is
@@ -1021,35 +1022,35 @@ IF Reset = '1' THEN
 				when 2 =>
 				when others =>
 					ST<=ST-2; --DS<='1'; RW<='1'; AS<='1';
-					PC<=Z1;
+					PC<=RPC;
 					rest2:=true;
 				end case;	
 			when "1110111" =>              -- JRBE (Reg,NUM,[reg],[n])
-				If SR(ZR)='1' or SR(CA)='1' then	PC<=Z1; end if;
+				If SR(ZR)='1' or SR(CA)='1' then	PC<=RPC; end if;
 				rest2:=true;
 			when "1111000" =>              -- JRLE (Reg,NUM,[reg],[n])
-				If SR(ZR)='1' or (SR(NG)/=SR(OV)) then	PC<=Z1; end if;
+				If SR(ZR)='1' or (SR(NG)/=SR(OV)) then	PC<=RPC; end if;
 				rest2:=true;
 			when "1111001" =>              -- JRNZ (Reg,NUM,[reg],[n])
-				if SR(ZR)='0' then	PC<=Z1; end if;
+				if SR(ZR)='0' then	PC<=RPC; end if;
 				rest2:=true;
 			when "1111010" =>              -- JRA (Reg,NUM,[reg],[n])
-				If SR(ZR)='0' and SR(CA)='0' then PC<=Z1; end if;
+				If SR(ZR)='0' and SR(CA)='0' then PC<=RPC; end if;
 				rest2:=true;
 			when "1111011" =>              -- MOVR Reg,([n],[R])  MOVR.B Reg,([n],[R])  GADR
 				case TT is
 				when 0 =>
-					AD<=Z1;	AS<='0'; --RW<='1';
+					AD<=RPC;	AS<='0'; --RW<='1';
 				when 1=>
 				when others =>
-					if fetch2 then	tmp:=Di; else tmp:=Z1;	end if;
+					if fetch2 then	tmp:=Di; else tmp:=RPC;	end if;
 					set_reg(r1,tmp,bwb,'0');       
 					rest2:=true;	--AS<='1';
 				end case;
 			when "1111100" =>              -- MOVR MOVR.B([n],[R]),Reg	   
 				case TT is
 				when 0 =>
-					AD<=Z1;  --RW<='1'; 
+					AD<=RPC;  --RW<='1'; 
 					if bwb='0' then rest:=true; FF<=StoreState; else AS<='0'; end if;
 				when 1 =>
 				when others =>
@@ -1061,13 +1062,13 @@ IF Reset = '1' THEN
 					AS<='1';	rest:=true; FF<=StoreState;
 				end case;
 			when "1111101" =>   -- JRGE ! 		
-				If SR(ZR)='1' or (SR(NG)=SR(OV)) then	PC<=Z1; end if;  
+				If SR(ZR)='1' or (SR(NG)=SR(OV)) then	PC<=RPC; end if;  
 			   rest2:=true;
 			when "1111110" =>              -- JRL (Reg,NUM,[reg],[n])
-				If  (SR(NG)/=SR(OV)) then PC<=Z1; end if;
+				If  (SR(NG)/=SR(OV)) then PC<=RPC; end if;
 				rest2:=true;
 			when "1111111" =>              --JRX 
-				if IDX/=ZERO16 then PC<=Z1; end if;
+				if IDX/=ZERO16 then PC<=RPC; end if;
 				IDX<=IDX-1;
 				rest2:=true;
 			when others => -- instructions  NOP	
