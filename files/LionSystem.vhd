@@ -265,7 +265,7 @@ NOIZ:lfsr
 --	PORT MAP (iClock,Clock);
 
 -- data out 
-rst<=reset when rising_edge(clock);
+rst<=reset when falling_edge(clock);
 HOLDAo<=HOLDA;
 A16o<=A16;
 ASo<=AS when HOLDA='0' else 'Z'; 
