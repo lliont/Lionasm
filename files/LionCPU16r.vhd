@@ -114,7 +114,7 @@ begin
 
 DOo<=DO; DSo<=DS; ASo<=AS; RWo<=RW;
 
-Process (Reset,Clock)
+Process (Clock)
 variable rest,rest2,fetch,fetch1,fetch2,fetch3,rel,setreg:boolean:=false;
 variable tmp,tmp2,stmp:Std_logic_vector(15 downto 0);
 variable r1,r2: Std_logic_vector(2 downto 0);
@@ -161,8 +161,7 @@ IF Reset = '1' THEN
 				if IR(0)='1' then
 					FF<=FetchState; AD<=PC; AS<='0'; 
 				else 
-					if IR(1)='1' then	
-						FF<=IndirectState;
+					if IR(1)='1' then	FF<=IndirectState;
 					else	
 						if rel then FF<=RelativeState; else FF<=ExecutionState; end if;
 					end if;
@@ -462,7 +461,8 @@ IF Reset = '1' THEN
 						X1<=Di;
 					end if;
 					sub<='1'; AS<='1'; 
-				when 3  =>
+				when 3 =>
+				when 4 =>
 					sub<='0';	set_flags;
 					rest2:=true;
 				when others =>
@@ -865,15 +865,15 @@ IF Reset = '1' THEN
 			when "1011011" | "0111010" =>              --ADD SUB SP,(Reg,NUM,[reg],[n])
 				case TT is
 				when 0 =>
-					X1<=ST;
+					QX1<=ST;
 				--when 1  =>
-					if fetch then Y1<=X; end if;
-					add<=IR(9); sub<=NOT IR(9);
-				when 1 =>
+					if fetch then QY1<=X; end if;
+					qsub<=NOT IR(9); --add<=IR(9); 
+				--when 1 =>
 				when others  =>
-					add<='0'; sub<='0';
-					ST<=Z1;
+					qsub<='0'; --sub<='0';
 					rest2:=true;
+					ST<=QZ1;
 				end case;	
 			when "0110011" =>   --JXAB JXAW
 				case TT is

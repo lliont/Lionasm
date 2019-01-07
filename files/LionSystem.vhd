@@ -64,10 +64,10 @@ Component lfsr is
   );
 end Component;
 
-Component VideoRGB is
+Component VideoRGB80 is
 	port
 	(
-		sclk : IN std_logic;
+		sclk, EN : IN std_logic;
 		R,G,B,VSYN,HSYN,VSINT : OUT std_logic;
 		reset, pbuffer, dbuffer: IN std_logic;
 		addr : OUT natural range 0 to 16383;
@@ -78,7 +78,7 @@ end Component;
 Component VideoRGB1 is
 	port
 	(
-		sclk : IN std_logic;
+		sclk, EN : IN std_logic;
 		R,G,B,BRI,VSYN,HSYN,VSINT : OUT std_logic;
 		pbuffer, dbuffer : IN std_logic;
 		addr : OUT natural range 0 to 16383;
@@ -205,7 +205,7 @@ Signal qi1,vq,vq2 : std_logic_vector (15 downto 0);
 Signal di,do,AD,qa,qro,aq,aq2 : std_logic_vector(15 downto 0);
 Signal qi,q16,count : std_logic_vector(15 downto 0);
 Signal w1, w2, Int_in, AS, DS, RW, IO, A16, HOLDA, WAud, WAud2,inter,vint: std_logic;
-Signal rst: std_logic:='1';
+Signal rst: std_logic:='0';
 Signal spw1, spw2, spw12, spw22, spw13, spw23: std_logic;
 Signal spqi,spqi1,spq16,spvq,spqi2,spqi12,spq162,spvq2,spqi3,spqi13,spq163,spvq3: std_logic_vector(15 downto 0);
 Signal Ii,IA : std_logic_vector(1 downto 0);
@@ -237,14 +237,14 @@ SPRAM2: true_dual_port_ram_single_clock
 SPRAM3: true_dual_port_ram_single_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 11)
 	PORT MAP ( clock, spad5, spad6, spqi13, spqi3, spw23, spw13, spvq3, spq163  );
-VIDEO0: videoRGB
-	PORT MAP ( Clock,R0,G0,B0,VSYN0, HSYN0, vint0, reset, spb, sdb, vad0, vq);
+VIDEO0: videoRGB80
+	PORT MAP ( Clock, Vmod, R0,G0,B0,VSYN0, HSYN0, vint0, reset, spb, sdb, vad0, vq);
 VIDEO1: videoRGB1
-	PORT MAP ( Clock,R1,G1,B1,BRI1,VSYN1, HSYN1, vint1, spb, sdb, vad1, vq, spad1, spvq);
+	PORT MAP ( Clock, Vmod, R1,G1,B1,BRI1,VSYN1, HSYN1, vint1, spb, sdb, vad1, vq, spad1, spvq);
 SPRTG2: VideoSp
-	PORT MAP ( Clock,R2,G2,B2,BRI2,SPDET, vint1, spb, sdb, spad3, spvq2);
+	PORT MAP ( Clock,R2,G2,B2,BRI2,SPDET, vint, spb, sdb, spad3, spvq2);
 SPRTG3: VideoSp
-	PORT MAP ( Clock,R3,G3,B3,BRI3,SPDET2, vint1, spb, sdb, spad5, spvq3);
+	PORT MAP ( Clock,R3,G3,B3,BRI3,SPDET2, vint, spb, sdb, spad5, spvq3);
 Serial: UART
 	PORT MAP ( Tx, Rx, Clock, reset, sr, sw, sdready, sready, sdi, sdo );
 SERKEYB: SKEYB
@@ -265,7 +265,7 @@ NOIZ:lfsr
 --	PORT MAP (iClock,Clock);
 
 -- data out 
-rst<=reset when falling_edge(clock);
+rst<=reset when rising_edge(clock);
 HOLDAo<=HOLDA;
 A16o<=A16;
 ASo<=AS when HOLDA='0' else 'Z'; 
@@ -285,10 +285,10 @@ AUDIO<= AUDIO1 ;
 NOIS<=NOISE and (play or play2) and ne;
 audiob<=audio2;
 vs<=VSYN;
-R<=R1 when Vmod='1' and (SPDET='0') and (SPDET2='0') else R2 when Vmod='1' and SPDET='1' else R3 when Vmod='1' and SPDET2='1' else R0;
-G<=G1 when Vmod='1' and (SPDET='0') and (SPDET2='0') else G2 when Vmod='1' and SPDET='1' else G3 when Vmod='1' and SPDET2='1' else G0;
-B<=B1 when Vmod='1' and (SPDET='0') and (SPDET2='0') else B2 when Vmod='1' and SPDET='1' else B3 when Vmod='1' and SPDET2='1' else B0;
-BRI<=BRI1 when Vmod='1' else '1';
+R<=R1 when Vmod='1' and (SPDET='0') and (SPDET2='0') else R2 when  SPDET='1' else R3 when SPDET2='1' else R0;
+G<=G1 when Vmod='1' and (SPDET='0') and (SPDET2='0') else G2 when  SPDET='1' else G3 when SPDET2='1' else G0;
+B<=B1 when Vmod='1' and (SPDET='0') and (SPDET2='0') else B2 when  SPDET='1' else B3 when SPDET2='1' else B0;
+BRI<=BRI1 when Vmod='1' and (SPDET='0') and (SPDET2='0') else '0' when  SPDET='1' or SPDET2='1' else '1';
 ad1<=vad1 when Vmod='1' else vad0;
 HSYN<=HSYN1 when Vmod='1' else HSYN0;
 VSYN<=VSYN1 when Vmod='1' else VSYN0;
