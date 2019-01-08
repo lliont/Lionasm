@@ -294,59 +294,14 @@ HSYN<=HSYN1 when Vmod='1' else HSYN0;
 VSYN<=VSYN1 when Vmod='1' else VSYN0;
 Vint<=Vint1 when Vmod='1' else Vint0;
 IACK<=IAC;
-
-
--- Video Ram 
-process (clock)
-begin 
-if falling_edge(clock) 	then
-	if AS='0' and DS='0' and IO='1' and AD(15)='1' and (RW='0')  then 
-		w1<='1';
-		qi<=Do; --(7 downto 0)&Do(15 downto 8);
-	else
-	   w1<='0';
-	end if;
-end if;
-end process ;
-
--- Sprite Ram 
-process (clock)
-begin 
-if falling_edge(clock) then
-	if (RW='0') AND AS='0' and DS='0' and IO='1' and AD(15 downto 12)="0100" then 
-		spw1<='1';
-		spqi<=Do; --(7 downto 0)&Do(15 downto 8);
-	else
-	   spw1<='0';
-	end if;
-end if;
-end process ;
-
--- Sprite2 Ram 
-process (clock)
-begin 
-if falling_edge(clock) then
-	if (RW='0') AND AS='0' and DS='0' and IO='1' and AD(15 downto 12)="0101" then 
-		spw12<='1';
-		spqi2<=Do; --(7 downto 0)&Do(15 downto 8);
-	else
-	   spw12<='0';
-	end if;
-end if;
-end process ;
-
--- Sprite3 Ram 
-process (clock)
-begin 
-if falling_edge(clock) then
-	if (RW='0') AND AS='0' and DS='0' and IO='1' and AD(15 downto 12)="0110" then 
-		spw13<='1';
-		spqi3<=Do; --(7 downto 0)&Do(15 downto 8);
-	else
-	   spw13<='0';
-	end if;
-end if;
-end process ;
+qi<=Do when IO='1';
+spqi<=Do when IO='1';
+spqi2<=Do when IO='1';
+spqi3<=Do when IO='1';
+w1<='1' when  AS='0' and DS='0' and IO='1' and AD(15)='1' and (RW='0') else '0'; 
+spw1<='1' when AS='0' and DS='0' and IO='1' and AD(15 downto 12)="0100" and (RW='0') else '0'; 
+spw12<='1' when AS='0' and DS='0' and IO='1' and AD(15 downto 12)="0101" and (RW='0') else '0'; 
+spw13<='1' when AS='0' and DS='0' and IO='1' and AD(15 downto 12)="0110" and (RW='0') else '0'; 
 
 -- UART SKEYB SPI IO decoding
 sdi<=Do(7 downto 0) when addr=0 and IO='1' and AS='0' and DS='0' and RW='0' and falling_edge(clock) ;
@@ -365,8 +320,8 @@ Vmod<='0' when reset='1' else Do(0) when addr=24 and IO='1' and AS='0' and DS='0
 aq<=Do when addr=8 and IO='1' and RW='0' and AS='0' and DS='0'  and falling_edge(clock); -- port 8
 aq2<=Do when  addr=10 and IO='1' and RW='0' and AS='0' and DS='0' and falling_edge(clock); -- port 10
 nen<=Do(0) when  addr=11 and IO='1' and RW='0' and AS='0' and DS='0'  and falling_edge(clock);  -- noise enable
-Waud<='0' when addr=8  and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
-Waud2<='0' when addr=10 and IO='1' and AS='0' and DS='0' and RW='0' and Clock='0' else '1';
+Waud<='0' when addr=8  and IO='1' and AS='0' and DS='0' and RW='0'  else '1';
+Waud2<='0' when addr=10 and IO='1' and AS='0' and DS='0' and RW='0' else '1';
 
 -- Read decoder
 process (clock)

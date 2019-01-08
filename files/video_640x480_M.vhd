@@ -436,7 +436,7 @@ constant lno:natural:=200;
 constant p1:natural :=142;
 constant pno:natural:=320;
 constant maxd:natural:=16;
-constant spno:natural:=13;
+constant spno:natural:=12;
 constant p2:natural:=p1+pno*2;
 constant l2:natural:=l1+lno*2;
 
@@ -507,8 +507,8 @@ begin
 						BRGB:='0'&SLData(11)(2+d1(11) downto d1(11));
 					when "1100" => 	
 						BRGB:='0'&SLData(12)(2+d1(12) downto d1(12));
-					when "1101" => 
-						BRGB:='0'&SLData(13)(2+d1(13) downto d1(13));
+--					when "1101" => 
+--						BRGB:='0'&SLData(13)(2+d1(13) downto d1(13));
 					when others =>
 					end case;
 					BRI<=BRGB(3); R<=BRGB(2); G<=BRGB(1); B<=BRGB(0); 
@@ -575,8 +575,8 @@ begin
 			d2(11):=lin-to_integer(unsigned(SY(11)));
 			d1(12):=(pixi-to_integer(unsigned(SX(12))))*4; 
 			d2(12):=lin-to_integer(unsigned(SY(12)));
-			d1(13):=(pixi-to_integer(unsigned(SX(13))))*4; 
-			d2(13):=lin-to_integer(unsigned(SY(13)));
+--			d1(13):=(pixi-to_integer(unsigned(SX(13))))*4; 
+--			d2(13):=lin-to_integer(unsigned(SY(13)));
 			
 			if pixel<(spno*4+4) then 
 				if (lines=0) then
@@ -616,7 +616,7 @@ begin
 			if (d1(10)<maxd*4) and (d2(10)<maxd) and (SEN(10)='1') and (SLData(10)(3+d1(10))='0') then blvec:="1010"; end if;
 			if (d1(11)<maxd*4) and (d2(11)<maxd) and (SEN(11)='1') and (SLData(11)(3+d1(11))='0') then blvec:="1011"; end if;
 			if (d1(12)<maxd*4) and (d2(12)<maxd) and (SEN(12)='1') and (SLData(12)(3+d1(12))='0') then blvec:="1100"; end if;
-			if (d1(13)<maxd*4) and (d2(13)<maxd) and (SEN(13)='1') and (SLData(13)(3+d1(13))='0') then blvec:="1101"; end if;
+--			if (d1(13)<maxd*4) and (d2(13)<maxd) and (SEN(13)='1') and (SLData(13)(3+d1(13))='0') then blvec:="1101"; end if;
 		end if;
 	end if; --falling
 end process;

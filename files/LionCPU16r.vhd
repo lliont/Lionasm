@@ -122,11 +122,11 @@ variable bt: natural range 0 to 15;
 variable bwb: Std_logic; --  bit to distinguish between word byte operations 
 begin
 IF Reset = '1' THEN
-		PC <= "0000000000010000"; SR <= ZERO8; IA<="00"; HOLDA<='0';
+		PC <= "0000000000010000"; SR <= ZERO8;  HOLDA<='0'; FF<=InitialState; TT<=0;
 		AS<='1';  DS<='1'; RW<='1'; ST <= "1111111111111110"; --was (16382) end of internal ram
 		AD <= (OTHERS => '0'); IR<=(OTHERS=>'0');	 
-		Wen<='0'; rhalf<='0'; IACK<='0'; A16<='0';
-		FF<=InitialState; TT<=0; add<='0'; sub<='0';  cin<='0';
+		Wen<='0'; rhalf<='0';  A16<='0';
+		 add<='0'; sub<='0';  cin<='0'; IA<="00"; IACK<='0';
 	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='0' AND FF=InitialState AND TT=0  then
 		HOLDA<='1'; Wen<='0';
 	ELSIF Clock'EVENT AND Clock = '1' AND RD='0' THEN 
@@ -143,9 +143,9 @@ IF Reset = '1' THEN
 			case TT is
 			when 0 =>
 				fetch:=false; fetch1:=false; fetch2:=false; rel:=false; setreg:=true;
-				AD<=PC; half<='0';  cin<='0'; add<='0'; sub<='0'; qsub<='0'; AS<='0'; A16<='0';
+				AD<=PC; half<='0';  qsub<='0'; AS<='0'; A16<='0';
 			when 1 =>
-				Wen<='0'; rhalf<='0'; QX1<=PC; QY1<=TWO16; 
+				cin<='0'; add<='0'; sub<='0'; Wen<='0'; rhalf<='0'; QX1<=PC; QY1<=TWO16; 
 			when 2 =>
 				PC<=QZ1; --PC+2;
 				 AS<='1'; QX1<=ST; QY1<=TWO16;
