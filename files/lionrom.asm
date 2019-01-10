@@ -37,7 +37,7 @@ BOOTC:	MOV		(SDFLAG),0
 		MOV.B		(SCOL),$1F
 		SETX		1589       ; Set default color 
 		MOV		A1,61152 
-COLINI:	OUT		A1,$3939
+COLINI:	OUT		A1,$1F1F
 		;ADDI		A1,2
 		JXAW		A1,COLINI
 		MOV		A2,32767

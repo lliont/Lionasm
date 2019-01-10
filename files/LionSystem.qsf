@@ -122,16 +122,8 @@ set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to JOYST1[4]
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to JOYST1[3]
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to JOYST1
 set_global_assignment -name ROUTER_EFFORT_MULTIPLIER 3
-set_global_assignment -name BDF_FILE QuADD.bdf
-set_global_assignment -name BDF_FILE regs.bdf
-set_global_assignment -name VHDL_FILE LionCPU16r.vhd
-set_global_assignment -name VHDL_FILE UART.vhd
-set_global_assignment -name VHDL_FILE SPI.vhd
-set_global_assignment -name CDF_FILE output_files/LionSystem.cdf
-set_global_assignment -name BDF_FILE ALU_LA2.bdf
-set_global_assignment -name BDF_FILE ALU_LA4.bdf
 set_global_assignment -name OPTIMIZATION_TECHNIQUE SPEED
-set_global_assignment -name PLACEMENT_EFFORT_MULTIPLIER 3.6
+set_global_assignment -name PLACEMENT_EFFORT_MULTIPLIER 7.2
 set_location_assignment PIN_103 -to R
 set_location_assignment PIN_104 -to G
 set_location_assignment PIN_105 -to B
@@ -145,7 +137,6 @@ set_location_assignment PIN_44 -to MISO
 set_location_assignment PIN_46 -to MOSI
 set_location_assignment PIN_43 -to SCLK
 set_location_assignment PIN_42 -to SPICS
-set_global_assignment -name CDF_FILE output_files/prog.cdf
 set_location_assignment PIN_39 -to Rx2
 set_location_assignment PIN_32 -to Rx
 set_location_assignment PIN_33 -to Tx
@@ -154,7 +145,6 @@ set_location_assignment PIN_31 -to NOIS
 set_location_assignment PIN_30 -to AUDIO
 set_location_assignment PIN_28 -to AUDIOB
 set_instance_assignment -name IO_STANDARD "3.0-V LVTTL" -to JOYST1[4]
-set_global_assignment -name VHDL_FILE LionSystem.vhd
 set_location_assignment PIN_132 -to Mdecod1
 set_location_assignment PIN_133 -to RWo
 set_location_assignment PIN_100 -to ADo[1]
@@ -196,10 +186,27 @@ set_location_assignment PIN_59 -to JOYST1[4]
 set_global_assignment -name RESERVE_DCLK_AFTER_CONFIGURATION "USE AS PROGRAMMING PIN"
 set_global_assignment -name RESERVE_DATA0_AFTER_CONFIGURATION "COMPILER CONFIGURED"
 set_global_assignment -name RESERVE_DATA1_AFTER_CONFIGURATION "COMPILER CONFIGURED"
+set_global_assignment -name PHYSICAL_SYNTHESIS_EFFORT NORMAL
+set_global_assignment -name SEED 0
+set_global_assignment -name OPTIMIZE_SSN "NORMAL COMPILATION"
 set_location_assignment PIN_49 -to BRI
-set_global_assignment -name VHDL_FILE video_640x480_M.vhd
 set_location_assignment PIN_50 -to A16o
 set_location_assignment PIN_58 -to Holdao
 set_location_assignment PIN_51 -to IACK
 set_location_assignment PIN_23 -to Int
+set_global_assignment -name OPTIMIZE_POWER_DURING_FITTING "NORMAL COMPILATION"
+set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_DUPLICATION OFF
+set_global_assignment -name QII_AUTO_PACKED_REGISTERS NORMAL
+set_global_assignment -name ALM_REGISTER_PACKING_EFFORT MEDIUM
+set_global_assignment -name BDF_FILE QuADD.bdf
+set_global_assignment -name BDF_FILE regs.bdf
+set_global_assignment -name VHDL_FILE LionCPU16r.vhd
+set_global_assignment -name VHDL_FILE UART.vhd
+set_global_assignment -name VHDL_FILE SPI.vhd
+set_global_assignment -name CDF_FILE output_files/LionSystem.cdf
+set_global_assignment -name BDF_FILE ALU_LA2.bdf
+set_global_assignment -name BDF_FILE ALU_LA4.bdf
+set_global_assignment -name CDF_FILE output_files/prog.cdf
+set_global_assignment -name VHDL_FILE LionSystem.vhd
+set_global_assignment -name VHDL_FILE video_640x480_M.vhd
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

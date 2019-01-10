@@ -1,6 +1,8 @@
 -- 16bit Lion CPU
 -- Theodoulos Liontakis (C) 2015 
 
+
+
 Library ieee;
 USE ieee.std_logic_1164.all;
 USE ieee.numeric_std.all ; 
@@ -114,7 +116,7 @@ begin
 
 DOo<=DO; DSo<=DS; ASo<=AS; RWo<=RW;
 
-Process (Clock)
+Process (Clock,reset)
 variable rest,rest2,fetch,fetch1,fetch2,fetch3,rel,setreg:boolean:=false;
 variable tmp,tmp2,stmp:Std_logic_vector(15 downto 0);
 variable r1,r2: Std_logic_vector(2 downto 0);
@@ -124,28 +126,28 @@ begin
 IF Reset = '1' THEN
 		PC <= "0000000000010000"; SR <= ZERO8;  HOLDA<='0'; FF<=InitialState; TT<=0;
 		AS<='1';  DS<='1'; RW<='1'; ST <= "1111111111111110"; --was (16382) end of internal ram
-		AD <= (OTHERS => '0'); IR<=(OTHERS=>'0');	 
+		AD <= (OTHERS => '0'); IR<=(OTHERS=>'0');	 IO<='0';
 		Wen<='0'; rhalf<='0';  A16<='0';
 		 add<='0'; sub<='0';  cin<='0'; IA<="00"; IACK<='0';
-	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='0' AND FF=InitialState AND TT=0  then
-		HOLDA<='1'; Wen<='0';
-	ELSIF Clock'EVENT AND Clock = '1' AND RD='0' THEN 
-	   Wen<='0';
-	ELSIF Clock'EVENT AND Clock = '1' AND HOLD='1' and INT='0' AND FF=InitialState AND TT=0 and SR(7)='0' THEN   -- Interrupts
+	ELSIF rising_edge(clock) AND HOLD='0' AND FF=InitialState AND TT=0  then
+		HOLDA<='1'; 
+	ELSIF  rising_edge(clock) AND RD='0' THEN 
+	   
+	ELSIF rising_edge(clock) AND HOLD='1' and INT='0' AND FF=InitialState AND TT=0 and SR(7)='0' THEN   -- Interrupts
 		IR<="100000100000"&I&"00";
-		FF<=ExecutionState; TT<=0; Wen<='0';
+		FF<=ExecutionState; TT<=0; 
 		IA<=I; IACK<='1';
 		HOLDA<='0';
-	ELSIF Clock'EVENT AND Clock = '1'  THEN   
+	ELSIF  rising_edge(clock)  THEN   
 		rest:=false; rest2:=false; HOLDA<='0'; 
 		case  FF is -- Fetch Instruction 
 		when InitialState =>
 			case TT is
 			when 0 =>
 				fetch:=false; fetch1:=false; fetch2:=false; rel:=false; setreg:=true;
-				AD<=PC; half<='0';  qsub<='0'; AS<='0'; A16<='0';
+				AD<=PC; half<='0';  qsub<='0'; AS<='0'; A16<='0'; Wen<='0'; IO<='0';
 			when 1 =>
-				cin<='0'; add<='0'; sub<='0'; Wen<='0'; rhalf<='0'; QX1<=PC; QY1<=TWO16; 
+				cin<='0'; add<='0'; sub<='0';  rhalf<='0'; QX1<=PC; QY1<=TWO16; 
 			when 2 =>
 				PC<=QZ1; --PC+2;
 				 AS<='1'; QX1<=ST; QY1<=TWO16;
@@ -273,9 +275,9 @@ IF Reset = '1' THEN
 				case TT is
 				when 0 =>
 					if fetch then AD<=X; else AD<=X1; end if;
-					IO<='1'; AS<='0';   RW<='0';	 Do<=Y1;
+					IO<='1';  RW<='0';	 Do<=Y1;
 				when 1 =>
-					DS<='0'; 
+					DS<='0';  AS<='0'; 
 				when 2 =>
 				when others =>
 					--IO<='0';	DS<='1'; AS<='1'; RW<='1';
@@ -766,7 +768,7 @@ IF Reset = '1' THEN
 				
 			when "1010110" =>              -- OUT Reg,n	
 				AD<=X1; 
-				IO<='1'; AS<='0';   RW<='0';	 Do<=X;
+				IO<='1';  RW<='0';	 Do<=X;
 				IR(15 downto 9)<="0000111"; -- continue as in OUT n,ax
 				
 			when "1010111" =>              -- OUT.B (Reg,n),Reg	
@@ -955,7 +957,7 @@ IF Reset = '1' THEN
 
 			when "1100011" =>              -- OUT n,n	
 					AD<=X;
-					IO<='1'; AS<='0';   RW<='0';	 Do<=Y;  
+					IO<='1';   RW<='0';	 Do<=Y;  
 					IR(15 downto 9)<="0000111"; -- continue as in OUT n,ax
 					
 			when "1100100" | "1100101" =>              -- ADD,SUB  [n],n  ADD.B, SUB.B [n],n
