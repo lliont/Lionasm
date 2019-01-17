@@ -65,7 +65,7 @@ variable FG,BG: std_logic_vector(3 downto 0);
 variable lin, p16, pd4, pm4: natural range 0 to 1023;
 
 begin
-	if  falling_edge(sclk) and EN='0' then
+	if  rising_edge(sclk) and EN='0' then
 		if  vidc then 
 			if pixel=799 then
 				pixel<=0; pix<=0; p6<=0; prc<=0; 
@@ -182,7 +182,7 @@ variable pixm4: natural range 0 to 1023;
 variable pix: natural range 0 to 1023;
 
 begin
-	if  falling_edge(sclk)  and EN='1' then
+	if  rising_edge(sclk)  and EN='1' then
 		if  vidc then 
 		-- sprites  ---------------------
 			if (lines>=l1 and lines<l2 and pixel>=p1 and pixel<p2) then
@@ -268,10 +268,10 @@ type sprite_line_data is array (spno downto 0) of std_logic_vector(63 downto 0);
 type dist is array (0 to spno) of natural range 0 to 4095;
 type sprite_enable is array (0 to spno) of std_logic;
 
+shared variable addr1: natural range 0 to 2047;
 
 Signal lines: natural range 0 to 1023;
 Signal pixel : natural range 0 to 1023;
-Signal addr2: natural range 0 to 16383;
 Signal vidc: boolean:=false;
 Signal SX,SY: sprite_dim;
 Signal SEN:sprite_enable;
@@ -280,6 +280,7 @@ Signal SEN:sprite_enable;
 begin
 
 vidc<=not vidc when rising_edge(sclk);
+spaddr<=addr1;
 --pm4<=pixel mod 4;
 --pd4<=pixel / 4;
 
@@ -293,8 +294,11 @@ variable pixi, lin, pm4,pd4: natural range 0 to 1023;
 variable blvec:std_logic_vector(3 downto 0);
 variable pix: natural range 0 to 1023;
 
+
 begin
-	if  falling_edge(sclk) then
+
+
+	if  rising_edge(sclk) then
 		if (reset='0') then
 			pixel<=4; lines<=0;
 		elsif  vidc then 
@@ -405,14 +409,14 @@ begin
 			
 			if (pixel<(spno*4+4)) then 
 				if (lines=1) then
-					if pbuffer='0' then spaddr<=(sp1/2+pixel); else spaddr<=(sp2/2+pixel); end if;
+					if pbuffer='0' then addr1:=(sp1/2+pixel); else addr1:=(sp2/2+pixel); end if;
 				end if;
 				if (lines>=l1) and (lines<l2) then
 					pm4:= pixel mod 4; pd4:=pixel/4;
 					if dbuffer='0' then 
-						spaddr<=(sd1/2+p16+d2(pd4)*4+pm4);
+						addr1:=(sd1/2+p16+d2(pd4)*4+pm4);
 					 else 
-						spaddr<=(sd2/2+p16+d2(pd4)*4+pm4);
+						addr1:=(sd2/2+p16+d2(pd4)*4+pm4);
 					end if; 
 					if pm4=3 then p16:=p16+64; end if;
 				end if;
@@ -700,7 +704,7 @@ variable ldata: std_logic_vector(7 downto 0);
 variable blvec:std_logic_vector(4 downto 0);
 
 begin
-	if  falling_edge(sclk) then
+	if  rising_edge(sclk) then
 		--p2:=p1+pno*2; l2:=l1+lno*2;
 		if  vidc then 
 			if pixel=799 then

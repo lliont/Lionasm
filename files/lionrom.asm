@@ -779,11 +779,13 @@ SLD2:	MOV	A5,(A2)
 
 ;---------------------------------------------------
 ; INT 5,A0=3 Load file
-FILELD:	JSR	FINDFN    
+FILELD:	PUSH	A5
+		JSR	FINDFN    
 		MOV	A4,A0
 		CMPI	A0,0
 		JZ	INTEXIT
 		JSR	FLOAD
+		POP	A5
 INTEXIT:	RETI
 ;-------------------------------------------------
 

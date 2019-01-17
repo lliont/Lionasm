@@ -1473,6 +1473,7 @@ LD1:  MOV.B	A0,(A3)
 	MOV.B	(A4),A0
 LD2:	;INC	A4
 	JXAB	A4,LD1
+	INC	A4
 	MOVHL	A0,34   
 	JSR	IGNBLNK
 	JNZ	QWHAT
@@ -1490,11 +1491,11 @@ LD2:	;INC	A4
 LD4:	MOV	A4,FNAME
 	MOV	A1,TXTBGN
 LD6:	PUSH	A3
-	PUSH	A5
+	PUSH	A4
 	MOV	A3,A1          ; load address
 	MOVI	A0,2
 	INT	5              ; LOAD FILE
-	POP	A5
+	POP	A4
 	POP	A3
 	CMPI	A0,0
 	JZ	QHOW
@@ -1723,7 +1724,7 @@ GCODE:
 	SETX  A1
 GCWAIT:
 	MOVI	A0,0
-	INT	4           ; Get keyboard code
+	INT	4           ; Get byte
 	BTST	A0,1        ; if availiable
 	JNZ	GC1
 	MOVI	A0,7
@@ -2773,9 +2774,9 @@ OK		TEXT	"OK"
 what		TEXT    "What?"
 		DB	$0d
 sorry		TEXT    "Sorry"
-		DB    $0d,0
+		DB    $0d
 
-SER		DB	0
+SER		DB	0,0
 RAND		DW	983
 CURRNT	DW	0
 STKGOS	DW	0
@@ -2788,7 +2789,7 @@ LOPLN		DW	0
 LOPPT		DW	0
 
 TXTUNF	DA    TXTBGN
-TXTBGN	DS	38000   ; program space
+TXTBGN	DS	44000   ; program space
 TXTEND	DS	4
 
 BUFFER	DS	120
@@ -2796,7 +2797,7 @@ BUFEND:
 
 VARBGN	DS	240
 
-STKLMT	DS	2048
+STKLMT	DS	4094
 STACK:	
 
 
