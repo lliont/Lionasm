@@ -44,13 +44,12 @@ constant ExecutionState:Std_logic_vector(2 downto 0):="110";
 constant StoreState:Std_logic_vector(2 downto 0):="111";
 
 SIGNAL IDX: Std_logic_vector(15 downto 0):=ZERO16;
-SIGNAL X1o,X2,Y1o,Ai,Ao,AoII,QZ1: Std_logic_vector(15 downto 0);
-SIGNAL PC,RPC:Std_logic_vector(15 downto 0):="0000000000010000";
-SIGNAL IR,Z1: Std_logic_vector(15 downto 0):=ZERO16;
+SIGNAL X1o,X2,Y1o,Ao,AoII,QZ1: Std_logic_vector(15 downto 0);
+SIGNAL RPC:Std_logic_vector(15 downto 0):="0000000000010000";
+SIGNAL Z1: Std_logic_vector(15 downto 0):=ZERO16;
 SIGNAL SR: Std_logic_vector(7 downto 0):=ZERO8;
 SIGNAL ST: Std_logic_vector(15 downto 0):="1111111111111110";
-SIGNAL M : Std_logic_vector(31 downto 0);
-SIGNAL FF,R,RR: Std_logic_vector(2 downto 0);
+SIGNAL FF: Std_logic_vector(2 downto 0);
 SIGNAL TT: natural range 0 to 15;
 SIGNAL carry, overflow, zero, neg: Std_logic;
 SIGNAL ds, as: Std_logic;
@@ -84,20 +83,20 @@ END COMPONENT;
 
 
 
-shared variable Do,AD,X1,Y1,X,Y,QX1,QY1: Std_logic_vector(15 downto 0);
+shared variable Do,AD,X1,Y1,X,Y,QX1,QY1,Ai,IR,PC: Std_logic_vector(15 downto 0);
 shared variable IO,cin,RW,Wen,sub,add,half,rhalf,qsub: Std_logic;
+shared variable M : Std_logic_vector(31 downto 0);
+shared variable R,RR: std_logic_vector(2 downto 0);
 
 procedure set_reg(i:Std_logic_vector(2 downto 0); v: std_logic_vector; b: std_Logic:='0'; f:std_logic:='1') is
 begin
-	R<=i; Ai<=v; Wen:='1';	
+	R:=i; Ai:=v; rhalf:=not b; Wen:='1';	
 	if b='1' then
-		rhalf:='0';
 		if f='1' then
 			if v(7 downto 0) = ZERO8 then SR(ZR)<='1'; else SR(ZR)<='0';  end if;
 			SR(NG)<=V(7);
 		end if;
 	else
-		rhalf:='1';
 		if f='1' then
 			if v = ZERO16 then SR(ZR)<='1'; else SR(ZR)<='0';  end if;
 			SR(NG)<=V(15);
@@ -132,9 +131,9 @@ variable bt: natural range 0 to 15;
 variable bwb: Std_logic; --  bit to distinguish between word byte operations 
 begin
 IF Reset = '1' THEN
-		PC <= "0000000000010000"; SR <= ZERO8;  HOLDA<='0'; FF<=InitialState; TT<=0;
+		PC := "0000000000010000"; SR <= ZERO8;  HOLDA<='0'; FF<=InitialState; TT<=0;
 		AS<='1';  DS<='1'; RW:='1'; ST <= "1111111111111110"; --was (16382) end of internal ram
-		AD:= (OTHERS => '0'); IR<=(OTHERS=>'0');	 IO:='0';
+		AD:= (OTHERS => '0'); IR:=(OTHERS=>'0');	 IO:='0';
 		Wen:='0'; rhalf:='0';  A16<='0';
 		 add:='0'; sub:='0';  cin:='0'; IA<="00"; IACK<='0';
 	ELSIF rising_edge(clock) AND HOLD='0' AND FF=InitialState AND TT=0  then
@@ -142,9 +141,9 @@ IF Reset = '1' THEN
 	ELSIF  rising_edge(clock) AND RD='0' THEN 
 	   
 	ELSIF rising_edge(clock) AND HOLD='1' and INT='0' AND FF=InitialState AND TT=0 and SR(7)='0' THEN   -- Interrupts
-		IR<="100000100000"&I&"00";
+		IR:="100000100000"&I&"00";
 		FF<=ExecutionState; TT<=0; 
-		IA<=I; IACK<='1';
+		IA<=I; IACK<='1'; Wen:='0';
 		HOLDA<='0';
 	ELSIF  rising_edge(clock)  THEN   
 		rest:=false; rest2:=false; HOLDA<='0'; 
@@ -152,22 +151,23 @@ IF Reset = '1' THEN
 		when InitialState =>
 			case TT is
 			when 0 =>
-				fetch1:=false; fetch2:=false; rel:=false; setreg:=true; RW:='1';
-				AD:=PC; half:='0';  qsub:='0'; AS<='0'; A16<='0'; Wen:='0'; IO:='0';
+				qsub:='0'; QX1:=PC; QY1:=TWO16;
+				rel:=false; setreg:=true; RW:='1';
+				AD:=PC; half:='0';  AS<='0'; A16<='0'; Wen:='0'; IO:='0'; 
 			when 1 =>
-				 add:='0'; sub:='0'; cin:='0'; rhalf:='0'; QX1:=PC; QY1:=TWO16; 
-			when 2 =>
-				PC<=QZ1; --PC+2;
-				 AS<='1'; QX1:=ST; QY1:=TWO16;
-				IR<=Di;
-				RR<=Di(4 downto 2); R<=Di(8 downto 6);
-			when others =>
-				r2:=RR; r1:=R;	X1:=Ao;	Y1:=AoII;
+				 add:='0'; sub:='0'; cin:='0'; rhalf:='0'; 
+				 fetch:=false; fetch1:=false; fetch2:=false;
+				 QX1:=ST; --QY1:=TWO16;
+				 PC:=QZ1; --PC+2
+			when others => 
+				IR:=Di; RR:=Di(4 downto 2); R:=Di(8 downto 6);
+				rest:=true; AS<='1';
 				bt:=to_integer(unsigned(IR(5 downto 2)));
 				bwb:= IR(5);
-				rel:= (IR(15 downto 13)="111") or (IR(15 downto 12)="1101");  --'1' and IR(14)='1' and IR(13)='1';
-				fetch3:=IR(15 downto 12)="1100"; --'1' and IR(14)='1' and IR(13)='0';
-				stmp:=QZ1;
+				rel:= (IR(15 downto 13)="111") or (IR(15 downto 12)="1101");  
+				fetch3:=IR(15 downto 12)="1100"; 
+				r2:=RR; r1:=R;	
+				stmp:=QZ1; --ST+2
 				if IR(0)='1' then
 					FF<=FetchState; AD:=PC; AS<='0'; 
 				else 
@@ -176,15 +176,14 @@ IF Reset = '1' THEN
 						if rel then FF<=RelativeState; else FF<=ExecutionState; end if;
 					end if;
 				end if;
-				rest:=true;
 			end case;
 		when FetchState =>              -- Fetch next word into X
+			--X1:=Ao;	Y1:=AoII;
 			case TT is 
 			when 0 =>
-				fetch1:=true;
-				QX1:=PC; QY1:=TWO16;
+				QX1:=PC; --QY1:=TWO16;
+				fetch1:=true; fetch:=true; 
 			when others =>
-				PC<=QZ1;
 				X:=Di;  AS<='1'; 
 				if fetch3 then 
 					FF<=Fetch2State;
@@ -195,6 +194,7 @@ IF Reset = '1' THEN
 						if rel then FF<=RelativeState; else FF<=ExecutionState; end if;
 					end if;
 				end if;
+				PC:=QZ1;
 				rest:=true;
 			end case;
 		when Fetch2State =>             -- fetch one more into Y
@@ -202,20 +202,22 @@ IF Reset = '1' THEN
 			when 0 =>
 				AD:=PC;  AS<='0';
 			when 1 =>
-				QX1:=PC; QY1:=TWO16;
+				QX1:=PC; --QY1:=TWO16;
 			when others =>
-				Y:=Di; AS<='1'; PC<=QZ1; --PC+2; 
+				Y:=Di; AS<='1'; 
 				if IR(1)='1' then	FF<=IndirectState; else FF<=ExecutionState;	end if;
 				rest:=true;
+				PC:=QZ1; --PC+2; 
 			end case;
 		when IndirectState =>              -- indirect
+			X1:=Ao;	Y1:=AoII;
 			case TT is
 			when 0 =>
-				fetch2:=true; AS<='0';  
-				if IR(0)='1' then	AD:=X; x2<=X; else AD:=Y1; x2<=y1; end if;
+				fetch2:=true; fetch:=true; AS<='0';  
+				if IR(0)='1' then	AD:=X; X2<=X; else AD:=Y1; X2<=y1; end if;
 			when 1 =>
 			when others =>
-				if x2(0)='0' and bwb='1' and (not rel) then
+				if X2(0)='0' and bwb='1' and (not rel) then
 					X(7 downto 0):=Di(15 downto 8);
 					X(15 downto 8):=Di(7 downto 0);
 				else
@@ -225,9 +227,10 @@ IF Reset = '1' THEN
 				rest:=true;
 			end case;
 		when RelativeState =>              -- relative
+			X1:=Ao;	Y1:=AoII;
 			case TT is
 			when 0 =>
-				if fetch1 or fetch2 then QY1:=X; else QY1:=X1; end if;
+				if fetch then QY1:=X; else QY1:=X1; end if;
 				QX1:=PC;
 			--when 1  =>
 			when others => 
@@ -236,8 +239,8 @@ IF Reset = '1' THEN
 				 RPC<=QZ1;
 			end case;
 		when "101" =>
-		when ExecutionState =>               --- F="110" Operation execution cycles 
-			fetch:=fetch1 or fetch2;  
+		when ExecutionState =>               --- F="110" Operation execution cycles   
+			if TT=0 then X1:=Ao;	Y1:=AoII; end if;
 			case IR(15 downto 9) is
 			when "0000000" =>              -- NOP
 					rest2:=true;
@@ -253,9 +256,9 @@ IF Reset = '1' THEN
 			when "0000011" =>              --ADD & ADD.B Reg,(Reg,NUM,[reg],[n])
 				case TT is
 				when 0 =>
-					half:=bwb;
 					if fetch=true then Y1:=X; end if;
 					add:='1';
+					half:=bwb;
 				--when 1 =>
 				when others =>
 					rest2:=true;
@@ -264,15 +267,15 @@ IF Reset = '1' THEN
 					add:='0'; sub:='0'; cin:='0';
 				end case;
 			when "0000100" =>              --SUB & SUB.B Reg,(Reg,NUM,[reg],[n])
-				half:=bwb;
 				if fetch=true then Y1:=X; end if;
 				sub:='1'; 
-				IR(15 downto 9)<="0000011"; -- continue as in ADD
+				half:=bwb;
+				IR(15 downto 9):="0000011"; -- continue as in ADD
 				
 			when "0000101" =>              --ADC Reg,(Reg,NUM,[reg],[n])
 				if fetch then	Y1:=X;	end if;
 				half:=bwb ; cin:=SR(CA); add:='1';
-				IR(15 downto 9)<="0000011"; -- continue as in ADD
+				IR(15 downto 9):="0000011"; -- continue as in ADD
 
 			when "0000110" =>              -- MOV.B Reg,(Reg,NUM,[reg],[n])
 				if fetch then	tmp(7 downto 0):=X(7 downto 0);
@@ -282,10 +285,9 @@ IF Reset = '1' THEN
 			when "0000111" =>              -- OUT (n,Reg),Reg	
 				case TT is
 				when 0 =>
-					IO:='1'; Do:=Y1; RW:='0';
+					Do:=Y1; RW:='0';
 					if fetch then AD:=X; else AD:=X1; end if;
-				--when 1 =>
-					AS<='0';  DS<='0';	
+					IO:='1'; AS<='0';  DS<='0'; 	
 				when 1 =>
 				when others =>
 					IO:='0';	--DS<='1'; AS<='1'; RW:='1';
@@ -304,15 +306,15 @@ IF Reset = '1' THEN
 					SR(CA)<='0'; SR(NG) <= '0';
 					if fetch then
 						if bwb='0' then
-							M<=std_logic_vector(unsigned(X1) * unsigned(X));
+							M:=std_logic_vector(unsigned(X1) * unsigned(X));
 						else
-							M<=std_logic_vector(unsigned("00000000"&X1(7 downto 0)) * unsigned("00000000"&X(7 downto 0)));
+							M:=std_logic_vector(unsigned("00000000"&X1(7 downto 0)) * unsigned("00000000"&X(7 downto 0)));
 						end if;
 					else 
 						if bwb='0' then
-							M<=std_logic_vector(unsigned(X1) * unsigned(Y1));
+							M:=std_logic_vector(unsigned(X1) * unsigned(Y1));
 						else
-							M<=std_logic_vector(unsigned("00000000"&X1(7 downto 0)) * unsigned("00000000"&Y1(7 downto 0)));
+							M:=std_logic_vector(unsigned("00000000"&X1(7 downto 0)) * unsigned("00000000"&Y1(7 downto 0)));
 						end if;
 					end if;				
 				when 1 =>
@@ -320,24 +322,20 @@ IF Reset = '1' THEN
 						SR(OV) <='0'; --neg & zero & overflow & carry
 						if M(15 downto 0) = ZERO16 then SR(ZR) <= '1'; else SR(ZR) <='0'; end if;
 					else
-						if not fetch then
-							SR(OV) <=  '0';
+						if not fetch then	SR(OV) <=  '0';
 						else
-							if M(31 downto 16)=ZERO16 then	
-								SR(OV) <= '0'; --neg & zero & overflow & carry
-							else
-								SR(OV)<='1';
-							end if;
+							if M(31 downto 16)=ZERO16 then SR(OV) <= '0'; 
+							else SR(OV)<='1';	end if;
 						end if;
 						if (M(15 downto 0) OR M(31 downto 16)) = ZERO16 then SR(ZR) <= '1'; else SR(ZR) <='0'; end if;
 					end if;
-					tmp:=M(15 downto 0); set_reg(r1,tmp,'0','0'); 
+					set_reg(r1,M(15 downto 0),'0','0'); 
 					rest2:=fetch or bwb='1';
 				when 2 =>
 					Wen:='0';	
 				when others =>
-					tmp:=M(31 downto 16); set_reg(r2,tmp,'0','0');
 					rest2:=true;
+					set_reg(r2,M(31 downto 16),'0','0');
 				end case;
  
 			when "0001100" =>           -- MOV.B <Reg>,(Reg,NUM,[reg],[n])
@@ -347,32 +345,26 @@ IF Reset = '1' THEN
 				when 1 =>
 				when others =>
 					if AD(0)='1' then	
-						if  fetch then
-							Y1:=Di(15 downto 8) & X(7 downto 0);
-						else
-							Y1(15 downto 8):=Di(15 downto 8);
-						end if;
+						if  fetch then	Y1:=Di(15 downto 8) & X(7 downto 0);
+						else	Y1(15 downto 8):=Di(15 downto 8); end if;
 					else 
-						if  fetch then
-							Y1:= X(7 downto 0) & Di(7 downto 0);
-						else
-							Y1:= Y1(7 downto 0) & Di(7 downto 0);
-						end if;
+						if  fetch then	Y1:= X(7 downto 0) & Di(7 downto 0);
+						else	Y1:= Y1(7 downto 0) & Di(7 downto 0);	end if;
 					end if;
 					AS<='1';	rest:=true; FF<=StoreState;
 				end case;
 			when "0001101" =>               -- CMP & CMP.B (n),Reg
-					half:=bwb;
-					X1:=X; --if fetch then X1:= X; end if;
-					sub:='1'; 
-					setreg:=false;
-				IR(15 downto 9)<="0000011"; -- continue as in ADD
+				half:=bwb;
+				X1:=X; --if fetch then X1:= X; end if;
+				sub:='1'; 
+				setreg:=false;
+				IR(15 downto 9):="0000011"; -- continue as in ADD
 			when "0001110" =>              --CMP & CMP.B Reg,(Reg,NUM,[reg],[n])
 				half:=bwb;
 				if fetch then Y1:=X;	end if;
 				sub:='1'; 
 				setreg:=false;
-				IR(15 downto 9)<="0000011"; -- continue as in ADD
+				IR(15 downto 9):="0000011"; -- continue as in ADD
 			when "0001111" =>              --AND & AND.B Reg,(Reg,NUM,[reg],[n])
 				if fetch=true then tmp:=X1 AND X; else tmp:=X1 AND Y1; end if;
 				set_reg(r1,tmp,bwb);
@@ -390,56 +382,56 @@ IF Reset = '1' THEN
 				set_reg(r1,tmp,bwb);
 				rest2:=true;
 			when "0010011" =>              -- SETX (Reg,NUM,[reg],[n])
-					if fetch then tmp:=X; else	tmp:=Y1; end if;
-					IDX<=tmp;
-					rest2:=true;
+				if fetch then tmp:=X; else	tmp:=Y1; end if;
+				IDX<=tmp;
+				rest2:=true;
 			when "0010100" =>              --JMPX 
-					if fetch then	tmp:=X; else tmp:=Y1; end if;
-					if IDX/=ZERO16 then PC<=tmp; end if;
-					IDX<=IDX-1;
-					rest2:=true;
+				if fetch then	tmp:=X; else tmp:=Y1; end if;
+				if IDX/=ZERO16 then PC:=tmp; end if;
+				IDX<=IDX-1;
+				rest2:=true;
 			when "0010101" =>              -- MOVX RegA
-					tmp:=IDX;
-					set_reg(r1,tmp,'0','0');
-					rest2:=true;
+				tmp:=IDX;
+				set_reg(r1,tmp,'0','0');
+				rest2:=true;
 			when "0010110" =>              -- BTST  R,n
-					if X1(bt)= '0' then SR(ZR)<='1'; else SR(ZR)<='0';  end if;
-					rest2:=true;
+				if X1(bt)= '0' then SR(ZR)<='1'; else SR(ZR)<='0';  end if;
+				rest2:=true;
 			when "0010111" =>              -- BSET  R,n
-					tmp:=X1;	tmp(bt):='1';	set_reg(r1,tmp,'0','0'); 
-					rest2:=true;
+				tmp:=X1;	tmp(bt):='1';	set_reg(r1,tmp,'0','0'); 
+				rest2:=true;
 			when "0011000" =>              -- BCLR  R,n
-					tmp:=X1;	tmp(bt):='0'; set_reg(r1,tmp,'0','0'); 
-					rest2:=true;
+				tmp:=X1;	tmp(bt):='0'; set_reg(r1,tmp,'0','0'); 
+				rest2:=true;
 			when "0001011" =>              -- BTST  R,R
-					if X1(to_integer(unsigned(Y1(3 downto 0))))= '0' then SR(ZR)<='1'; else SR(ZR)<='0';  end if;
-					rest2:=true;
+				if X1(to_integer(unsigned(Y1(3 downto 0))))= '0' then SR(ZR)<='1'; else SR(ZR)<='0';  end if;
+				rest2:=true;
 			when "1010001" =>              -- BSET  R,R
-					tmp:=X1;	tmp(to_integer(unsigned(Y1(3 downto 0)))):='1';	set_reg(r1,tmp,'0','0'); 
-					rest2:=true;
+				tmp:=X1;	tmp(to_integer(unsigned(Y1(3 downto 0)))):='1';	set_reg(r1,tmp,'0','0'); 
+				rest2:=true;
 			when "0011110" =>              -- BCLR  R,R
-					tmp:=X1;	tmp(to_integer(unsigned(Y1(3 downto 0)))):='0'; set_reg(r1,tmp,'0','0'); 
-					rest2:=true;						
+				tmp:=X1;	tmp(to_integer(unsigned(Y1(3 downto 0)))):='0'; set_reg(r1,tmp,'0','0'); 
+				rest2:=true;						
 			when "0011001" =>              --SRA Reg
-					tmp:= std_logic_vector(shift_right(signed (X1),bt));
-					set_reg(r1,tmp); 
-					SR(CA)<=X1(bt-1);
-					rest2:=true;
+				tmp:= std_logic_vector(shift_right(signed (X1),bt));
+				set_reg(r1,tmp); 
+				SR(CA)<=X1(bt-1);
+				rest2:=true;
 			when "0011010" =>              --SLA Reg
-					tmp:= std_logic_vector(shift_left(signed (X1),bt));
-					set_reg(r1,tmp); --A(r1)<=tmp; 
-					--SR(CA)<=X1(16-bt);
-					rest2:=true;
+				tmp:= std_logic_vector(shift_left(signed (X1),bt));
+				set_reg(r1,tmp); --A(r1)<=tmp; 
+				--SR(CA)<=X1(16-bt);
+				rest2:=true;
 			when "0011011" =>              --SRL Reg
-					SR(CA)<=X1(bt-1);
-					tmp:= std_logic_vector(shift_right(unsigned (X1),bt));
-					set_reg(r1,tmp);  
-					rest2:=true;
+				SR(CA)<=X1(bt-1);
+				tmp:= std_logic_vector(shift_right(unsigned (X1),bt));
+				set_reg(r1,tmp);  
+				rest2:=true;
 			when "0011100" =>              --SLL Reg
-					SR(CA)<=X1(16-bt);
-					tmp:= std_logic_vector(shift_left(unsigned (X1),bt));
-					set_reg(r1,tmp);  
-					rest2:=true;
+				SR(CA)<=X1(16-bt);
+				tmp:= std_logic_vector(shift_left(unsigned (X1),bt));
+				set_reg(r1,tmp);  
+				rest2:=true;
 			when "0011111" =>  -- xchg r1,r2
 				case TT is
 				when 0 =>
@@ -451,9 +443,9 @@ IF Reset = '1' THEN
 					rest2:=true;
 				end case;	
 			when "0100000" =>              -- MOVI Reg,0-15
-					tmp:="000000000000"&IR(5 downto 2);
-					set_reg(r1,tmp,'0','0');
-					rest2:=true;
+				tmp:="000000000000"&IR(5 downto 2);
+				set_reg(r1,tmp,'0','0');
+				rest2:=true;
 			when "0100001" =>               -- CMP & CMP.B (R),(Reg,NUM,[reg],[n])
 				case TT is
 				when 0 =>
@@ -470,78 +462,78 @@ IF Reset = '1' THEN
 					end if;
 					sub:='1'; AS<='1'; 
 				when 3 =>
-				when 4 =>
-					set_flags;	rest2:=true;
-					sub:='0';
+				--when 4 =>
+				rest2:=true; sub:='0';
+				set_flags;	
 				when others =>
 				end case;
 			when "0100010" =>              -- MOVI.B Reg,0-15
-					tmp(7 DOWNTO 0):="0000"&IR(5 downto 2);
-					set_reg(r1,tmp,'1','0'); --A(r1)<=tmp;
-					rest2:=true;		
+				tmp(7 DOWNTO 0):="0000"&IR(5 downto 2);
+				set_reg(r1,tmp,'1','0'); --A(r1)<=tmp;
+				rest2:=true;		
 			when "0100101" =>              -- JMP (Reg,NUM,[reg],[n])
-					if fetch then PC<=X;
-					else	PC<=Y1; end if;
-					rest2:=true;
+				if fetch then PC:=X;
+				else	PC:=Y1; end if;
+				rest2:=true;
 			when "0100110" =>              -- SRSET  n
-					SR(to_integer(unsigned(Y1(2 downto 0))))<='1'; 
-					rest2:=true;
+				SR(to_integer(unsigned(Y1(2 downto 0))))<='1'; 
+				rest2:=true;
 			when "0101010" =>              -- SRCLR  n
-					SR(to_integer(unsigned(Y1(2 downto 0))))<='0';  
-					rest2:=true;
+				SR(to_integer(unsigned(Y1(2 downto 0))))<='0';  
+				rest2:=true;
 			when "0100111" =>              -- JZ & JNZ (Reg,NUM,[reg],[n])
-					If SR(ZR)=bwb then
-						if fetch then PC<=X;
-						else	PC<=Y1; end if;
-					end if;
-					rest2:=true;
+				If SR(ZR)=bwb then
+					if fetch then PC:=X;
+					else	PC:=Y1; end if;
+				end if;
+				rest2:=true;
 			when "0101001" =>              -- JO & JNO (Reg,NUM,[reg],[n])
-					If SR(OV)=bwb then
-						if fetch then PC<=X;
-						else	PC<=Y1; end if;
-					end if;
-					rest2:=true;       
+				If SR(OV)=bwb then
+					if fetch then PC:=X;
+					else	PC:=Y1; end if;
+				end if;
+				rest2:=true;       
 			when "0101011" =>              -- JC,JB & JNC (Reg,NUM,[reg],[n])
-					If SR(CA)=bwb then
-						if fetch then PC<=X;
-						else	PC<=Y1; end if;
-					end if;
-					rest2:=true;        
+				If SR(CA)=bwb then
+					if fetch then PC:=X;
+					else	PC:=Y1; end if;
+				end if;
+				rest2:=true;        
 			when "0101101" =>              -- JN & JP (Reg,NUM,[reg],[n])
-					If SR(NG)=bwb then
-						if fetch then PC<=X;
-						else	PC<=Y1; end if;
-					end if;
-					rest2:=true;
+				If SR(NG)=bwb then
+					if fetch then PC:=X;
+					else	PC:=Y1; end if;
+				end if;
+				rest2:=true;
 			when "0101110" =>              -- JBE (Reg,NUM,[reg],[n])
-					If SR(ZR)='1' or SR(CA)='1' then
-						if fetch then PC<=X;
-						else	PC<=Y1; end if;
-					end if;
-					rest2:=true;
+				If SR(ZR)='1' or SR(CA)='1' then
+					if fetch then PC:=X;
+					else	PC:=Y1; end if;
+				end if;
+				rest2:=true;
 			when "0101111" =>              -- JA (Reg,NUM,[reg],[n])   
-					If SR(ZR)='0' and SR(CA)='0' then
-						if fetch then PC<=X;
-						else	PC<=Y1; end if;
-					end if;
-					rest2:=true;
+				If SR(ZR)='0' and SR(CA)='0' then
+					if fetch then PC:=X;
+					else	PC:=Y1; end if;
+				end if;
+				rest2:=true;
 			when "0011101" =>              -- JAE (Reg,NUM,[reg],[n])   
-					If SR(ZR)='1' or SR(CA)='0' then
-						if fetch then PC<=X;
-						else	PC<=Y1; end if;
-					end if;
-					rest2:=true;
+				If SR(ZR)='1' or SR(CA)='0' then
+					if fetch then PC:=X;
+					else	PC:=Y1; end if;
+				end if;
+				rest2:=true;
 			when "0110000" =>              --CMPI.B Reg,0-15
 				half:='1';
 				Y1:="000000000000"&IR(5 downto 2);
 				sub:='1'; 
 				setreg:=false;
-				IR(15 downto 9)<="0000011"; -- continue as in ADD
+				IR(15 downto 9):="0000011"; -- continue as in ADD
 				
 			when "0110001" =>              -- JL (Reg,NUM,[reg],[n])
 				If  (SR(NG)/=SR(OV)) then
-					if fetch then PC<=X;
-					else	PC<=Y1; end if;
+					if fetch then PC:=X;
+					else	PC:=Y1; end if;
 				end if;
 				rest2:=true;
          when "0110010" =>              --CMPHL Reg,(Reg,NUM,[reg],[n])
@@ -549,7 +541,7 @@ IF Reset = '1' THEN
 				X1(7 downto 0):=X1(15 downto 8);
 				if fetch then Y1:=X;	end if;
 				sub:='1'; setreg:=false;
-				IR(15 downto 9)<="0000011"; -- continue as in ADD
+				IR(15 downto 9):="0000011"; -- continue as in ADD
        
 			when "0110101" =>              -- JSR Reg  /NUM / <reg>/<n>
 				case TT is
@@ -559,16 +551,15 @@ IF Reset = '1' THEN
 					DS<='0'; 
 				when 2 =>
 				when others =>
-					ST<=ST-2; --RW:='1'; AS<='1';  DS<='1';
-					if fetch then tmp:=X;
-					else	tmp:=Y1; end if;
-					PC<=tmp;	rest2:=true;
+					ST<=ST-2; 
+					if fetch then tmp:=X; else	tmp:=Y1; end if;
+					PC:=tmp;	rest2:=true;
 				end case;
 			when "0110110" =>              --ROL Reg
-					tmp:= std_logic_vector(shift_left(unsigned (X1),bt));
-					tmp(0):=X1(bt-1);
-					set_reg(r1,tmp);  
-					rest2:=true;            
+				tmp:= std_logic_vector(shift_left(unsigned (X1),bt));
+				tmp(0):=X1(bt-1);
+				set_reg(r1,tmp);  
+				rest2:=true;            
 			when "0110111" =>              -- RET
 				case TT is
 				when 0 =>
@@ -577,34 +568,31 @@ IF Reset = '1' THEN
 					AD:=ST; AS<='0';  
 				when 2 =>
 				when others =>
-					PC<=Di;
+					PC:=Di;
 					rest2:=true;
 				end case;
 			when "0111000" =>              -- JLE (Reg,NUM,[reg],[n])
-					If SR(ZR)='1' or (SR(NG)/=SR(OV)) then
-						if fetch then PC<=X;
-						else	PC<=Y1; end if;
-					end if;
-					rest2:=true;
+				If SR(ZR)='1' or (SR(NG)/=SR(OV)) then
+					if fetch then PC:=X;
+					else	PC:=Y1; end if;
+				end if;
+				rest2:=true;
 			when "0111001" =>              -- JG (Reg,NUM,[reg],[n])
-					If SR(ZR)='0' and (SR(NG)=SR(OV)) then
-						if fetch then PC<=X;
-						else	PC<=Y1; end if;
-					end if;
-					rest2:=true;   
+				If SR(ZR)='0' and (SR(NG)=SR(OV)) then
+					if fetch then PC:=X;
+					else	PC:=Y1; end if;
+				end if;
+				rest2:=true;   
 			when "0111011" =>              -- PUSH Rn, n, (Rn), (n)
-					tmp:=ST;
-					AD:=tmp; 	
-					if fetch then Y1:=X; else Y1:=X1; end if;
-					ST<=ST-2;  FF<=StoreState;
-					rest:=true;
+				AD:=ST; 	
+				if fetch then Y1:=X; else Y1:=X1; end if;
+				ST<=ST-2;  FF<=StoreState;
+				rest:=true;
 			when "0111100" =>              -- PUSH SR
-					tmp:=ST;
-					AD:=tmp; Y1(7 downto 0):=SR; ST<=ST-2;
+					AD:=ST; Y1(7 downto 0):=SR; ST<=ST-2;
 					rest:=true;  FF<=StoreState;
 			when "0111101" =>              -- PUSHX
-					tmp:=ST;
-					AD:=tmp;	Y1:=IDX; ST<=ST-2;
+					AD:=ST;	Y1:=IDX; ST<=ST-2;
 					rest:=true; FF<=StoreState;
 			when "0111110" =>              -- POPX 
 				case TT is
@@ -641,23 +629,22 @@ IF Reset = '1' THEN
 					AD:=ST; AS<='0'; RW:='0'; Do:=PC; Wen:='0';
 					DS<='0'; 
 				when 1 =>
-					ST<=ST-2;
 				when 2 =>
+					ST<=ST-2;
 					AS<='1';  DS<='1';
 				when 3 =>
 					AD:=ST; Do(7 downto 0):=SR;
 					AS<='0';  RW:='0';   DS<='0'; 
 				when 4 =>
-					ST<=ST-2;
 				when 5 =>
-					SR(7)<='1';
+					SR(7)<='1'; ST<=ST-2;
 					AS<='1'; DS<='1';  RW:='1'; 
-					tmp:="00000000000"&IR(5 downto 2)&"0"; AD:=tmp;
 				when 6 =>
+					AD:="00000000000"&IR(5 downto 2)&"0";
 					AS<='0'; 
 				when 7 =>
 				when others =>
-					PC<=Di; SR(5)<='0'; 
+					PC:=Di; SR(5)<='0'; 
 					rest2:=true; 
 				end case;
 			when "1000010" =>              -- RETi  don't change opcode
@@ -672,7 +659,7 @@ IF Reset = '1' THEN
 					AD:=ST;	AS<='0';  
 				when 4 =>
 				when others =>	
-					PC<=Di;  IA<="00"; IACK<='0'; --AS<='1';
+					PC:=Di;  IA<="00"; IACK<='0'; --AS<='1';
 					rest2:=true;
 				end case;
 			when "1000011" =>              -- CLI
@@ -703,11 +690,10 @@ IF Reset = '1' THEN
 					rest2:=true;
 				end case;
 			when "1000111" | "1001000" =>              -- INC DEC & INC.B DEC.B Rn
-					Y1:="0000000000000001";
-					add:=IR(9); sub:= NOT IR(9);
-					half:=bwb;
-					IR(15 downto 9)<="0000011"; -- continue as in ADD
-					
+				Y1:="0000000000000001";
+				add:=IR(9); sub:= NOT IR(9);
+				half:=bwb;
+				IR(15 downto 9):="0000011"; -- continue as in ADD	
 			when "1001001" =>              -- MOV (n),Reg 
 					AD:=X; FF<=StoreState;
 					rest:=true;
@@ -716,15 +702,15 @@ IF Reset = '1' THEN
 					if X2(0)='1' then	
 						tmp:=X(15 downto 8)&Y1(7 downto 0);
 					else 
-						tmp:= Y1(7 downto 0) & X(15 downto 8);
+						tmp:=Y1(7 downto 0) & X(15 downto 8);
 					end if;
-						Y1:=tmp;
+					Y1:=tmp;
 					rest:=true; FF<=StoreState;    
 
 			when "1001100" =>              -- MOVHL Reg,(Reg,NUM,[reg],[n])
 				if fetch2 then
-					if X2(0)='1'  then	tmp:=X(7 downto 0)&X1(7 downto 0);
-								  else	tmp:=X(15 downto 8)&X1(7 downto 0);	end if;
+					if X2(0)='1'  then tmp:=X(7 downto 0)&X1(7 downto 0);
+								  else tmp:=X(15 downto 8)&X1(7 downto 0);	end if;
 				else
 					if fetch1 then	tmp:=X(7 downto 0)&X1(7 downto 0);
 								 else tmp:=Y1(7 downto 0)&X1(7 downto 0); end if;
@@ -732,8 +718,8 @@ IF Reset = '1' THEN
 				set_reg(r1,tmp,'0','0'); 
 				rest2:=true;
 			when "1001101" =>              -- MOVLH Reg,(Reg,NUM,[reg],[n])
-					if fetch then	tmp(7 downto 0):=X(15 downto 8);
-								 else tmp(7 downto 0):=Y1(15 downto 8); end if;
+				if fetch then	tmp(7 downto 0):=X(15 downto 8);
+				   		 else tmp(7 downto 0):=Y1(15 downto 8); end if;
 				set_reg(r1,tmp,'1','0'); 
 				rest2:=true;
 			when "1001110" =>              -- MOVHH Reg,(Reg,NUM,[reg],[n])
@@ -742,48 +728,43 @@ IF Reset = '1' THEN
 				set_reg(r1,tmp,'0','0'); 
 				rest2:=true;
 			when "1001111" =>              --SRL.B Reg
-					tmp(7 downto 0):= std_logic_vector(shift_right(unsigned (X1(7 downto 0)),bt));
-					set_reg(r1,tmp,'1'); 
-					SR(CA)<=X1(bt-1);
-					rest2:=true;
+				tmp(7 downto 0):= std_logic_vector(shift_right(unsigned (X1(7 downto 0)),bt));
+				set_reg(r1,tmp,'1'); 
+				SR(CA)<=X1(bt-1);
+				rest2:=true;
 			when "1010000" =>              --SLL.B Reg
-					tmp(7 downto 0):=  std_logic_vector(shift_left(unsigned (X1(7 downto 0)),bt));
-					set_reg(r1,tmp,'1');  
-					SR(CA)<=X1(8-bt);
-					rest2:=true; 
-
+				tmp(7 downto 0):=  std_logic_vector(shift_left(unsigned (X1(7 downto 0)),bt));
+				set_reg(r1,tmp,'1');  
+				SR(CA)<=X1(8-bt);
+				rest2:=true; 
 			when "1010010" =>              --CMPI Reg,(0-15)
-					Y1:="000000000000"&IR(5 downto 2);
-					sub:='1'; 
-					setreg:=false;
-				IR(15 downto 9)<="0000011"; -- continue as in ADD
-
+				Y1:="000000000000"&IR(5 downto 2);
+				sub:='1'; 
+				setreg:=false;
+				IR(15 downto 9):="0000011"; -- continue as in ADD
 			when "1010011" =>              --SUBI Reg,0-15   1011001-6275
-					Y1:="000000000000"&IR(5 downto 2);
-					sub:='1'; bwb:='0';
-				   IR(15 downto 9)<="0000011"; -- continue as in ADD			
+				Y1:="000000000000"&IR(5 downto 2);
+				sub:='1'; bwb:='0';
+				IR(15 downto 9):="0000011"; -- continue as in ADD			
 			when "1010100" =>              --ADDI Reg,0-15
 				Y1:="000000000000"&IR(5 downto 2);
 				add:='1'; bwb:='0';
-				IR(15 downto 9)<="0000011"; -- continue as in ADD
+				IR(15 downto 9):="0000011"; -- continue as in ADD
 			when "1010101" =>              -- NEG Rn
 				tmp:=X1;
 				X1:=NOT tmp;
 				Y1:=ONE16;
 				add:='1';
 				half:=bwb;
-				IR(15 downto 9)<="0000011"; -- continue as in ADD
-				
+				IR(15 downto 9):="0000011"; -- continue as in ADD
 			when "1010110" =>              -- OUT Reg,n	
-				IO:='1'; Do:=X; AD:=X1; RW:='0'; AS<='0';  DS<='0';
-				IR(15 downto 9)<="0000111"; -- continue as in OUT n,ax
-				
+				Do:=X; AD:=X1; RW:='0'; IO:='1'; AS<='0';  DS<='0';
+				IR(15 downto 9):="0000111"; -- continue as in OUT n,ax
 			when "1010111" =>              -- OUT.B (Reg,n),Reg	
 				case TT is
 				when 0 =>
-					IO:='1';
 					if fetch then AD:=X; else AD:=X1; end if;
-					AS<='0';  
+					IO:='1'; RW:='1'; AS<='0';   
 				when 1 =>
 				when 2 =>
 					if AD(0)='0' then
@@ -791,18 +772,15 @@ IF Reset = '1' THEN
 					else
 						Do:=Di(15 downto 8)&Y1(7 downto 0);
 					end if;
-				when 3 =>
 					RW:='0'; DS<='0'; 
-				when 4 =>
+				when 3 =>
 				when others =>
-					IO:='0';	--DS<='1'; AS<='1'; RW:='1';
+					IO:='0';
 					rest2:=true;
 				end case;
-				
 			when "1011000" =>                     -- OUT.B Reg,n	
-					IO:='1'; AD:=X1; Y1:=X; AS<='0'; 
-					IR(15 downto 9)<="1010111";  -- as OUT.B
-								
+					AD:=X1; Y1:=X; IO:='1'; AS<='0'; 
+					IR(15 downto 9):="1010111";  -- as OUT.B	
 			when "1001011" =>    --SLLL Reg
 			      case TT is
 					when 0 =>
@@ -810,7 +788,6 @@ IF Reset = '1' THEN
 						tmp:=X1(14 downto 0)&Y1(15);
 						set_reg(r1,tmp); 
 					when 1 => 
-					when 2 =>
 						Wen:='0';
 					when others =>
 						tmp:=Y1(14 downto 0)&"0";
@@ -832,16 +809,14 @@ IF Reset = '1' THEN
 					end case;
 
 			when "1011100" | "1011101" =>              -- ADD SUB [n],reg  ADD.B [n],reg
-					X1:=X; sub:=IR(9); add:=NOT IR(9); 
-					half:=bwb;	AD:=X2;
-					IR(15 downto 9)<="1100100"; -- continue ADD [n],n
-					
+				X1:=X; sub:=IR(9); add:=NOT IR(9); 
+				half:=bwb;	AD:=X2;
+				IR(15 downto 9):="1100100"; -- continue ADD [n],n	
 			when "1011110" | "1011111" =>              -- ADD SUB [reg],reg  ADD.B [reg],reg
-					X1:=AoII;  Y1:=X; -- assembler reverses X1,Y1 
-					sub:=IR(9); add:=NOT IR(9); 
-					half:=bwb; AD:=X2;
-					IR(15 downto 9)<="1100100"; -- continue ADD [n],n
-					
+				X1:=AoII;  Y1:=X; -- assembler reverses X1,Y1 
+				sub:=IR(9); add:=NOT IR(9); 
+				half:=bwb; AD:=X2;
+				IR(15 downto 9):="1100100"; -- continue ADD [n],n	
 			when "1011010" | "0110100" =>              -- ADD SUB [reg],n  ADD.B [reg],n 
 				case TT is
 				when 0 =>
@@ -865,24 +840,21 @@ IF Reset = '1' THEN
 				end case;
 				
 			when "0100011" =>              -- JGE (Reg,NUM,[reg],[n])
-					If SR(ZR)='1' or (SR(NG)=SR(OV)) then
-						if fetch then PC<=X;
-						else	PC<=Y1; end if;
-					end if;
-					rest2:=true;  
+				If SR(ZR)='1' or (SR(NG)=SR(OV)) then
+					if fetch then PC:=X;
+					else	PC:=Y1; end if;
+				end if;
+				rest2:=true;  
 
 			when "1011011" | "0111010" =>              --ADD SUB SP,(Reg,NUM,[reg],[n])
 				case TT is
 				when 0 =>
 					QX1:=ST;
-				--when 1  =>
 					if fetch then QY1:=X; end if;
 					qsub:=NOT IR(9); --add:=IR(9); 
-				--when 1 =>
-				when others  =>
-					 --sub:='0';
+				when others =>
 					rest2:=true;
-					ST<=QZ1; qsub:='0';
+					ST<=QZ1; 
 				end case;	
 			when "0110011" =>   --JXAB JXAW
 				case TT is
@@ -897,7 +869,7 @@ IF Reset = '1' THEN
 					qsub:=SR(JXAD);
 				when others =>
 					IDX<=IDX-1;	
-					if (IDX/=ZERO16) then PC<=tmp; set_reg(r1,QZ1,'0','0');  end if;
+					if (IDX/=ZERO16) then PC:=tmp; set_reg(r1,QZ1,'0','0');  end if;
 					--qsub='0'; add:='0'; sub:='0';
 					rest2:=true;
 				end case;
@@ -960,11 +932,11 @@ IF Reset = '1' THEN
 				X1:= X; 
 				sub:='1'; 
 				setreg:=false;
-				IR(15 downto 9)<="0000011"; -- continue as in ADD
+				IR(15 downto 9):="0000011"; -- continue as in ADD
 
 			when "1100011" =>              -- OUT n,n	
-					IO:='1'; AD:=X; Do:=Y;  RW:='0'; AS<='0';  DS<='0';
-					IR(15 downto 9)<="0000111"; -- continue as in OUT n,ax
+					AD:=X; Do:=Y;  RW:='0'; IO:='1';  AS<='0';  DS<='0';
+					IR(15 downto 9):="0000111"; -- continue as in OUT n,ax
 					
 			when "1100100" | "1100101" =>              -- ADD,SUB  [n],n  ADD.B, SUB.B [n],n
 				case TT is
@@ -999,27 +971,27 @@ IF Reset = '1' THEN
 					qsub:=SR(JXAD);
 				when others =>
 					IDX<=IDX-1;	
-					if (IDX/=ZERO16) then PC<=RPC; set_reg(r1,QZ1,'0','0'); end if;
+					if (IDX/=ZERO16) then PC:=RPC; set_reg(r1,QZ1,'0','0'); end if;
 					--qsub='0'; add:='0'; sub:='0';
 					rest2:=true;
 				end case;
 			when "1110000" =>              -- JR (Reg,NUM,[reg],[n])
-				PC<=RPC; 
+				PC:=RPC; 
 				rest2:=true;
 			when "1110001" =>              -- JRZ (Reg,NUM,[reg],[n])
-				if SR(ZR)='1' then PC<=RPC; end if;
+				if SR(ZR)='1' then PC:=RPC; end if;
 				rest2:=true;
 			when "1110010" =>              -- JRN (Reg,NUM,[reg],[n])
-				if SR(NG)='1' then	PC<=RPC; 	end if;
+				if SR(NG)='1' then	PC:=RPC; 	end if;
 				rest2:=true;
 			when "1110011" =>              -- JRO (Reg,NUM,[reg],[n])
-				if SR(OV)='1' then	PC<=RPC; end if;
+				if SR(OV)='1' then	PC:=RPC; end if;
 				rest2:=true;
 			when "1110100" =>              -- JRC (Reg,NUM,[reg],[n])
-				if SR(CA)='1' then	PC<=RPC; end if;
+				if SR(CA)='1' then	PC:=RPC; end if;
 				rest2:=true;
 			when "1110101" =>              -- JRG (Reg,NUM,[reg],[n])
-				If SR(ZR)='0' and (SR(NG)=SR(OV)) then	PC<=RPC; end if;
+				If SR(ZR)='0' and (SR(NG)=SR(OV)) then	PC:=RPC; end if;
 				rest2:=true;
 			when "1110110" =>              -- JRSR (Reg,NUM,[reg],[n])
 				case TT is
@@ -1029,20 +1001,20 @@ IF Reset = '1' THEN
 				when 1 =>
 				when others =>
 					ST<=ST-2; --DS<='1'; RW:='1'; AS<='1';
-					PC<=RPC;
+					PC:=RPC;
 					rest2:=true;
 				end case;	
 			when "1110111" =>              -- JRBE (Reg,NUM,[reg],[n])
-				If SR(ZR)='1' or SR(CA)='1' then	PC<=RPC; end if;
+				If SR(ZR)='1' or SR(CA)='1' then	PC:=RPC; end if;
 				rest2:=true;
 			when "1111000" =>              -- JRLE (Reg,NUM,[reg],[n])
-				If SR(ZR)='1' or (SR(NG)/=SR(OV)) then	PC<=RPC; end if;
+				If SR(ZR)='1' or (SR(NG)/=SR(OV)) then	PC:=RPC; end if;
 				rest2:=true;
 			when "1111001" =>              -- JRNZ (Reg,NUM,[reg],[n])
-				if SR(ZR)='0' then	PC<=RPC; end if;
+				if SR(ZR)='0' then	PC:=RPC; end if;
 				rest2:=true;
 			when "1111010" =>              -- JRA (Reg,NUM,[reg],[n])
-				If SR(ZR)='0' and SR(CA)='0' then PC<=RPC; end if;
+				If SR(ZR)='0' and SR(CA)='0' then PC:=RPC; end if;
 				rest2:=true;
 			when "1111011" =>              -- MOVR Reg,([n],[R])  MOVR.B Reg,([n],[R])  GADR
 				case TT is
@@ -1069,13 +1041,13 @@ IF Reset = '1' THEN
 					AS<='1';	rest:=true; FF<=StoreState;
 				end case;
 			when "1111101" =>   -- JRGE ! 		
-				If SR(ZR)='1' or (SR(NG)=SR(OV)) then	PC<=RPC; end if;  
+				If SR(ZR)='1' or (SR(NG)=SR(OV)) then	PC:=RPC; end if;  
 			   rest2:=true;
 			when "1111110" =>              -- JRL (Reg,NUM,[reg],[n])
-				If  (SR(NG)/=SR(OV)) then PC<=RPC; end if;
+				If  (SR(NG)/=SR(OV)) then PC:=RPC; end if;
 				rest2:=true;
 			when "1111111" =>              --JRX 
-				if IDX/=ZERO16 then PC<=RPC; end if;
+				if IDX/=ZERO16 then PC:=RPC; end if;
 				IDX<=IDX-1;
 				rest2:=true;
 			when others => -- instructions  NOP	
@@ -1085,11 +1057,9 @@ IF Reset = '1' THEN
 		when others => -- FF="111" write Y1 to mem in AD
  			case TT is
 			when 0 =>
-				AS<='0';  Do:=Y1;
-				DS<='0'; RW:='0';
+				AS<='0';  Do:=Y1; RW:='0';	DS<='0'; 
 			when	1 =>
 			when others =>	
-				--DS<='1'; AS<='1'; RW:='1';
 				rest2:=true;
 			end case;
 		end case;
@@ -1097,9 +1067,9 @@ IF Reset = '1' THEN
 		if (rest=true) or (rest2=true) then
 			TT<=0; 
 			if rest2=true then 
-				IO:='0'; RW:='1'; DS<='1'; AS<='1';
+				RW:='1'; DS<='1'; AS<='1';
 				if SR(5)='1' and IR(15 downto 9)/="1000010"  then  -- SR(5) = trace flag reti
-					IR<="1000001000111100";  --INT 
+					IR:="1000001000111100";  --INT 
 					FF<=ExecutionState;
 				else	
 					FF<=InitialState;

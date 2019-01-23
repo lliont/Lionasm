@@ -3,7 +3,7 @@
 
 -- 640x480 @60 Hz
 -- Vertical refresh	31.46875 kHz
--- Pixel freq.	25.175 MHz  (25.1736 Mhz)
+-- Pixel freq.	25.175 MHz  (25 Mhz)
 
 --Scanline part	Pixels	Time [µs]
 --Visible area	640	25.422045680238
@@ -52,12 +52,15 @@ Signal addr2,addr3: natural range 0 to 16383;
 signal m8,p6: natural range 0 to 127;
 Signal vidc: boolean:=false;
 
+shared variable addr1:natural range 0 to 16383;
+
 begin
 
-vidc<=not vidc when rising_edge(sclk);
---HSYN<='0' when (pixel<96) else '1'; 
---VSYN<='0' when lines<2 else '1';
---VSINT<='0' when (lines=0) and (pixel<4) else	'1';
+addr<=addr1;
+vidc<=not vidc when falling_edge(sclk);
+HSYN<='0' when (pixel<96) else '1'; 
+VSYN<='0' when lines<2 else '1';
+VSINT<='0' when (lines=0) and (pixel<4) else	'1';
 
 process (sclk)
 variable m78: natural range 0 to 31;
@@ -76,11 +79,7 @@ begin
 			else
 				pixel<=pixel+1;
 			end if;
-			if (p6=0) and (pixel>=p1-1) and (pixel<p2) then addr<=addr3+prc/2; end if;
-			if (pixel<96) then HSYN<='0'; else HSYN<='1'; end if;
-			
-			if lines<2 then VSYN<='0';	else	VSYN<='1';	end if;
-			if (lines=0) and (pixel<4) then 	VSINT<='0';	else	VSINT<='1';	end if;
+			if (p6=0) and (pixel>=p1-1) and (pixel<p2) then addr1:=addr3+prc/2; end if;
 			 
 			if (lines>=l1 and lines<l2 and pixel>=p1 and pixel<p2) then
 				if Q(m78)='1' then BRI0<=FG(3); R<=FG(2); G<=FG(1); B<=FG(0);
@@ -95,7 +94,7 @@ begin
 			if (lines>=l1) and (lines<l2) and (pixel>=p1) and (pixel<p2) then
 				pix<=pix+1;
 				if pix mod 2=0 then	m78:=15-m8/2; else m78:=7-m8/2; end if;  -- m78<= not m8
-				addr<= pix/2 + addr2; 
+				addr1:= pix/2 + addr2; 
 			end if;
 			
 			if pixel=799 then
@@ -133,7 +132,7 @@ end;
 
 
 -----------------------------------------------------------------------------
--- Color Video Controller + Multicolor Sprites for Lion Computer
+-- Color Video Controller Mode 1
 -- Theodoulos Liontakis (C) 2018
 
 Library ieee;
@@ -167,10 +166,11 @@ Signal addr2: natural range 0 to 16383;
 signal m8: natural range 0 to 31;
 Signal vidc: boolean:=false;
 
+shared variable addr1:natural range 0 to 16383;
 
 begin
-
-vidc<=not vidc when rising_edge(sclk);
+addr<=addr1;
+vidc<=not vidc when falling_edge(sclk);
 VSYN<='0' when lines<2 else '1';	
 VSINT<='0' when (lines=0) and (pixel<4) else	'1';	
 HSYN<='0' when (pixel<96) else '1'; 
@@ -209,7 +209,7 @@ begin
 					pix:=pix+1; 
 				end if;
 			end if;
-			addr<= pix/4 + addr2;
+			addr1:= pix/4 + addr2;
 			
 			case pixm4 is
 			when 0 => BRGB:=Q(15 downto 12);  --end if;  --Q(12)&Q(13)&Q(14)&Q(15);
@@ -234,7 +234,7 @@ end;
 
 Library ieee;
 USE ieee.std_logic_1164.all;
-USE ieee.std_logic_unsigned.all ;
+--USE ieee.std_logic_unsigned.all ;
 USE ieee.numeric_std.all ;
 
 entity VideoSp is
@@ -263,7 +263,7 @@ constant spno:natural:=13;
 constant p2:natural:=p1+pno*2;
 constant l2:natural:=l1+lno*2;
 
-type sprite_dim is array (0 to spno*4+3) of std_logic_vector(8 downto 0);
+type sprite_dim is array (0 to spno*4+3) of natural range 0 to 511;
 type sprite_line_data is array (spno downto 0) of std_logic_vector(63 downto 0);
 type dist is array (0 to spno) of natural range 0 to 4095;
 type sprite_enable is array (0 to spno) of std_logic;
@@ -279,7 +279,7 @@ Signal SEN:sprite_enable;
 
 begin
 
-vidc<=not vidc when rising_edge(sclk);
+vidc<=not vidc when falling_edge(sclk);
 spaddr<=addr1;
 --pm4<=pixel mod 4;
 --pd4<=pixel / 4;
@@ -289,68 +289,66 @@ process (sclk,reset)
 variable BRGB: std_logic_vector(3 downto 0);
 variable sldata: sprite_line_data; 
 variable d1,d2:dist;
-variable p16: natural range 0 to 2047;
+variable p16,datab: natural range 0 to 2047;
 variable pixi, lin, pm4,pd4: natural range 0 to 1023;
 variable blvec:std_logic_vector(3 downto 0);
 variable pix: natural range 0 to 1023;
 
 
 begin
-
-
 	if  rising_edge(sclk) then
 		if (reset='0') then
 			pixel<=4; lines<=0;
 		elsif  vidc then 
 		-- sprites  ---------------------
 			if (lines>=l1 and lines<l2 and pixel>=p1 and pixel<p2) then
-					case blvec is
-					when "0000" => 	
-						BRGB:='0'&SLData(0)(2+d1(0) downto d1(0));
-						SPDET<='1';
-					when "0001" => 
-						BRGB:='0'&SLData(1)(2+d1(1) downto d1(1));
-						SPDET<='1';
-					when "0010" => 
-						BRGB:='0'&SLData(2)(2+d1(2) downto d1(2));
-						SPDET<='1';
-					when "0011" => 
-						BRGB:='0'&SLData(3)(2+d1(3) downto d1(3));
-						SPDET<='1';
-					when "0100" => 	
-						BRGB:='0'&SLData(4)(2+d1(4) downto d1(4));
-						SPDET<='1';
-					when "0101" => 	
-						BRGB:='0'&SLData(5)(2+d1(5) downto d1(5));
-						SPDET<='1';
-					when "0110" => 	
-						BRGB:='0'&SLData(6)(2+d1(6) downto d1(6));
-						SPDET<='1';
-					when "0111" => 	
-						BRGB:='0'&SLData(7)(2+d1(7) downto d1(7));
-						SPDET<='1';
-					when "1000" => 	
-						BRGB:='0'&SLData(8)(2+d1(8) downto d1(8));
-						SPDET<='1';
-					when "1001" => 
-						BRGB:='0'&SLData(9)(2+d1(9) downto d1(9));
-						SPDET<='1';
-					when "1010" => 
-						BRGB:='0'&SLData(10)(2+d1(10) downto d1(10));
-						SPDET<='1';
-					when "1011" => 
-						SPDET<='1';
-						BRGB:='0'&SLData(11)(2+d1(11) downto d1(11));
-					when "1100" => 
-						SPDET<='1';
-						BRGB:='0'&SLData(12)(2+d1(12) downto d1(12));
-					when "1101" => 
-						SPDET<='1';
-						BRGB:='0'&SLData(13)(2+d1(13) downto d1(13));
-					when others =>
-						SPDET<='0'; BRGB:="0000";
-					end case;
-					BRI<=BRGB(3); R<=BRGB(2); G<=BRGB(1); B<=BRGB(0); 
+				case blvec is
+				when "0000" => 	
+					BRGB:='0'&SLData(0)(2+d1(0) downto d1(0));
+					SPDET<='1';
+				when "0001" => 
+					BRGB:='0'&SLData(1)(2+d1(1) downto d1(1));
+					SPDET<='1';
+				when "0010" => 
+					BRGB:='0'&SLData(2)(2+d1(2) downto d1(2));
+					SPDET<='1';
+				when "0011" => 
+					BRGB:='0'&SLData(3)(2+d1(3) downto d1(3));
+					SPDET<='1';
+				when "0100" => 	
+					BRGB:='0'&SLData(4)(2+d1(4) downto d1(4));
+					SPDET<='1';
+				when "0101" => 	
+					BRGB:='0'&SLData(5)(2+d1(5) downto d1(5));
+					SPDET<='1';
+				when "0110" => 	
+					BRGB:='0'&SLData(6)(2+d1(6) downto d1(6));
+					SPDET<='1';
+				when "0111" => 	
+					BRGB:='0'&SLData(7)(2+d1(7) downto d1(7));
+					SPDET<='1';
+				when "1000" => 	
+					BRGB:='0'&SLData(8)(2+d1(8) downto d1(8));
+					SPDET<='1';
+				when "1001" => 
+					BRGB:='0'&SLData(9)(2+d1(9) downto d1(9));
+					SPDET<='1';
+				when "1010" => 
+					BRGB:='0'&SLData(10)(2+d1(10) downto d1(10));
+					SPDET<='1';
+				when "1011" => 
+					SPDET<='1';
+					BRGB:='0'&SLData(11)(2+d1(11) downto d1(11));
+				when "1100" => 
+					SPDET<='1';
+					BRGB:='0'&SLData(12)(2+d1(12) downto d1(12));
+				when "1101" => 
+					SPDET<='1';
+					BRGB:='0'&SLData(13)(2+d1(13) downto d1(13));
+				when others =>
+					SPDET<='0'; BRGB:="0000";
+				end case;
+				BRI<=BRGB(3); R<=BRGB(2); G<=BRGB(1); B<=BRGB(0); 
 			else  -- vsync  0.01 us = 1 pixels
 				SPDET<='0';
 			end if;
@@ -361,11 +359,10 @@ begin
 			else
 				pixel<=pixel+1;
 			end if;
-			
+			--pm4:= pixel mod 4; pd4:=pixel/4;
 			if (lines=1) and (pixel<spno*4+4)  then	
-				pm4:= pixel mod 4; pd4:=pixel/4;
-				if pm4 = 0 then SX(pd4)<=SPQ(8 downto 0); end if; 
-				if pm4 = 1 then SY(pd4)<=SPQ(8 downto 0); end if;
+				if pm4 = 0 then SX(pd4)<=to_integer(unsigned(SPQ(8 downto 0))); end if; 
+				if pm4 = 1 then SY(pd4)<=to_integer(unsigned(SPQ(8 downto 0))); end if;
 				--if pm4=2 then SDX(pd4):=SPQ(15 downto 8); SDY(pd4):=SPQ(7 downto 0); end if;
 				if pm4 = 3 then SEN(pd4)<=SPQ(0); end if;
 			end if;
@@ -375,49 +372,46 @@ begin
 			end if;
 			blvec:="1111"; 
 		else   ------ vidc false ---------------------------------------
-			
+
 			lin:=(lines-l1)/2; pixi:=(pixel-p1)/2;
 			
-			d1(0):=(pixi-to_integer(unsigned(SX(0))))*4; 
-			d2(0):=lin-to_integer(unsigned(SY(0)));
-			d1(1):=(pixi-to_integer(unsigned(SX(1))))*4; 
-			d2(1):=lin-to_integer(unsigned(SY(1)));
-			d1(2):=(pixi-to_integer(unsigned(SX(2))))*4; 
-			d2(2):=lin-to_integer(unsigned(SY(2)));
-			d1(3):=(pixi-to_integer(unsigned(SX(3))))*4; 
-			d2(3):=lin-to_integer(unsigned(SY(3)));
-			d1(4):=(pixi-to_integer(unsigned(SX(4))))*4; 
-			d2(4):=lin-to_integer(unsigned(SY(4)));
-			d1(5):=(pixi-to_integer(unsigned(SX(5))))*4; 
-			d2(5):=lin-to_integer(unsigned(SY(5)));
-			d1(6):=(pixi-to_integer(unsigned(SX(6))))*4; 
-			d2(6):=lin-to_integer(unsigned(SY(6)));
-			d1(7):=(pixi-to_integer(unsigned(SX(7))))*4; 
-			d2(7):=lin-to_integer(unsigned(SY(7)));
-			d1(8):=(pixi-to_integer(unsigned(SX(8))))*4; 
-			d2(8):=lin-to_integer(unsigned(SY(8)));
-			d1(9):=(pixi-to_integer(unsigned(SX(9))))*4; 
-			d2(9):=lin-to_integer(unsigned(SY(9)));
-			d1(10):=(pixi-to_integer(unsigned(SX(10))))*4; 
-			d2(10):=lin-to_integer(unsigned(SY(10)));
-			d1(11):=(pixi-to_integer(unsigned(SX(11))))*4; 
-			d2(11):=lin-to_integer(unsigned(SY(11)));
-			d1(12):=(pixi-to_integer(unsigned(SX(12))))*4; 
-			d2(12):=lin-to_integer(unsigned(SY(12)));
-			d1(13):=(pixi-to_integer(unsigned(SX(13))))*4; 
-			d2(13):=lin-to_integer(unsigned(SY(13)));
+			d1(0):=(pixi-SX(0))*4; 
+			d2(0):=lin-SY(0);
+			d1(1):=(pixi-SX(1))*4; 
+			d2(1):=lin-SY(1);
+			d1(2):=(pixi-SX(2))*4; 
+			d2(2):=lin-SY(2);
+			d1(3):=(pixi-SX(3))*4; 
+			d2(3):=lin-SY(3);
+			d1(4):=(pixi-SX(4))*4; 
+			d2(4):=lin-SY(4);
+			d1(5):=(pixi-SX(5))*4; 
+			d2(5):=lin-SY(5);
+			d1(6):=(pixi-SX(6))*4; 
+			d2(6):=lin-SY(6);
+			d1(7):=(pixi-SX(7))*4; 
+			d2(7):=lin-SY(7);
+			d1(8):=(pixi-SX(8))*4; 
+			d2(8):=lin-SY(8);
+			d1(9):=(pixi-SX(9))*4; 
+			d2(9):=lin-SY(9);
+			d1(10):=(pixi-SX(10))*4; 
+			d2(10):=lin-SY(10);
+			d1(11):=(pixi-SX(11))*4; 
+			d2(11):=lin-SY(11);
+			d1(12):=(pixi-SX(12))*4; 
+			d2(12):=lin-SY(12);
+			d1(13):=(pixi-SX(13))*4; 
+			d2(13):=lin-SY(13);
 			
+			pm4:= pixel mod 4; pd4:=pixel/4;
 			if (pixel<(spno*4+4)) then 
 				if (lines=1) then
 					if pbuffer='0' then addr1:=(sp1/2+pixel); else addr1:=(sp2/2+pixel); end if;
+					if dbuffer='0' then datab:=sd1/2; else datab:=sd2/2; end if;
 				end if;
 				if (lines>=l1) and (lines<l2) then
-					pm4:= pixel mod 4; pd4:=pixel/4;
-					if dbuffer='0' then 
-						addr1:=(sd1/2+p16+d2(pd4)*4+pm4);
-					 else 
-						addr1:=(sd2/2+p16+d2(pd4)*4+pm4);
-					end if; 
+					addr1:=(datab+p16+d2(pd4)*4+pm4);
 					if pm4=3 then p16:=p16+64; end if;
 				end if;
 			end if;

@@ -28,7 +28,7 @@ type FIFO_r is array (0 to rblen-1) of std_logic_vector(9 downto 2);
 Signal tFIFO: FIFO_t;
 Signal rFIFO: FIFO_r;
 Signal inb,outb: std_logic_vector(9 downto 2);
-Signal rcounter,tcounter :natural range 0 to 4095;
+Signal rcounter,tcounter :natural range 0 to 4095:=1;
 signal dr: boolean:=false;
 signal rd:boolean :=true;
 signal rptr1, rptr2: natural range 0 to rblen := 0; 
@@ -170,7 +170,7 @@ constant divider:natural :=2604; -- 19200       650  25MHz/38400   1302 ; -- 50M
 type FIFO_r is array (0 to rblen-1) of std_logic_vector(9 downto 2);
 Signal rFIFO: FIFO_r;
 Signal inb: std_logic_vector(9 downto 2);
-Signal rcounter:natural range 0 to 4095;
+Signal rcounter:natural range 0 to 4095:=1;
 signal dr: boolean:=false;
 signal rd:boolean :=true;
 signal rptr1, rptr2: natural range 0 to rblen := 0; 
