@@ -93,8 +93,7 @@ begin
 			
 			if (lines>=l1) and (lines<l2) and (pixel>=p1) and (pixel<p2) then
 				pix<=pix+1;
-				if pix mod 2=0 then	m78:=15-m8/2; else m78:=7-m8/2; end if;  -- m78<= not m8
-				addr1:= pix/2 + addr2; 
+				if pix mod 2=0 then	m78:=15-m8/2; addr1:= pix/2 + addr2; else m78:=7-m8/2; end if;  -- m78<= not m8
 			end if;
 			
 			if pixel=799 then
@@ -201,7 +200,7 @@ begin
 			else
 				pixel<=pixel+1;
 			end if;
-			
+			 
 		else   ------ vidc false ---------------------------------------
 			
 			if (lines>=l1) and (lines<l2) and (pixel>p1) and (pixel<p2) then
@@ -251,9 +250,9 @@ end VideoSp;
 Architecture Behavior of VideoSp is
 
 constant sp1: natural:= 0; 
-constant sp2: natural:= 256;
-constant sd1: natural:= 512;
-constant sd2: natural:= 2304;
+constant sp2: natural:= 256/2;
+constant sd1: natural:= 512/2;
+constant sd2: natural:= 2304/2;
 constant l1:natural:=74;
 constant lno:natural:=240;
 constant p1:natural :=142;
@@ -269,9 +268,9 @@ type dist is array (0 to spno) of natural range 0 to 4095;
 type sprite_enable is array (0 to spno) of std_logic;
 
 shared variable addr1: natural range 0 to 2047;
-
-Signal lines: natural range 0 to 1023;
-Signal pixel : natural range 0 to 1023;
+shared variable lines: natural range 0 to 1023;
+shared variable pixel : natural range 0 to 1023;
+shared variable det: std_logic:='0';
 Signal vidc: boolean:=false;
 Signal SX,SY: sprite_dim;
 Signal SEN:sprite_enable;
@@ -281,6 +280,7 @@ begin
 
 vidc<=not vidc when falling_edge(sclk);
 spaddr<=addr1;
+SPDET<=det;
 --pm4<=pixel mod 4;
 --pd4<=pixel / 4;
 
@@ -292,123 +292,101 @@ variable d1,d2:dist;
 variable p16,datab: natural range 0 to 2047;
 variable pixi, lin, pm4,pd4: natural range 0 to 1023;
 variable blvec:std_logic_vector(3 downto 0);
-variable pix: natural range 0 to 1023;
-
 
 begin
 	if  rising_edge(sclk) then
 		if (reset='0') then
-			pixel<=4; lines<=0;
+			pixel:=4; lines:=0; det:='0';
+			if dbuffer='0' then datab:=sd1; else datab:=sd2; end if;
 		elsif  vidc then 
-		-- sprites  ---------------------
 			if (lines>=l1 and lines<l2 and pixel>=p1 and pixel<p2) then
+				det:='1';
 				case blvec is
 				when "0000" => 	
 					BRGB:='0'&SLData(0)(2+d1(0) downto d1(0));
-					SPDET<='1';
 				when "0001" => 
 					BRGB:='0'&SLData(1)(2+d1(1) downto d1(1));
-					SPDET<='1';
 				when "0010" => 
 					BRGB:='0'&SLData(2)(2+d1(2) downto d1(2));
-					SPDET<='1';
 				when "0011" => 
 					BRGB:='0'&SLData(3)(2+d1(3) downto d1(3));
-					SPDET<='1';
 				when "0100" => 	
 					BRGB:='0'&SLData(4)(2+d1(4) downto d1(4));
-					SPDET<='1';
 				when "0101" => 	
 					BRGB:='0'&SLData(5)(2+d1(5) downto d1(5));
-					SPDET<='1';
 				when "0110" => 	
 					BRGB:='0'&SLData(6)(2+d1(6) downto d1(6));
-					SPDET<='1';
 				when "0111" => 	
 					BRGB:='0'&SLData(7)(2+d1(7) downto d1(7));
-					SPDET<='1';
 				when "1000" => 	
 					BRGB:='0'&SLData(8)(2+d1(8) downto d1(8));
-					SPDET<='1';
 				when "1001" => 
 					BRGB:='0'&SLData(9)(2+d1(9) downto d1(9));
-					SPDET<='1';
 				when "1010" => 
 					BRGB:='0'&SLData(10)(2+d1(10) downto d1(10));
-					SPDET<='1';
 				when "1011" => 
-					SPDET<='1';
 					BRGB:='0'&SLData(11)(2+d1(11) downto d1(11));
 				when "1100" => 
-					SPDET<='1';
 					BRGB:='0'&SLData(12)(2+d1(12) downto d1(12));
 				when "1101" => 
-					SPDET<='1';
 					BRGB:='0'&SLData(13)(2+d1(13) downto d1(13));
 				when others =>
-					SPDET<='0'; BRGB:="0000";
+					det:='0'; BRGB:="0000";
 				end case;
 				BRI<=BRGB(3); R<=BRGB(2); G<=BRGB(1); B<=BRGB(0); 
-			else  -- vsync  0.01 us = 1 pixels
-				SPDET<='0';
+			else  
+				det:='0';
 			end if;
 			
 			if pixel=799 then
-				pixel<=0; pix:=0; p16:=0;
-				if lines=524 then	lines<=0; else lines<=lines+1; end if;
+				pixel:=0; p16:=0;
+				if lines=524 then	lines:=0; else lines:=lines+1; end if;
 			else
-				pixel<=pixel+1;
+				pixel:=pixel+1;
 			end if;
 			--pm4:= pixel mod 4; pd4:=pixel/4;
 			if (lines=1) and (pixel<spno*4+4)  then	
 				if pm4 = 0 then SX(pd4)<=to_integer(unsigned(SPQ(8 downto 0))); end if; 
 				if pm4 = 1 then SY(pd4)<=to_integer(unsigned(SPQ(8 downto 0))); end if;
-				--if pm4=2 then SDX(pd4):=SPQ(15 downto 8); SDY(pd4):=SPQ(7 downto 0); end if;
 				if pm4 = 3 then SEN(pd4)<=SPQ(0); end if;
 			end if;
 			
 			if (lines>=l1 and lines<l2 and (pixel<(spno*4+4))) then
-				SLData(pd4)(pm4*16+15 downto pm4*16):=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
+				case pm4 is
+				when 0 =>
+					SLData(pd4)(15 downto 0):=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
+				when 1 =>
+					SLData(pd4)(31 downto 16):=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
+				when 2 =>
+					SLData(pd4)(47 downto 32):=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
+				when others =>
+					SLData(pd4)(63 downto 48):=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
+				end case;
 			end if;
 			blvec:="1111"; 
 		else   ------ vidc false ---------------------------------------
 
 			lin:=(lines-l1)/2; pixi:=(pixel-p1)/2;
 			
-			d1(0):=(pixi-SX(0))*4; 
-			d2(0):=lin-SY(0);
-			d1(1):=(pixi-SX(1))*4; 
-			d2(1):=lin-SY(1);
-			d1(2):=(pixi-SX(2))*4; 
-			d2(2):=lin-SY(2);
-			d1(3):=(pixi-SX(3))*4; 
-			d2(3):=lin-SY(3);
-			d1(4):=(pixi-SX(4))*4; 
-			d2(4):=lin-SY(4);
-			d1(5):=(pixi-SX(5))*4; 
-			d2(5):=lin-SY(5);
-			d1(6):=(pixi-SX(6))*4; 
-			d2(6):=lin-SY(6);
-			d1(7):=(pixi-SX(7))*4; 
-			d2(7):=lin-SY(7);
-			d1(8):=(pixi-SX(8))*4; 
-			d2(8):=lin-SY(8);
-			d1(9):=(pixi-SX(9))*4; 
-			d2(9):=lin-SY(9);
-			d1(10):=(pixi-SX(10))*4; 
-			d2(10):=lin-SY(10);
-			d1(11):=(pixi-SX(11))*4; 
-			d2(11):=lin-SY(11);
-			d1(12):=(pixi-SX(12))*4; 
-			d2(12):=lin-SY(12);
-			d1(13):=(pixi-SX(13))*4; 
-			d2(13):=lin-SY(13);
+			d1(0):=(pixi-SX(0))*4; d2(0):=lin-SY(0);
+			d1(1):=(pixi-SX(1))*4; d2(1):=lin-SY(1);
+			d1(2):=(pixi-SX(2))*4; d2(2):=lin-SY(2);
+			d1(3):=(pixi-SX(3))*4; d2(3):=lin-SY(3);
+			d1(4):=(pixi-SX(4))*4; d2(4):=lin-SY(4);
+			d1(5):=(pixi-SX(5))*4; d2(5):=lin-SY(5);
+			d1(6):=(pixi-SX(6))*4; d2(6):=lin-SY(6);
+			d1(7):=(pixi-SX(7))*4; d2(7):=lin-SY(7);
+			d1(8):=(pixi-SX(8))*4; d2(8):=lin-SY(8);
+			d1(9):=(pixi-SX(9))*4; d2(9):=lin-SY(9);
+			d1(10):=(pixi-SX(10))*4; d2(10):=lin-SY(10);
+			d1(11):=(pixi-SX(11))*4; d2(11):=lin-SY(11);
+			d1(12):=(pixi-SX(12))*4; d2(12):=lin-SY(12);
+			d1(13):=(pixi-SX(13))*4; d2(13):=lin-SY(13);
 			
 			pm4:= pixel mod 4; pd4:=pixel/4;
 			if (pixel<(spno*4+4)) then 
 				if (lines=1) then
-					if pbuffer='0' then addr1:=(sp1/2+pixel); else addr1:=(sp2/2+pixel); end if;
-					if dbuffer='0' then datab:=sd1/2; else datab:=sd2/2; end if;
+					if pbuffer='0' then addr1:=(sp1+pixel); else addr1:=(sp2+pixel); end if;
 				end if;
 				if (lines>=l1) and (lines<l2) then
 					addr1:=(datab+p16+d2(pd4)*4+pm4);

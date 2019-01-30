@@ -16,7 +16,7 @@ entity LionCPU16 is
 		Di  : IN  Std_logic_vector(15 downto 0);
 		DOo  : OUT  Std_logic_vector(15 downto 0);
 		ADo  : OUT  Std_logic_vector(15 downto 0); 
-		RWo,ASo,DSo : OUT Std_logic;
+		RWo,AS,DS : OUT Std_logic;
 		RD, Reset, Clock, Int, HOLD: IN Std_Logic;
 		IOo, A16, HOLDA : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
@@ -52,21 +52,21 @@ SIGNAL ST: Std_logic_vector(15 downto 0):="1111111111111110";
 SIGNAL FF: Std_logic_vector(2 downto 0);
 SIGNAL TT: natural range 0 to 15;
 SIGNAL carry, overflow, zero, neg: Std_logic;
-SIGNAL ds, as: Std_logic;
+--SIGNAL ds, as: Std_logic;
 
 COMPONENT ALU_LA4 IS
 PORT (X, Y 	: IN STD_LOGIC_VECTOR(15 DOWNTO 0) ;
 		Z 		: OUT	STD_LOGIC_VECTOR(15 DOWNTO 0) ;
-		add, sub, half, cin, clock: IN STD_LOGIC ;
+		sub, half, cin: IN STD_LOGIC ;
 		carry,overflow,zero,neg: OUT STD_LOGIC ) ;
 END COMPONENT ;
 
-COMPONENT ALU_LA2 IS
-PORT (X, Y 	: IN STD_LOGIC_VECTOR(15 DOWNTO 0) ;
-		Z 		: OUT	STD_LOGIC_VECTOR(15 DOWNTO 0) ;
-		add, sub, half, cin, clock: IN STD_LOGIC ;
-		carry,overflow,zero,neg: OUT STD_LOGIC ) ;
-END COMPONENT ;
+--COMPONENT ALU_LA2 IS
+--PORT (X, Y 	: IN STD_LOGIC_VECTOR(15 DOWNTO 0) ;
+--		Z 		: OUT	STD_LOGIC_VECTOR(15 DOWNTO 0) ;
+--		add, sub, half, cin, clock: IN STD_LOGIC ;
+--		carry,overflow,zero,neg: OUT STD_LOGIC ) ;
+--END COMPONENT ;
 
 COMPONENT QuADD IS
 PORT (QX, QY 	: IN STD_LOGIC_VECTOR(15 DOWNTO 0) ;
@@ -84,7 +84,7 @@ END COMPONENT;
 
 
 shared variable Do,AD,X1,Y1,X,Y,QX1,QY1,Ai,IR,PC: Std_logic_vector(15 downto 0);
-shared variable IO,cin,RW,Wen,sub,add,half,rhalf,qsub: Std_logic;
+shared variable IO,cin,RW,Wen,sub,half,rhalf,qsub: Std_logic;
 shared variable M : Std_logic_vector(31 downto 0);
 shared variable R,RR: std_logic_vector(2 downto 0);
 
@@ -113,7 +113,7 @@ end set_flags;
 
 begin
 	ALU: ALU_LA4
-	PORT MAP ( X1,Y1,Z1, add, sub, half, cin, clock, carry, overflow, zero, neg ) ;
+	PORT MAP ( X1,Y1,Z1, sub, half, cin, carry, overflow, zero, neg ) ;
 	FADD: QuADD 
 	PORT MAP ( QX1,QY1,QZ1,qsub ) ;
 	REG:REGs
@@ -121,21 +121,21 @@ begin
 
 
 	
-DOo<=Do; DSo<=DS; ASo<=AS; RWo<=RW; ADo<=AD; IOo<=IO;
+DOo<=Do; RWo<=RW; ADo<=AD; IOo<=IO;
 
-Process (Clock,reset)
+Process (Clock)
 variable rest,rest2,fetch,fetch1,fetch2,fetch3,rel,setreg:boolean:=false;
 variable tmp,tmp2,stmp:Std_logic_vector(15 downto 0);
 variable r1,r2: Std_logic_vector(2 downto 0);
 variable bt: natural range 0 to 15;
 variable bwb: Std_logic; --  bit to distinguish between word byte operations 
 begin
-IF Reset = '1' THEN
+IF Reset = '1' and rising_edge(clock) THEN
 		PC := "0000000000010000"; SR <= ZERO8;  HOLDA<='0'; FF<=InitialState; TT<=0;
 		AS<='1';  DS<='1'; RW:='1'; ST <= "1111111111111110"; --was (16382) end of internal ram
 		AD:= (OTHERS => '0'); IR:=(OTHERS=>'0');	 IO:='0';
 		Wen:='0'; rhalf:='0';  A16<='0';
-		 add:='0'; sub:='0';  cin:='0'; IA<="00"; IACK<='0';
+		sub:='0';  cin:='0'; IA<="00"; IACK<='0';
 	ELSIF rising_edge(clock) AND HOLD='0' AND FF=InitialState AND TT=0  then
 		HOLDA<='1'; 
 	ELSIF  rising_edge(clock) AND RD='0' THEN 
@@ -144,18 +144,18 @@ IF Reset = '1' THEN
 		IR:="100000100000"&I&"00";
 		FF<=ExecutionState; TT<=0; 
 		IA<=I; IACK<='1'; Wen:='0';
-		HOLDA<='0';
+		HOLDA<='0'; RW:='1'; 
 	ELSIF  rising_edge(clock)  THEN   
 		rest:=false; rest2:=false; HOLDA<='0'; 
 		case  FF is -- Fetch Instruction 
 		when InitialState =>
 			case TT is
 			when 0 =>
-				qsub:='0'; QX1:=PC; QY1:=TWO16;
-				rel:=false; setreg:=true; RW:='1';
-				AD:=PC; half:='0';  AS<='0'; A16<='0'; Wen:='0'; IO:='0'; 
+				IO:='0'; qsub:='0'; QX1:=PC; QY1:=TWO16;
+				rel:=false; setreg:=true; RW:='1'; RW:='1'; 
+				AD:=PC; half:='0';  DS<='1'; AS<='0'; A16<='0'; Wen:='0'; 
 			when 1 =>
-				 add:='0'; sub:='0'; cin:='0'; rhalf:='0'; 
+				 sub:='0'; cin:='0'; rhalf:='0'; 
 				 fetch:=false; fetch1:=false; fetch2:=false;
 				 QX1:=ST; --QY1:=TWO16;
 				 PC:=QZ1; --PC+2
@@ -257,14 +257,13 @@ IF Reset = '1' THEN
 				case TT is
 				when 0 =>
 					if fetch=true then Y1:=X; end if;
-					add:='1';
 					half:=bwb;
 				--when 1 =>
 				when others =>
 					rest2:=true;
 					if setreg then set_reg(r1,Z1,bwb,'0'); end if;
 					set_flags;
-					add:='0'; sub:='0'; cin:='0';
+					sub:='0'; cin:='0';
 				end case;
 			when "0000100" =>              --SUB & SUB.B Reg,(Reg,NUM,[reg],[n])
 				if fetch=true then Y1:=X; end if;
@@ -274,7 +273,7 @@ IF Reset = '1' THEN
 				
 			when "0000101" =>              --ADC Reg,(Reg,NUM,[reg],[n])
 				if fetch then	Y1:=X;	end if;
-				half:=bwb ; cin:=SR(CA); add:='1';
+				half:=bwb ; cin:=SR(CA); 
 				IR(15 downto 9):="0000011"; -- continue as in ADD
 
 			when "0000110" =>              -- MOV.B Reg,(Reg,NUM,[reg],[n])
@@ -691,7 +690,7 @@ IF Reset = '1' THEN
 				end case;
 			when "1000111" | "1001000" =>              -- INC DEC & INC.B DEC.B Rn
 				Y1:="0000000000000001";
-				add:=IR(9); sub:= NOT IR(9);
+				sub:= NOT IR(9);
 				half:=bwb;
 				IR(15 downto 9):="0000011"; -- continue as in ADD	
 			when "1001001" =>              -- MOV (n),Reg 
@@ -748,13 +747,12 @@ IF Reset = '1' THEN
 				IR(15 downto 9):="0000011"; -- continue as in ADD			
 			when "1010100" =>              --ADDI Reg,0-15
 				Y1:="000000000000"&IR(5 downto 2);
-				add:='1'; bwb:='0';
+				bwb:='0';
 				IR(15 downto 9):="0000011"; -- continue as in ADD
 			when "1010101" =>              -- NEG Rn
 				tmp:=X1;
 				X1:=NOT tmp;
 				Y1:=ONE16;
-				add:='1';
 				half:=bwb;
 				IR(15 downto 9):="0000011"; -- continue as in ADD
 			when "1010110" =>              -- OUT Reg,n	
@@ -809,12 +807,12 @@ IF Reset = '1' THEN
 					end case;
 
 			when "1011100" | "1011101" =>              -- ADD SUB [n],reg  ADD.B [n],reg
-				X1:=X; sub:=IR(9); add:=NOT IR(9); 
+				X1:=X; sub:=IR(9); 
 				half:=bwb;	AD:=X2;
 				IR(15 downto 9):="1100100"; -- continue ADD [n],n	
 			when "1011110" | "1011111" =>              -- ADD SUB [reg],reg  ADD.B [reg],reg
 				X1:=AoII;  Y1:=X; -- assembler reverses X1,Y1 
-				sub:=IR(9); add:=NOT IR(9); 
+				sub:=IR(9); 
 				half:=bwb; AD:=X2;
 				IR(15 downto 9):="1100100"; -- continue ADD [n],n	
 			when "1011010" | "0110100" =>              -- ADD SUB [reg],n  ADD.B [reg],n 
@@ -823,7 +821,7 @@ IF Reset = '1' THEN
 					Y1:=X; AD:=X1; AS<='0';
 				when 1 =>
 				when 2 =>
-					X1:=Di; sub:= NOT IR(10); add:=IR(10); AS<='1'; 
+					X1:=Di; sub:= NOT IR(10); AS<='1'; 
 				when 3 =>
 				when others  =>
 					if half='1' then 
@@ -836,7 +834,7 @@ IF Reset = '1' THEN
 						Y1:=Z1;
 					end if;    
 					set_flags;	FF<=StoreState;	rest:=true;
-					add:='0'; sub:='0';
+					sub:='0';
 				end case;
 				
 			when "0100011" =>              -- JGE (Reg,NUM,[reg],[n])
@@ -942,7 +940,7 @@ IF Reset = '1' THEN
 				case TT is
 				when 0 =>
 					X1:=X; Y1:=Y;
-					sub:=IR(9); add:=NOT IR(9); half:=bwb;	AD:=X2;
+					sub:=IR(9); half:=bwb;	AD:=X2;
 				when 1  =>
 				when others =>
 					if bwb='1' then 
@@ -955,7 +953,7 @@ IF Reset = '1' THEN
 						Y1:=Z1;
 					end if;    
 					set_flags;	FF<=StoreState;	rest:=true;
-					add:='0'; sub:='0';
+					sub:='0';
 				end case;
 				
 		-----------    instructions after "1101..." relative 
@@ -1067,7 +1065,7 @@ IF Reset = '1' THEN
 		if (rest=true) or (rest2=true) then
 			TT<=0; 
 			if rest2=true then 
-				RW:='1'; DS<='1'; AS<='1';
+				DS<='1'; AS<='1';
 				if SR(5)='1' and IR(15 downto 9)/="1000010"  then  -- SR(5) = trace flag reti
 					IR:="1000001000111100";  --INT 
 					FF<=ExecutionState;

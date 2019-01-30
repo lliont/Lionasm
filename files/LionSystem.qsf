@@ -100,7 +100,7 @@ set_global_assignment -name EDA_OUTPUT_DATA_FORMAT NONE -section_id eda_simulati
 
 # end ENTITY(LionSystem)
 # ----------------------
-set_global_assignment -name OPTIMIZATION_MODE "HIGH PERFORMANCE EFFORT"
+set_global_assignment -name OPTIMIZATION_MODE BALANCED
 set_global_assignment -name ALLOW_REGISTER_RETIMING ON
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
@@ -123,7 +123,7 @@ set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to JOYST1[3]
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to JOYST1
 set_global_assignment -name ROUTER_EFFORT_MULTIPLIER 2
 set_global_assignment -name OPTIMIZATION_TECHNIQUE SPEED
-set_global_assignment -name PLACEMENT_EFFORT_MULTIPLIER 11.5
+set_global_assignment -name PLACEMENT_EFFORT_MULTIPLIER 5
 set_location_assignment PIN_103 -to R
 set_location_assignment PIN_104 -to G
 set_location_assignment PIN_105 -to B
@@ -201,6 +201,20 @@ set_global_assignment -name ALM_REGISTER_PACKING_EFFORT LOW
 set_global_assignment -name FITTER_AUTO_EFFORT_DESIRED_SLACK_MARGIN "1.3 ns"
 set_global_assignment -name ENABLE_BUS_HOLD_CIRCUITRY OFF
 set_global_assignment -name ECO_OPTIMIZE_TIMING ON
+set_global_assignment -name DISABLE_REGISTER_MERGING_ACROSS_HIERARCHIES ON
+set_global_assignment -name SYNCHRONIZER_IDENTIFICATION AUTO
+set_global_assignment -name ALLOW_REGISTER_MERGING ON
+set_global_assignment -name ALLOW_REGISTER_DUPLICATION ON
+set_global_assignment -name MUX_RESTRUCTURE AUTO
+set_global_assignment -name NOT_GATE_PUSH_BACK ON
+set_global_assignment -name REMOVE_DUPLICATE_REGISTERS ON
+set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE SPEED
+set_global_assignment -name ADV_NETLIST_OPT_SYNTH_WYSIWYG_REMAP ON
+set_global_assignment -name ALLOW_SHIFT_REGISTER_MERGING_ACROSS_HIERARCHIES OFF
+set_global_assignment -name PRE_MAPPING_RESYNTHESIS ON
+set_global_assignment -name PHYSICAL_SYNTHESIS_COMBO_LOGIC ON
+set_global_assignment -name PERIPHERY_TO_CORE_PLACEMENT_AND_ROUTING_OPTIMIZATION AUTO
+set_global_assignment -name ROUTER_TIMING_OPTIMIZATION_LEVEL NORMAL
 set_global_assignment -name BDF_FILE 3_to_8.bdf
 set_global_assignment -name VHDL_FILE LPLL2.vhd
 set_global_assignment -name BDF_FILE QuADD.bdf
@@ -214,17 +228,10 @@ set_global_assignment -name BDF_FILE ALU_LA4.bdf
 set_global_assignment -name CDF_FILE output_files/prog.cdf
 set_global_assignment -name VHDL_FILE LionSystem.vhd
 set_global_assignment -name VHDL_FILE video_640x480_M.vhd
-set_global_assignment -name DISABLE_REGISTER_MERGING_ACROSS_HIERARCHIES ON
-set_global_assignment -name SYNCHRONIZER_IDENTIFICATION "FORCED IF ASYNCHRONOUS"
-set_global_assignment -name ALLOW_REGISTER_MERGING OFF
-set_global_assignment -name ALLOW_REGISTER_DUPLICATION ON
-set_global_assignment -name MUX_RESTRUCTURE OFF
-set_global_assignment -name NOT_GATE_PUSH_BACK ON
-set_global_assignment -name REMOVE_DUPLICATE_REGISTERS OFF
-set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE SPEED
-set_global_assignment -name ADV_NETLIST_OPT_SYNTH_WYSIWYG_REMAP ON
-set_global_assignment -name ALLOW_SHIFT_REGISTER_MERGING_ACROSS_HIERARCHIES OFF
-set_global_assignment -name PRE_MAPPING_RESYNTHESIS ON
-set_global_assignment -name PHYSICAL_SYNTHESIS_COMBO_LOGIC ON
-set_global_assignment -name PERIPHERY_TO_CORE_PLACEMENT_AND_ROUTING_OPTIMIZATION AUTO
+set_global_assignment -name AUTO_RAM_RECOGNITION ON
+set_global_assignment -name AUTO_RAM_BLOCK_BALANCING ON
+set_global_assignment -name BDF_FILE 74251_l.bdf
+set_global_assignment -name REMOVE_REDUNDANT_LOGIC_CELLS ON
+set_global_assignment -name ALLOW_SYNCH_CTRL_USAGE OFF
+set_global_assignment -name ALLOW_ANY_RAM_SIZE_FOR_RECOGNITION ON
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

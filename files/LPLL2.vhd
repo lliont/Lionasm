@@ -168,23 +168,23 @@ BEGIN
 		clk0_divide_by => 1,
 		clk0_duty_cycle => 50,
 		clk0_multiply_by => 1,
-		clk0_phase_shift => "10000",
+		clk0_phase_shift => "0",
 		clk1_divide_by => 1,
-		clk1_duty_cycle => 40,
+		clk1_duty_cycle => 50,
 		clk1_multiply_by => 1,
-		clk1_phase_shift => "0",
+		clk1_phase_shift => "10000",
 		clk2_divide_by => 1,
-		clk2_duty_cycle => 60,
+		clk2_duty_cycle => 50,
 		clk2_multiply_by => 1,
-		clk2_phase_shift => "0",
+		clk2_phase_shift => "10000",
 		clk3_divide_by => 1,
 		clk3_duty_cycle => 50,
 		clk3_multiply_by => 1,
-		clk3_phase_shift => "16000",
+		clk3_phase_shift => "0",
 		clk4_divide_by => 1,
 		clk4_duty_cycle => 50,
-		clk4_multiply_by => 1,
-		clk4_phase_shift => "13000",
+		clk4_multiply_by => 2,
+		clk4_phase_shift => "0",
 		compensate_clock => "CLK0",
 		inclk0_input_frequency => 20000,
 		intended_device_family => "Cyclone IV E",
@@ -269,15 +269,15 @@ END SYN;
 -- Retrieval info: PRIVATE: DIV_FACTOR3 NUMERIC "1"
 -- Retrieval info: PRIVATE: DIV_FACTOR4 NUMERIC "1"
 -- Retrieval info: PRIVATE: DUTY_CYCLE0 STRING "50.00000000"
--- Retrieval info: PRIVATE: DUTY_CYCLE1 STRING "40.00000000"
--- Retrieval info: PRIVATE: DUTY_CYCLE2 STRING "60.00000000"
+-- Retrieval info: PRIVATE: DUTY_CYCLE1 STRING "50.00000000"
+-- Retrieval info: PRIVATE: DUTY_CYCLE2 STRING "50.00000000"
 -- Retrieval info: PRIVATE: DUTY_CYCLE3 STRING "50.00000000"
 -- Retrieval info: PRIVATE: DUTY_CYCLE4 STRING "50.00000000"
 -- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE0 STRING "50.000000"
 -- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE1 STRING "50.000000"
 -- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE2 STRING "50.000000"
 -- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE3 STRING "50.000000"
--- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE4 STRING "50.000000"
+-- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE4 STRING "100.000000"
 -- Retrieval info: PRIVATE: EXPLICIT_SWITCHOVER_COUNTER STRING "0"
 -- Retrieval info: PRIVATE: EXT_FEEDBACK_RADIO STRING "0"
 -- Retrieval info: PRIVATE: GLOCKED_COUNTER_EDIT_CHANGED STRING "1"
@@ -323,7 +323,7 @@ END SYN;
 -- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE1 STRING "0"
 -- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE2 STRING "0"
 -- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE3 STRING "0"
--- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE4 STRING "0"
+-- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE4 STRING "1"
 -- Retrieval info: PRIVATE: OUTPUT_FREQ_UNIT0 STRING "MHz"
 -- Retrieval info: PRIVATE: OUTPUT_FREQ_UNIT1 STRING "MHz"
 -- Retrieval info: PRIVATE: OUTPUT_FREQ_UNIT2 STRING "MHz"
@@ -331,11 +331,11 @@ END SYN;
 -- Retrieval info: PRIVATE: OUTPUT_FREQ_UNIT4 STRING "MHz"
 -- Retrieval info: PRIVATE: PHASE_RECONFIG_FEATURE_ENABLED STRING "1"
 -- Retrieval info: PRIVATE: PHASE_RECONFIG_INPUTS_CHECK STRING "0"
--- Retrieval info: PRIVATE: PHASE_SHIFT0 STRING "10.00000000"
--- Retrieval info: PRIVATE: PHASE_SHIFT1 STRING "0.00000000"
--- Retrieval info: PRIVATE: PHASE_SHIFT2 STRING "0.00000000"
--- Retrieval info: PRIVATE: PHASE_SHIFT3 STRING "16.00000000"
--- Retrieval info: PRIVATE: PHASE_SHIFT4 STRING "13.00000000"
+-- Retrieval info: PRIVATE: PHASE_SHIFT0 STRING "0.00000000"
+-- Retrieval info: PRIVATE: PHASE_SHIFT1 STRING "10.00000000"
+-- Retrieval info: PRIVATE: PHASE_SHIFT2 STRING "10.00000000"
+-- Retrieval info: PRIVATE: PHASE_SHIFT3 STRING "0.00000000"
+-- Retrieval info: PRIVATE: PHASE_SHIFT4 STRING "0.00000000"
 -- Retrieval info: PRIVATE: PHASE_SHIFT_STEP_ENABLED_CHECK STRING "0"
 -- Retrieval info: PRIVATE: PHASE_SHIFT_UNIT0 STRING "ns"
 -- Retrieval info: PRIVATE: PHASE_SHIFT_UNIT1 STRING "ns"
@@ -388,23 +388,23 @@ END SYN;
 -- Retrieval info: CONSTANT: CLK0_DIVIDE_BY NUMERIC "1"
 -- Retrieval info: CONSTANT: CLK0_DUTY_CYCLE NUMERIC "50"
 -- Retrieval info: CONSTANT: CLK0_MULTIPLY_BY NUMERIC "1"
--- Retrieval info: CONSTANT: CLK0_PHASE_SHIFT STRING "10000"
+-- Retrieval info: CONSTANT: CLK0_PHASE_SHIFT STRING "0"
 -- Retrieval info: CONSTANT: CLK1_DIVIDE_BY NUMERIC "1"
--- Retrieval info: CONSTANT: CLK1_DUTY_CYCLE NUMERIC "40"
+-- Retrieval info: CONSTANT: CLK1_DUTY_CYCLE NUMERIC "50"
 -- Retrieval info: CONSTANT: CLK1_MULTIPLY_BY NUMERIC "1"
--- Retrieval info: CONSTANT: CLK1_PHASE_SHIFT STRING "0"
+-- Retrieval info: CONSTANT: CLK1_PHASE_SHIFT STRING "10000"
 -- Retrieval info: CONSTANT: CLK2_DIVIDE_BY NUMERIC "1"
--- Retrieval info: CONSTANT: CLK2_DUTY_CYCLE NUMERIC "60"
+-- Retrieval info: CONSTANT: CLK2_DUTY_CYCLE NUMERIC "50"
 -- Retrieval info: CONSTANT: CLK2_MULTIPLY_BY NUMERIC "1"
--- Retrieval info: CONSTANT: CLK2_PHASE_SHIFT STRING "0"
+-- Retrieval info: CONSTANT: CLK2_PHASE_SHIFT STRING "10000"
 -- Retrieval info: CONSTANT: CLK3_DIVIDE_BY NUMERIC "1"
 -- Retrieval info: CONSTANT: CLK3_DUTY_CYCLE NUMERIC "50"
 -- Retrieval info: CONSTANT: CLK3_MULTIPLY_BY NUMERIC "1"
--- Retrieval info: CONSTANT: CLK3_PHASE_SHIFT STRING "16000"
+-- Retrieval info: CONSTANT: CLK3_PHASE_SHIFT STRING "0"
 -- Retrieval info: CONSTANT: CLK4_DIVIDE_BY NUMERIC "1"
 -- Retrieval info: CONSTANT: CLK4_DUTY_CYCLE NUMERIC "50"
--- Retrieval info: CONSTANT: CLK4_MULTIPLY_BY NUMERIC "1"
--- Retrieval info: CONSTANT: CLK4_PHASE_SHIFT STRING "13000"
+-- Retrieval info: CONSTANT: CLK4_MULTIPLY_BY NUMERIC "2"
+-- Retrieval info: CONSTANT: CLK4_PHASE_SHIFT STRING "0"
 -- Retrieval info: CONSTANT: COMPENSATE_CLOCK STRING "CLK0"
 -- Retrieval info: CONSTANT: INCLK0_INPUT_FREQUENCY NUMERIC "20000"
 -- Retrieval info: CONSTANT: INTENDED_DEVICE_FAMILY STRING "Cyclone IV E"
@@ -470,9 +470,9 @@ END SYN;
 -- Retrieval info: CONNECT: c4 0 0 0 0 @clk 0 0 1 4
 -- Retrieval info: GEN_FILE: TYPE_NORMAL LPLL2.vhd TRUE
 -- Retrieval info: GEN_FILE: TYPE_NORMAL LPLL2.ppf TRUE
--- Retrieval info: GEN_FILE: TYPE_NORMAL LPLL2.inc FALSE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL LPLL2.inc TRUE
 -- Retrieval info: GEN_FILE: TYPE_NORMAL LPLL2.cmp TRUE
--- Retrieval info: GEN_FILE: TYPE_NORMAL LPLL2.bsf FALSE
--- Retrieval info: GEN_FILE: TYPE_NORMAL LPLL2_inst.vhd FALSE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL LPLL2.bsf TRUE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL LPLL2_inst.vhd TRUE
 -- Retrieval info: LIB_FILE: altera_mf
 -- Retrieval info: CBX_MODULE_PREFIX: ON
