@@ -172,7 +172,6 @@ Signal rFIFO: FIFO_r;
 Signal inb: std_logic_vector(9 downto 2);
 Signal rcounter:natural range 0 to 4095:=1;
 signal dr: boolean:=false;
-signal rd:boolean :=true;
 signal rptr1, rptr2: natural range 0 to rblen := 0; 
 signal rstate: natural range 0 to 15 :=0 ;
 
@@ -185,7 +184,7 @@ begin
 	begin
 		if (reset='1') then 
 			rptr1<=0; rptr2<=0; data_ready<='0'; rcounter<=1; rstate<=0;
-			 dr<=false; rd<=true;  ra:=false; 
+			 dr<=false; ra:=false; 
 		elsif  clk'EVENT  and clk = '1' then
 			rcounter<=rcounter+1;
 			

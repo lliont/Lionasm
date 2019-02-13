@@ -16,7 +16,7 @@ entity LionCPU16 is
 		Di  : IN  Std_logic_vector(15 downto 0);
 		DOo  : OUT  Std_logic_vector(15 downto 0);
 		ADo  : OUT  Std_logic_vector(15 downto 0); 
-		RWo,AS,DS : OUT Std_logic;
+		RWo,ASo,DSo : OUT Std_logic;
 		RD, Reset, Clock, Int, HOLD: IN Std_Logic;
 		IOo, A16, HOLDA : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
@@ -31,6 +31,8 @@ constant OV:natural:=1;
 constant ZR:natural:=2;
 constant NG:natural:=3; 
 constant JXAD:natural:=4;  
+constant INT_EN:natural:=7;  
+constant TRAP:natural:=5;
 constant ZERO8 : std_logic_vector(7 downto 0):= (OTHERS => '0');
 constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 constant ONE16: std_logic_vector(15 downto 0) := "0000000000000001";
@@ -44,7 +46,7 @@ constant ExecutionState:Std_logic_vector(2 downto 0):="110";
 constant StoreState:Std_logic_vector(2 downto 0):="111";
 
 SIGNAL IDX: Std_logic_vector(15 downto 0):=ZERO16;
-SIGNAL X1o,X2,Y1o,Ao,AoII,QZ1: Std_logic_vector(15 downto 0);
+SIGNAL X2,Ao,AoII: Std_logic_vector(15 downto 0);
 SIGNAL RPC:Std_logic_vector(15 downto 0):="0000000000010000";
 SIGNAL Z1: Std_logic_vector(15 downto 0):=ZERO16;
 SIGNAL SR: Std_logic_vector(7 downto 0):=ZERO8;
@@ -61,19 +63,6 @@ PORT (X, Y 	: IN STD_LOGIC_VECTOR(15 DOWNTO 0) ;
 		carry,overflow,zero,neg: OUT STD_LOGIC ) ;
 END COMPONENT ;
 
---COMPONENT ALU_LA2 IS
---PORT (X, Y 	: IN STD_LOGIC_VECTOR(15 DOWNTO 0) ;
---		Z 		: OUT	STD_LOGIC_VECTOR(15 DOWNTO 0) ;
---		add, sub, half, cin, clock: IN STD_LOGIC ;
---		carry,overflow,zero,neg: OUT STD_LOGIC ) ;
---END COMPONENT ;
-
-COMPONENT QuADD IS
-PORT (QX, QY 	: IN STD_LOGIC_VECTOR(15 DOWNTO 0) ;
-		QZ 		: OUT	STD_LOGIC_VECTOR(15 DOWNTO 0) ;
-		qsub: IN STD_LOGIC ) ;
-END COMPONENT ;
-
 COMPONENT regs IS
 PORT (Ai : IN STD_logic_vector(15 downto 0);
 		Ao, AoII : OUT STD_logic_vector(15 downto 0);
@@ -83,8 +72,8 @@ END COMPONENT;
 
 
 
-shared variable Do,AD,X1,Y1,X,Y,QX1,QY1,Ai,IR,PC: Std_logic_vector(15 downto 0);
-shared variable IO,cin,RW,Wen,sub,half,rhalf,qsub: Std_logic;
+shared variable Do,AD,X1,Y1,X,Y,Ai,IR,PC: Std_logic_vector(15 downto 0);
+shared variable IO,cin,RW,Wen,sub,half,rhalf,AS,DS: Std_logic;
 shared variable M : Std_logic_vector(31 downto 0);
 shared variable R,RR: std_logic_vector(2 downto 0);
 
@@ -114,25 +103,27 @@ end set_flags;
 begin
 	ALU: ALU_LA4
 	PORT MAP ( X1,Y1,Z1, sub, half, cin, carry, overflow, zero, neg ) ;
-	FADD: QuADD 
-	PORT MAP ( QX1,QY1,QZ1,qsub ) ;
+--	FADD: QuADD 
+--	PORT MAP ( QX1,QY1,QZ1) ;
+--	FSUB: QuSUB 
+--	PORT MAP ( QX1,QY1,QSZ1) ;
 	REG:REGs
 	PORT MAP ( Ai,Ao,AoII,clock,Wen,rhalf,R,RR ) ;	
 
-
-	
 DOo<=Do; RWo<=RW; ADo<=AD; IOo<=IO;
+ASo<=AS; DSo<=DS;
 
-Process (Clock)
+
+Process (Clock,RD,RESET)
 variable rest,rest2,fetch,fetch1,fetch2,fetch3,rel,setreg:boolean:=false;
-variable tmp,tmp2,stmp:Std_logic_vector(15 downto 0);
+variable tmp,tmp2,stmp,mtmp:Std_logic_vector(15 downto 0);
 variable r1,r2: Std_logic_vector(2 downto 0);
 variable bt: natural range 0 to 15;
 variable bwb: Std_logic; --  bit to distinguish between word byte operations 
 begin
 IF Reset = '1' and rising_edge(clock) THEN
-		PC := "0000000000010000"; SR <= ZERO8;  HOLDA<='0'; FF<=InitialState; TT<=0;
-		AS<='1';  DS<='1'; RW:='1'; ST <= "1111111111111110"; --was (16382) end of internal ram
+		PC := "0000000000010000"; SR <= "10000000";  HOLDA<='0'; FF<=InitialState; TT<=0;
+		AS:='1';  DS:='1'; RW:='1'; ST <= "1111111111111110"; 
 		AD:= (OTHERS => '0'); IR:=(OTHERS=>'0');	 IO:='0';
 		Wen:='0'; rhalf:='0';  A16<='0';
 		sub:='0';  cin:='0'; IA<="00"; IACK<='0';
@@ -140,36 +131,32 @@ IF Reset = '1' and rising_edge(clock) THEN
 		HOLDA<='1'; 
 	ELSIF  rising_edge(clock) AND RD='0' THEN 
 	   
-	ELSIF rising_edge(clock) AND HOLD='1' and INT='0' AND FF=InitialState AND TT=0 and SR(7)='0' THEN   -- Interrupts
-		IR:="100000100000"&I&"00";
-		FF<=ExecutionState; TT<=0; 
-		IA<=I; IACK<='1'; Wen:='0';
-		HOLDA<='0'; RW:='1'; 
+	ELSIF rising_edge(clock) AND (HOLD='1') and (INT='0') AND (FF=InitialState) AND (TT=0) and (SR(INT_EN)='0') THEN   -- Interrupts
+		AS:='1'; DS:='1'; IR:="100000100000"&I&"00"; FF<=ExecutionState; TT<=0; IA<=I; IACK<='1'; 
+		HOLDA<='0'; RW:='1'; IO:='0'; rest2:=false; mtmp:=ST-2;
 	ELSIF  rising_edge(clock)  THEN   
-		rest:=false; rest2:=false; HOLDA<='0'; 
+		rest:=false;   
 		case  FF is -- Fetch Instruction 
 		when InitialState =>
 			case TT is
 			when 0 =>
-				IO:='0'; qsub:='0'; QX1:=PC; QY1:=TWO16;
-				rel:=false; setreg:=true; RW:='1'; RW:='1'; 
-				AD:=PC; half:='0';  DS<='1'; AS<='0'; A16<='0'; Wen:='0'; 
+				IO:='0'; rest2:=false;
+				RW:='1'; HOLDA<='0';	AD:=PC; half:='0';  
+				DS:='1'; AS:='0'; A16<='0'; Wen:='0'; 
 			when 1 =>
-				 sub:='0'; cin:='0'; rhalf:='0'; 
+				 sub:='0'; cin:='0'; rhalf:='0'; setreg:=true;
 				 fetch:=false; fetch1:=false; fetch2:=false;
-				 QX1:=ST; --QY1:=TWO16;
-				 PC:=QZ1; --PC+2
+				 PC:=PC+2; stmp:=ST+2; mtmp:=ST-2;
 			when others => 
 				IR:=Di; RR:=Di(4 downto 2); R:=Di(8 downto 6);
-				rest:=true; AS<='1';
+				rest:=true; AS:='1';
 				bt:=to_integer(unsigned(IR(5 downto 2)));
 				bwb:= IR(5);
 				rel:= (IR(15 downto 13)="111") or (IR(15 downto 12)="1101");  
 				fetch3:=IR(15 downto 12)="1100"; 
 				r2:=RR; r1:=R;	
-				stmp:=QZ1; --ST+2
 				if IR(0)='1' then
-					FF<=FetchState; AD:=PC; AS<='0'; 
+					FF<=FetchState; AD:=PC; AS:='0'; 
 				else 
 					if IR(1)='1' then	FF<=IndirectState;
 					else	
@@ -181,10 +168,9 @@ IF Reset = '1' and rising_edge(clock) THEN
 			--X1:=Ao;	Y1:=AoII;
 			case TT is 
 			when 0 =>
-				QX1:=PC; --QY1:=TWO16;
-				fetch1:=true; fetch:=true; 
+				fetch1:=true; fetch:=true; PC:=PC+2; 
 			when others =>
-				X:=Di;  AS<='1'; 
+				X:=Di;  AS:='1'; 
 				if fetch3 then 
 					FF<=Fetch2State;
 				else	
@@ -194,26 +180,24 @@ IF Reset = '1' and rising_edge(clock) THEN
 						if rel then FF<=RelativeState; else FF<=ExecutionState; end if;
 					end if;
 				end if;
-				PC:=QZ1;
 				rest:=true;
 			end case;
 		when Fetch2State =>             -- fetch one more into Y
 			case TT is
 			when 0 =>
-				AD:=PC;  AS<='0';
+				AD:=PC;  AS:='0';
 			when 1 =>
-				QX1:=PC; --QY1:=TWO16;
 			when others =>
-				Y:=Di; AS<='1'; 
+				Y:=Di; AS:='1'; 
 				if IR(1)='1' then	FF<=IndirectState; else FF<=ExecutionState;	end if;
 				rest:=true;
-				PC:=QZ1; --PC+2; 
+				PC:=PC+2; 
 			end case;
 		when IndirectState =>              -- indirect
 			X1:=Ao;	Y1:=AoII;
 			case TT is
 			when 0 =>
-				fetch2:=true; fetch:=true; AS<='0';  
+				fetch2:=true; fetch:=true; AS:='0';  
 				if IR(0)='1' then	AD:=X; X2<=X; else AD:=Y1; X2<=y1; end if;
 			when 1 =>
 			when others =>
@@ -223,21 +207,14 @@ IF Reset = '1' and rising_edge(clock) THEN
 				else
 					X:=Di; 
 				end if;
-				AS<='1';	FF<=ExecutionState;
+				AS:='1';	FF<=ExecutionState;
 				rest:=true;
 			end case;
 		when RelativeState =>              -- relative
 			X1:=Ao;	Y1:=AoII;
-			case TT is
-			when 0 =>
-				if fetch then QY1:=X; else QY1:=X1; end if;
-				QX1:=PC;
-			--when 1  =>
-			when others => 
-				 if IR(1)='1' then FF<=IndirectState; else FF<=ExecutionState; end if;
-				 rest:=true; 
-				 RPC<=QZ1;
-			end case;
+			if fetch then RPC<=PC+X; else RPC<=PC+X1; end if;
+			 if IR(1)='1' then FF<=IndirectState; else FF<=ExecutionState; end if;
+			 rest:=true; 
 		when "101" =>
 		when ExecutionState =>               --- F="110" Operation execution cycles   
 			if TT=0 then X1:=Ao;	Y1:=AoII; end if;
@@ -286,12 +263,13 @@ IF Reset = '1' and rising_edge(clock) THEN
 				when 0 =>
 					Do:=Y1; RW:='0';
 					if fetch then AD:=X; else AD:=X1; end if;
-					IO:='1'; AS<='0';  DS<='0'; 	
+					IO:='1'; AS:='0';   	
 				when 1 =>
+					DS:='0';
 				when others =>
-					IO:='0';	--DS<='1'; AS<='1'; RW:='1';
 					rest2:=true;
-				end case;
+					IO:='0';
+					end case;
 			when "0001000" =>              --SWAP R
 				tmp:=X1(7 downto 0) & X1(15 downto 8);
 				set_reg(r1,tmp,'0','0'); 
@@ -302,7 +280,6 @@ IF Reset = '1' and rising_edge(clock) THEN
 			when "0001010" =>            --MULU Reg,Reg	MULU.B Reg,(Reg,NUM,[reg],[n])
 				case TT is
 				when 0 =>
-					SR(CA)<='0'; SR(NG) <= '0';
 					if fetch then
 						if bwb='0' then
 							M:=std_logic_vector(unsigned(X1) * unsigned(X));
@@ -317,6 +294,7 @@ IF Reset = '1' and rising_edge(clock) THEN
 						end if;
 					end if;				
 				when 1 =>
+					SR(CA)<='0'; SR(NG) <= '0';
 					if bwb='1' then 
 						SR(OV) <='0'; --neg & zero & overflow & carry
 						if M(15 downto 0) = ZERO16 then SR(ZR) <= '1'; else SR(ZR) <='0'; end if;
@@ -340,7 +318,7 @@ IF Reset = '1' and rising_edge(clock) THEN
 			when "0001100" =>           -- MOV.B <Reg>,(Reg,NUM,[reg],[n])
 				case TT is
 				when 0 =>
-					AD:=X1 ; AS<='0';  
+					AD:=X1 ; AS:='0';  
 				when 1 =>
 				when others =>
 					if AD(0)='1' then	
@@ -350,7 +328,7 @@ IF Reset = '1' and rising_edge(clock) THEN
 						if  fetch then	Y1:= X(7 downto 0) & Di(7 downto 0);
 						else	Y1:= Y1(7 downto 0) & Di(7 downto 0);	end if;
 					end if;
-					AS<='1';	rest:=true; FF<=StoreState;
+					AS:='1';	rest:=true; FF<=StoreState;
 				end case;
 			when "0001101" =>               -- CMP & CMP.B (n),Reg
 				half:=bwb;
@@ -450,7 +428,7 @@ IF Reset = '1' and rising_edge(clock) THEN
 				when 0 =>
 					half:=bwb;
 					IF fetch then Y1:= X; end if; 
-					AD:=X1; AS<='0';
+					AD:=X1; AS:='0';
 				when 1 =>
 				when 2 =>
 					if bwb='1' then
@@ -459,7 +437,7 @@ IF Reset = '1' and rising_edge(clock) THEN
 					else
 						X1:=Di;
 					end if;
-					sub:='1'; AS<='1'; 
+					sub:='1'; AS:='1'; 
 				when 3 =>
 				--when 4 =>
 				rest2:=true; sub:='0';
@@ -545,14 +523,12 @@ IF Reset = '1' and rising_edge(clock) THEN
 			when "0110101" =>              -- JSR Reg  /NUM / <reg>/<n>
 				case TT is
 				when 0 =>
-					AD:=ST;	AS<='0'; RW:='0';  Do:=PC;
+					AD:=ST;	AS:='0'; RW:='0';  Do:=PC;	DS:='0'; 
 				when 1 =>
-					DS<='0'; 
-				when 2 =>
 				when others =>
-					ST<=ST-2; 
-					if fetch then tmp:=X; else	tmp:=Y1; end if;
-					PC:=tmp;	rest2:=true;
+					ST<=mtmp; --ST-2; 
+					if fetch then PC:=X; else	PC:=Y1; end if;
+					rest2:=true;
 				end case;
 			when "0110110" =>              --ROL Reg
 				tmp:= std_logic_vector(shift_left(unsigned (X1),bt));
@@ -562,10 +538,10 @@ IF Reset = '1' and rising_edge(clock) THEN
 			when "0110111" =>              -- RET
 				case TT is
 				when 0 =>
-					ST<=ST+2; 
+					ST<=stmp; --ST+2; 
+				--when 1 =>
+					AD:=stmp; AS:='0';  
 				when 1 =>
-					AD:=ST; AS<='0';  
-				when 2 =>
 				when others =>
 					PC:=Di;
 					rest2:=true;
@@ -596,9 +572,9 @@ IF Reset = '1' and rising_edge(clock) THEN
 			when "0111110" =>              -- POPX 
 				case TT is
 				when 0 =>
-					ST<=stmp; 
-					AD:=stmp;	AS<='0'; 
+					AD:=stmp;	AS:='0'; 
 				when 1 =>
+					ST<=stmp;
 				when others =>
 					IDX<=Di; 
 					rest2:=true;
@@ -606,8 +582,9 @@ IF Reset = '1' and rising_edge(clock) THEN
 			when "0111111" =>              -- POP SR
 				case TT is
 				when 0 =>
-					ST<=stmp; AD:=stmp;	AS<='0';
+					AD:=stmp;	AS:='0';
 				when 1 =>
+					ST<=stmp; 
 				when others =>
 					SR<=Di(7 downto 0); 
 					rest2:=true;
@@ -615,8 +592,9 @@ IF Reset = '1' and rising_edge(clock) THEN
 			when "1000000" =>              -- POP Rn
 				case TT is
 				when 0 =>
-					ST<=stmp; AS<='0'; AD:=stmp;
+					  AD:=stmp; AS:='0';
 				when 1 =>
+						ST<=stmp;
 				when others =>
 					tmp:=Di;
 					set_reg(r1,tmp,'0','0');
@@ -625,40 +603,39 @@ IF Reset = '1' and rising_edge(clock) THEN
 			when "1000001" =>              -- INT n  don't change opcode
 				case TT is
 				when 0 =>
-					AD:=ST; AS<='0'; RW:='0'; Do:=PC; Wen:='0';
-					DS<='0'; 
+					AD:=ST; Do:=PC; Wen:='0'; RW:='0';
+					AS:='0'; DS:='0'; ST<=mtmp; 
 				when 1 =>
 				when 2 =>
-					ST<=ST-2;
-					AS<='1';  DS<='1';
+					AS:='1';  DS:='1';
 				when 3 =>
-					AD:=ST; Do(7 downto 0):=SR;
-					AS<='0';  RW:='0';   DS<='0'; 
+					AD:=ST; Do(7 downto 0):=SR; RW:='0';
+					AS:='0'; DS:='0'; 
 				when 4 =>
+					ST<=ST-2; SR(INT_EN)<='1'; 
 				when 5 =>
-					SR(7)<='1'; ST<=ST-2;
-					AS<='1'; DS<='1';  RW:='1'; 
+					AS:='1'; DS:='1';  RW:='1'; 
 				when 6 =>
 					AD:="00000000000"&IR(5 downto 2)&"0";
-					AS<='0'; 
+					AS:='0'; 
 				when 7 =>
 				when others =>
-					PC:=Di; SR(5)<='0'; 
+					PC:=Di; SR(TRAP)<='0'; 
 					rest2:=true; 
 				end case;
 			when "1000010" =>              -- RETi  don't change opcode
 				case TT is
 				when 0 =>
-					ST<=stmp;
-					AD:=stmp; AS<='0';   
+					AD:=stmp; AS:='0';   
 				when 1 =>
+					ST<=stmp;
 				when 2 =>
-					SR<=Di( 7 downto 0); ST<=ST+2;   AS<='1';
+					SR<=Di( 7 downto 0); ST<=ST+2;   AS:='1';
 				when 3 =>
-					AD:=ST;	AS<='0';  
+					AD:=ST;	AS:='0';  
 				when 4 =>
 				when others =>	
-					PC:=Di;  IA<="00"; IACK<='0'; --AS<='1';
+					PC:=Di;  IA<="11"; IACK<='0'; --AS:='1';
 					rest2:=true;
 				end case;
 			when "1000011" =>              -- CLI
@@ -674,9 +651,9 @@ IF Reset = '1' and rising_edge(clock) THEN
 			when "1000110" =>              -- IN Reg, (Reg, n)
 				case TT is
 				when 0 =>
-					IO:='1';
+					RW:='1'; 
 					if fetch then tmp:=X; else	tmp:=Y1;	end if;
-					AD:=tmp;	AS<='0';   
+					AD:=tmp;	IO:='1'; AS:='0';   
 				when 1 =>
 				when others =>
 					if (bwb='1') and (AD(0)='0') then
@@ -685,7 +662,7 @@ IF Reset = '1' and rising_edge(clock) THEN
 						tmp:=Di;
 					end if;
 					IO:='0';
-					set_reg(r1,tmp,bwb,'0'); --AS<='1'; 
+					set_reg(r1,tmp,bwb,'0'); --AS:='1'; 
 					rest2:=true;
 				end case;
 			when "1000111" | "1001000" =>              -- INC DEC & INC.B DEC.B Rn
@@ -705,7 +682,6 @@ IF Reset = '1' and rising_edge(clock) THEN
 					end if;
 					Y1:=tmp;
 					rest:=true; FF<=StoreState;    
-
 			when "1001100" =>              -- MOVHL Reg,(Reg,NUM,[reg],[n])
 				if fetch2 then
 					if X2(0)='1'  then tmp:=X(7 downto 0)&X1(7 downto 0);
@@ -756,13 +732,13 @@ IF Reset = '1' and rising_edge(clock) THEN
 				half:=bwb;
 				IR(15 downto 9):="0000011"; -- continue as in ADD
 			when "1010110" =>              -- OUT Reg,n	
-				Do:=X; AD:=X1; RW:='0'; IO:='1'; AS<='0';  DS<='0';
+				Do:=X; AD:=X1; RW:='0'; IO:='1'; AS:='0';  DS:='0';
 				IR(15 downto 9):="0000111"; -- continue as in OUT n,ax
 			when "1010111" =>              -- OUT.B (Reg,n),Reg	
 				case TT is
 				when 0 =>
 					if fetch then AD:=X; else AD:=X1; end if;
-					IO:='1'; RW:='1'; AS<='0';   
+					IO:='1'; RW:='1'; AS:='0';   
 				when 1 =>
 				when 2 =>
 					if AD(0)='0' then
@@ -770,14 +746,14 @@ IF Reset = '1' and rising_edge(clock) THEN
 					else
 						Do:=Di(15 downto 8)&Y1(7 downto 0);
 					end if;
-					RW:='0'; DS<='0'; 
+					RW:='0'; DS:='0'; 
 				when 3 =>
 				when others =>
 					IO:='0';
 					rest2:=true;
 				end case;
 			when "1011000" =>                     -- OUT.B Reg,n	
-					AD:=X1; Y1:=X; IO:='1'; AS<='0'; 
+					AD:=X1; Y1:=X; IO:='1'; AS:='0'; 
 					IR(15 downto 9):="1010111";  -- as OUT.B	
 			when "1001011" =>    --SLLL Reg
 			      case TT is
@@ -818,10 +794,10 @@ IF Reset = '1' and rising_edge(clock) THEN
 			when "1011010" | "0110100" =>              -- ADD SUB [reg],n  ADD.B [reg],n 
 				case TT is
 				when 0 =>
-					Y1:=X; AD:=X1; AS<='0';
+					Y1:=X; AD:=X1; AS:='0';
 				when 1 =>
 				when 2 =>
-					X1:=Di; sub:= NOT IR(10); AS<='1'; 
+					X1:=Di; sub:= NOT IR(10); AS:='1'; 
 				when 3 =>
 				when others  =>
 					if half='1' then 
@@ -845,38 +821,23 @@ IF Reset = '1' and rising_edge(clock) THEN
 				rest2:=true;  
 
 			when "1011011" | "0111010" =>              --ADD SUB SP,(Reg,NUM,[reg],[n])
-				case TT is
-				when 0 =>
-					QX1:=ST;
-					if fetch then QY1:=X; end if;
-					qsub:=NOT IR(9); --add:=IR(9); 
-				when others =>
 					rest2:=true;
-					ST<=QZ1; 
-				end case;	
-			when "0110011" =>   --JXAB JXAW
-				case TT is
-				when 0 =>
 					if fetch then tmp:=X; else tmp:=Y1; end if;
-					QX1:=X1; 
-					if bwb='1' then
-						QY1:=ONE16;
-					else
-						QY1:=TWO16;
-					end if;
-					qsub:=SR(JXAD);
-				when others =>
+					if IR(9)='1' then ST<=ST+tmp; else ST<=ST-tmp; end if;
+			when "0110011" =>   --JXAB JXAW
 					IDX<=IDX-1;	
-					if (IDX/=ZERO16) then PC:=tmp; set_reg(r1,QZ1,'0','0');  end if;
-					--qsub='0'; add:='0'; sub:='0';
+					if (IDX/=ZERO16) then 
+						if fetch then PC:=X; else PC:=Y1; end if;
+						if SR(JXAD)='0' then  tmp:=X1+2-bwb; else tmp:=X1-2+bwb; end if;
+						set_reg(r1,tmp,'0','0'); 
+					end if;
 					rest2:=true;
-				end case;
 				
 			when "0101000" =>  -- xmov .b An1,(An2,address)
 				case TT is
 				when 0 =>
 					if fetch then AD:=X; else	AD:=Y1;	end if;
-					A16<='1';	AS<='0';   
+					A16<='1';	AS:='0';   
 				when 1 =>
 				when others =>
 					if (bwb='1') and (AD(0)='0') then
@@ -891,7 +852,7 @@ IF Reset = '1' and rising_edge(clock) THEN
 				case TT is
 				when 0 =>
 					if fetch then AD:=X; else AD:=X1; end if;
-					A16<='1'; AS<='0';  
+					A16<='1'; AS:='0';  
 				when 1 =>
 					if bwb='0' then Do:=Y1; end if;
 				when 2 =>
@@ -902,9 +863,9 @@ IF Reset = '1' and rising_edge(clock) THEN
 							Do:=Di(15 downto 8)&Y1(7 downto 0);
 						end if;
 					end if;
-				   AS<='1'; A16<='0';
+				   AS:='1'; A16<='0';
 				when 3 =>
-					RW:='0'; AS<='0'; A16<='1'; DS<='0'; 
+					RW:='0'; AS:='0'; A16<='1'; DS:='0'; 
 				when 4 =>
 				when others =>
 					A16<='0';	
@@ -933,7 +894,7 @@ IF Reset = '1' and rising_edge(clock) THEN
 				IR(15 downto 9):="0000011"; -- continue as in ADD
 
 			when "1100011" =>              -- OUT n,n	
-					AD:=X; Do:=Y;  RW:='0'; IO:='1';  AS<='0';  DS<='0';
+					AD:=X; Do:=Y;  RW:='0'; IO:='1';  AS:='0';  DS:='0';
 					IR(15 downto 9):="0000111"; -- continue as in OUT n,ax
 					
 			when "1100100" | "1100101" =>              -- ADD,SUB  [n],n  ADD.B, SUB.B [n],n
@@ -958,21 +919,13 @@ IF Reset = '1' and rising_edge(clock) THEN
 				
 		-----------    instructions after "1101..." relative 
 			when "1101001" =>   --JRXAB JRXAW
-				case TT is
-				when 0 =>
-					QX1:=X1; 
-					if bwb='1' then
-						QY1:=ONE16;
-					else
-						QY1:=TWO16;
-					end if;
-					qsub:=SR(JXAD);
-				when others =>
-					IDX<=IDX-1;	
-					if (IDX/=ZERO16) then PC:=RPC; set_reg(r1,QZ1,'0','0'); end if;
-					--qsub='0'; add:='0'; sub:='0';
-					rest2:=true;
-				end case;
+				IDX<=IDX-1;	
+				if (IDX/=ZERO16) then 
+					PC:=RPC;
+					if SR(JXAD)='0' then  tmp:=X1+2-bwb; else tmp:=X1-2+bwb; end if;
+					set_reg(r1,tmp,'0','0'); 
+				end if;
+				rest2:=true;				
 			when "1110000" =>              -- JR (Reg,NUM,[reg],[n])
 				PC:=RPC; 
 				rest2:=true;
@@ -994,11 +947,11 @@ IF Reset = '1' and rising_edge(clock) THEN
 			when "1110110" =>              -- JRSR (Reg,NUM,[reg],[n])
 				case TT is
 				when 0 =>
-					AD:=ST;	AS<='0'; RW:='0'; Do:=PC; 
-					DS<='0'; 
+					AD:=ST;	AS:='0'; RW:='0'; Do:=PC; 
+					DS:='0'; 
 				when 1 =>
 				when others =>
-					ST<=ST-2; --DS<='1'; RW:='1'; AS<='1';
+					ST<=mtmp; --ST-2; --DS:='1'; RW:='1'; AS:='1';
 					PC:=RPC;
 					rest2:=true;
 				end case;	
@@ -1017,18 +970,18 @@ IF Reset = '1' and rising_edge(clock) THEN
 			when "1111011" =>              -- MOVR Reg,([n],[R])  MOVR.B Reg,([n],[R])  GADR
 				case TT is
 				when 0 =>
-					AD:=RPC;	AS<='0'; --RW:='1';
+					AD:=RPC;	AS:='0'; --RW:='1';
 				when 1=>
 				when others =>
 					rest2:=true;
 					if fetch2 then	tmp:=Di; else tmp:=RPC;	end if;
-					set_reg(r1,tmp,bwb,'0');   --AS<='1';
+					set_reg(r1,tmp,bwb,'0');   --AS:='1';
 				end case;
 			when "1111100" =>              -- MOVR MOVR.B([n],[R]),Reg	   
 				case TT is
 				when 0 =>
 					AD:=RPC;  --RW:='1'; 
-					if bwb='0' then rest:=true; FF<=StoreState; else AS<='0'; end if;
+					if bwb='0' then rest:=true; FF<=StoreState; else AS:='0'; end if;
 				when 1 =>
 				when others =>
 					if AD(0)='1' then	
@@ -1036,7 +989,7 @@ IF Reset = '1' and rising_edge(clock) THEN
 					else 
 						Y1:= Y1(7 downto 0) & Di(7 downto 0);
 					end if;
-					AS<='1';	rest:=true; FF<=StoreState;
+					AS:='1';	rest:=true; FF<=StoreState;
 				end case;
 			when "1111101" =>   -- JRGE ! 		
 				If SR(ZR)='1' or (SR(NG)=SR(OV)) then	PC:=RPC; end if;  
@@ -1055,7 +1008,7 @@ IF Reset = '1' and rising_edge(clock) THEN
 		when others => -- FF="111" write Y1 to mem in AD
  			case TT is
 			when 0 =>
-				AS<='0';  Do:=Y1; RW:='0';	DS<='0'; 
+				IO:='0'; AS:='0';  Do:=Y1; RW:='0';	DS:='0'; 
 			when	1 =>
 			when others =>	
 				rest2:=true;
@@ -1065,8 +1018,8 @@ IF Reset = '1' and rising_edge(clock) THEN
 		if (rest=true) or (rest2=true) then
 			TT<=0; 
 			if rest2=true then 
-				DS<='1'; AS<='1';
-				if SR(5)='1' and IR(15 downto 9)/="1000010"  then  -- SR(5) = trace flag reti
+				DS:='1'; AS:='1'; RW:='1'; IO:='1';
+				if SR(TRAP)='1' and IR(15 downto 9)/="1000010"  then  -- SR(5) = trace flag reti
 					IR:="1000001000111100";  --INT 
 					FF<=ExecutionState;
 				else	

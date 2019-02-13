@@ -60,9 +60,9 @@ addr<=addr1;
 vidc<=not vidc when falling_edge(sclk);
 HSYN<='0' when (pixel<96) else '1'; 
 VSYN<='0' when lines<2 else '1';
-VSINT<='0' when (lines=0) and (pixel<4) else	'1';
+VSINT<='0' when (lines=0) and (pixel<4) and rising_edge(sclk) else '1' when rising_edge(sclk);
 
-process (sclk)
+process (sclk,EN)
 variable m78: natural range 0 to 31;
 variable FG,BG: std_logic_vector(3 downto 0);
 variable lin, p16, pd4, pm4: natural range 0 to 1023;
@@ -126,10 +126,6 @@ end process;
 end;
 
 
-
-
-
-
 -----------------------------------------------------------------------------
 -- Color Video Controller Mode 1
 -- Theodoulos Liontakis (C) 2018
@@ -171,10 +167,10 @@ begin
 addr<=addr1;
 vidc<=not vidc when falling_edge(sclk);
 VSYN<='0' when lines<2 else '1';	
-VSINT<='0' when (lines=0) and (pixel<4) else	'1';	
+VSINT<='0' when (lines=0) and (pixel<4) and rising_edge(sclk) else '1' when rising_edge(sclk);	
 HSYN<='0' when (pixel<96) else '1'; 
 
-process (sclk)
+process (sclk,EN)
 
 variable BRGB: std_logic_vector(3 downto 0);
 variable pixm4: natural range 0 to 1023;
@@ -237,6 +233,10 @@ USE ieee.std_logic_1164.all;
 USE ieee.numeric_std.all ;
 
 entity VideoSp is
+	generic 
+	(
+		DATA_LINE : natural := 1
+	);
 	port
 	(
 		sclk: IN std_logic;
@@ -246,6 +246,7 @@ entity VideoSp is
 		SPQ: IN std_logic_vector(15 downto 0)
 	);
 end VideoSp;
+
 
 Architecture Behavior of VideoSp is
 
@@ -269,12 +270,11 @@ type sprite_enable is array (0 to spno) of std_logic;
 
 shared variable addr1: natural range 0 to 2047;
 shared variable lines: natural range 0 to 1023;
-shared variable pixel : natural range 0 to 1023;
 shared variable det: std_logic:='0';
 Signal vidc: boolean:=false;
 Signal SX,SY: sprite_dim;
 Signal SEN:sprite_enable;
-
+Signal pixel : natural range 0 to 1023;
 
 begin
 
@@ -296,7 +296,7 @@ variable blvec:std_logic_vector(3 downto 0);
 begin
 	if  rising_edge(sclk) then
 		if (reset='0') then
-			pixel:=4; lines:=0; det:='0';
+			pixel<=4; lines:=0; det:='0';
 			if dbuffer='0' then datab:=sd1; else datab:=sd2; end if;
 		elsif  vidc then 
 			if (lines>=l1 and lines<l2 and pixel>=p1 and pixel<p2) then
@@ -339,13 +339,14 @@ begin
 			end if;
 			
 			if pixel=799 then
-				pixel:=0; p16:=0;
+				pixel<=0; p16:=0;
 				if lines=524 then	lines:=0; else lines:=lines+1; end if;
+				 
 			else
-				pixel:=pixel+1;
-			end if;
+				pixel<=pixel+1; pixi:=(pixel-p1)/2;
+			end if;	
 			--pm4:= pixel mod 4; pd4:=pixel/4;
-			if (lines=1) and (pixel<spno*4+4)  then	
+			if (lines=DATA_LINE) and (pixel<spno*4+4)  then	
 				if pm4 = 0 then SX(pd4)<=to_integer(unsigned(SPQ(8 downto 0))); end if; 
 				if pm4 = 1 then SY(pd4)<=to_integer(unsigned(SPQ(8 downto 0))); end if;
 				if pm4 = 3 then SEN(pd4)<=SPQ(0); end if;
@@ -365,9 +366,7 @@ begin
 			end if;
 			blvec:="1111"; 
 		else   ------ vidc false ---------------------------------------
-
-			lin:=(lines-l1)/2; pixi:=(pixel-p1)/2;
-			
+			lin:=(lines-l1)/2;
 			d1(0):=(pixi-SX(0))*4; d2(0):=lin-SY(0);
 			d1(1):=(pixi-SX(1))*4; d2(1):=lin-SY(1);
 			d1(2):=(pixi-SX(2))*4; d2(2):=lin-SY(2);
@@ -385,7 +384,7 @@ begin
 			
 			pm4:= pixel mod 4; pd4:=pixel/4;
 			if (pixel<(spno*4+4)) then 
-				if (lines=1) then
+				if (lines=DATA_LINE) then
 					if pbuffer='0' then addr1:=(sp1+pixel); else addr1:=(sp2+pixel); end if;
 				end if;
 				if (lines>=l1) and (lines<l2) then
@@ -411,8 +410,6 @@ begin
 		end if;
 	end if; --reset
 end process;
-
-
 end;
 
 -----------------------------------------------------------------------------
@@ -446,7 +443,7 @@ Signal dur: natural range 0 to 65535*2+1;
 signal i: natural range 0 to 511;
 begin
 
-f<=Q when wr='0' ;
+f<=Q when wr='0';
 
 process (clk,reset,wr)	
 	begin
@@ -512,20 +509,21 @@ end Sound;
 Architecture Behavior of Sound is
 
 Signal c3:natural range 0 to 255;
-Signal f:std_logic_vector(15 downto 0);
+
 Signal c2:std_logic_vector(11 downto 0);
 Signal c1:std_logic_vector(9 downto 0);
 Signal dur: natural range 0 to 65535*2+1;
 begin
 
-f<=Q when wr='0' ;
-
+--f<=Q when wr='0';
 process (clk,reset,wr)	
+variable f:std_logic_vector(15 downto 0);
 	begin
 		if (reset='1') then
 		   Aud<='0'; c3<=0;  play<='0'; dur<=0;
 		elsif  Clk'EVENT AND Clk = '1' then
 			if wr='0' then 
+				f:=Q;
 				play<='1';
 				CASE f(15 downto 14) is
 					when "00" =>

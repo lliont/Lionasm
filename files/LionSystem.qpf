@@ -18,12 +18,12 @@
 #
 # Quartus Prime
 # Version 18.1.0 Build 625 09/12/2018 SJ Lite Edition
-# Date created = 00:00:57  January 30, 2019
+# Date created = 02:39:14  February 11, 2019
 #
 # -------------------------------------------------------------------------- #
 
 QUARTUS_VERSION = "18.1"
-DATE = "00:00:57  January 30, 2019"
+DATE = "02:39:14  February 11, 2019"
 
 # Revisions
 
@@ -31,3 +31,5 @@ PROJECT_REVISION = "LionSystem"
 PROJECT_REVISION = "Rom8192"
 PROJECT_REVISION = "Retime"
 PROJECT_REVISION = "Lion100"
+PROJECT_REVISION = "Faster"
+PROJECT_REVISION = "most_stable"
