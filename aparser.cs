@@ -1000,7 +1000,7 @@ namespace Lion_assembler
                         break;
                     case OperandType.MemoryDirect:
                         il.len = 3; r2 = conv_int(il.op2);
-                        il.word1 = "1100100" + "0000000" + "01";
+                        il.word1 = "1100100" + "0000000" + "11";
                         il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                         il.word2 = il.word2.Substring(il.word2.Length - 16);
                         il.word3 = Convert.ToString(r2, 2).PadLeft(16, '0');
@@ -1013,7 +1013,7 @@ namespace Lion_assembler
                         if (il.op2t == OperandType.LabelDirect) r2 = (int)lblList[il.op2];
                         if (il.op2t == OperandType.VariableDirect) r2 = (int)varList[il.op2];
                         if (il.op2t == OperandType.ConstantDirect) r2 = (int)constList[il.op2];
-                        il.word1 = "1100100" + "000"+bwb+"000" + "01";
+                        il.word1 = "1100100" + "000"+bwb+"000" + "11";
                         il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                         il.word2 = il.word2.Substring(il.word2.Length - 16);
                         il.word3 = Convert.ToString(r2, 2).PadLeft(16, '0');
@@ -1037,7 +1037,7 @@ namespace Lion_assembler
                         break;
                     case OperandType.MemoryDirect:
                         il.len = 3; r2 = conv_int(il.op2);
-                        il.word1 = "1100100" + "000" + bwb + "000" + "01";
+                        il.word1 = "1100100" + "000" + bwb + "000" + "11";
                         //il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                         //il.word2 = il.word2.Substring(il.word2.Length - 16);
                         il.word3 = Convert.ToString(r2, 2).PadLeft(16, '0');
@@ -1050,7 +1050,7 @@ namespace Lion_assembler
                         if (il.op2t == OperandType.LabelDirect) r2 = (int)lblList[il.op2];
                         if (il.op2t == OperandType.VariableDirect) r2 = (int)varList[il.op2];
                         if (il.op2t == OperandType.ConstantDirect) r2 = (int)constList[il.op2];
-                        il.word1 = "1100100" + "000" + bwb + "000" + "01";
+                        il.word1 = "1100100" + "000" + bwb + "000" + "11";
                         //il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                         //il.word2 = il.word2.Substring(il.word2.Length - 16);
                         il.word3 = Convert.ToString(r2, 2).PadLeft(16, '0');
@@ -1078,7 +1078,7 @@ namespace Lion_assembler
                         break;
                     case OperandType.MemoryDirect:
                         il.len = 3; r2 = conv_int(il.op2);
-                        il.word1 = "1100100" + "0000000" + "01";
+                        il.word1 = "1100100" + "0000000" + "11";
                         il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                         il.word2 = il.word2.Substring(il.word2.Length - 16);
                         il.word3 = Convert.ToString(r2, 2).PadLeft(16, '0');
@@ -1091,7 +1091,7 @@ namespace Lion_assembler
                         if (il.op2t == OperandType.LabelDirect) r2 = (int)lblList[il.op2];
                         if (il.op2t == OperandType.VariableDirect) r2 = (int)varList[il.op2];
                         if (il.op2t == OperandType.ConstantDirect) r2 = (int)constList[il.op2];
-                        il.word1 = "1100100" + "0000000" + "01";
+                        il.word1 = "1100100" + "0000000" + "11";
                         il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
                         il.word2 = il.word2.Substring(il.word2.Length - 16);
                         il.word3 = Convert.ToString(r2, 2).PadLeft(16, '0');

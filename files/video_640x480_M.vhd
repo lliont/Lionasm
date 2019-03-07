@@ -60,7 +60,7 @@ addr<=addr1;
 vidc<=not vidc when falling_edge(sclk);
 HSYN<='0' when (pixel<96) else '1'; 
 VSYN<='0' when lines<2 else '1';
-VSINT<='0' when (lines=0) and (pixel<4) and rising_edge(sclk) else '1' when rising_edge(sclk);
+VSINT<='0' when (lines=0) and (pixel<6) else '1';
 
 process (sclk,EN)
 variable m78: natural range 0 to 31;
@@ -167,7 +167,7 @@ begin
 addr<=addr1;
 vidc<=not vidc when falling_edge(sclk);
 VSYN<='0' when lines<2 else '1';	
-VSINT<='0' when (lines=0) and (pixel<4) and rising_edge(sclk) else '1' when rising_edge(sclk);	
+VSINT<='0' when (lines=0) and (pixel<6) else '1';	
 HSYN<='0' when (pixel<96) else '1'; 
 
 process (sclk,EN)
@@ -259,7 +259,7 @@ constant lno:natural:=240;
 constant p1:natural :=142;
 constant pno:natural:=320;
 constant maxd:natural:=16;
-constant spno:natural:=13;
+constant spno:natural:=14;
 constant p2:natural:=p1+pno*2;
 constant l2:natural:=l1+lno*2;
 
@@ -296,7 +296,7 @@ variable blvec:std_logic_vector(3 downto 0);
 begin
 	if  rising_edge(sclk) then
 		if (reset='0') then
-			pixel<=4; lines:=0; det:='0';
+			pixel<=6; lines:=0; det:='0';
 			if dbuffer='0' then datab:=sd1; else datab:=sd2; end if;
 		elsif  vidc then 
 			if (lines>=l1 and lines<l2 and pixel>=p1 and pixel<p2) then
@@ -330,6 +330,8 @@ begin
 					BRGB:='0'&SLData(12)(2+d1(12) downto d1(12));
 				when "1101" => 
 					BRGB:='0'&SLData(13)(2+d1(13) downto d1(13));
+				when "1110" => 
+					BRGB:='0'&SLData(14)(2+d1(14) downto d1(14));
 				when others =>
 					det:='0'; BRGB:="0000";
 				end case;
@@ -381,7 +383,7 @@ begin
 			d1(11):=(pixi-SX(11))*4; d2(11):=lin-SY(11);
 			d1(12):=(pixi-SX(12))*4; d2(12):=lin-SY(12);
 			d1(13):=(pixi-SX(13))*4; d2(13):=lin-SY(13);
-			
+			d1(14):=(pixi-SX(14))*4; d2(14):=lin-SY(14);			
 			pm4:= pixel mod 4; pd4:=pixel/4;
 			if (pixel<(spno*4+4)) then 
 				if (lines=DATA_LINE) then
@@ -407,6 +409,7 @@ begin
 			if (d1(11)<maxd*4) and (d2(11)<maxd) and (SEN(11)='1') and (SLData(11)(3+d1(11))='0') then blvec:="1011"; end if;
 			if (d1(12)<maxd*4) and (d2(12)<maxd) and (SEN(12)='1') and (SLData(12)(3+d1(12))='0') then blvec:="1100"; end if;
 			if (d1(13)<maxd*4) and (d2(13)<maxd) and (SEN(13)='1') and (SLData(13)(3+d1(13))='0') then blvec:="1101"; end if;			
+			if (d1(14)<maxd*4) and (d2(14)<maxd) and (SEN(14)='1') and (SLData(14)(3+d1(14))='0') then blvec:="1110"; end if;		
 		end if;
 	end if; --reset
 end process;
@@ -426,9 +429,7 @@ entity SoundI is
 		reset, clk, wr : IN std_logic;
 		Q : IN std_logic_vector(15 downto 0);
 		count: OUT std_logic_vector(15 downto 0);
-		play: OUT  std_logic;
-		Inter: OUT std_logic;
-		IAC: IN std_logic
+		play: OUT  std_logic
 	);
 end SoundI;
 
@@ -436,21 +437,21 @@ end SoundI;
 Architecture Behavior of SoundI is
 
 Signal c3:natural range 0 to 255;
-Signal f:std_logic_vector(15 downto 0);
+
 Signal c2:std_logic_vector(11 downto 0);
 Signal c1:std_logic_vector(9 downto 0);
 Signal dur: natural range 0 to 65535*2+1;
 signal i: natural range 0 to 511;
 begin
 
-f<=Q when wr='0';
-
 process (clk,reset,wr)	
+variable f:std_logic_vector(15 downto 0);
 	begin
 		if (reset='1') then
-		   Aud<='0'; c3<=0;  inter<='1'; i<=0; count<=(others=>'0'); play<='0'; dur<=0;
+		   Aud<='0'; c3<=0;  i<=0; count<=(others=>'0'); play<='0'; dur<=0;
 		elsif  Clk'EVENT AND Clk = '1' then
 			if wr='0' then 
+				f:=Q;
 			   play<='1';
 				CASE f(15 downto 14) is
 					when "00" =>
@@ -479,11 +480,8 @@ process (clk,reset,wr)
 					end if;
 					--play<='1';
 				end if;
-				if i=99 then inter<='0'; i<=0; count<=count+'1'; else i<=i+1; end if;
+				if i=99 then i<=0; count<=count+'1'; else i<=i+1; end if;
 			else
-				if IAC='1' or c1="0000001000" then
-					inter<='1';
-				end if;
 			end if;
 		end if;
 	end process ;

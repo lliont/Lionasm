@@ -31,6 +31,9 @@ INT14		DA          INTEXIT
 INT15		DA		RINT15   ; trace interrupt in ram	
 
 BOOTC:	MOV		(SDFLAG),0
+		MOV		(RHINT0),$8400
+		MOV		(RHINT1),$8400
+		MOV		(RHINT2),$8400
 		MOV		A1,65300
 		SETSP		A1
 		MOV.B		(VMODE),0
@@ -150,6 +153,7 @@ INTR5:	SLL		A0,1
 ;---------------------------------------------------
 
 FCMP:
+  STI
   PUSH A1
   PUSH A2
   PUSH A3
@@ -212,6 +216,7 @@ CFLT_E:
 
 
 FLMUL:
+  STI
   PUSH A5
   PUSH A6
   PUSH A7
@@ -276,6 +281,7 @@ FMUL_E:
   RETI
 
 FLDIV: 
+  STI
   PUSH A5
   PUSH A6
   PUSH A7
@@ -337,6 +343,7 @@ FDIV_E:
   RETI
 
 FLADD: 
+  STI
   PUSH A5
   PUSH A6
   PUSH A7
@@ -1481,6 +1488,7 @@ LP1:		OUT		A0,(A4)
 		RETI
 
 PUTC1:       ; VMODE1 PRINT Character in A1 at A2 (XY)
+		STI
 		PUSH		A7
 		PUSH		A6
 		PUSH		A5
@@ -1971,6 +1979,7 @@ UDIVE:	POP		A3
 ; A1A2 / A3A4 res A1A2, rem A3A4
 ; long divide
 LDIV:
+  STI
   PUSH A5
   PUSH A7
   PUSHX
@@ -2071,6 +2080,7 @@ _DL14:
 ; long multiply
 
 LMUL:
+  STI
   PUSH A5
   PUSH A7
   PUSH A6
