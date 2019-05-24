@@ -34,6 +34,8 @@ BOOTC:	MOV		(SDFLAG),0
 		MOV		(RHINT0),$8400
 		MOV		(RHINT1),$8400
 		MOV		(RHINT2),$8400
+		MOV.B		(SHIFT),0
+		MOV.B		(CAPSL),0
 		MOV		A1,65300
 		SETSP		A1
 		MOV.B		(VMODE),0
@@ -153,7 +155,6 @@ INTR5:	SLL		A0,1
 ;---------------------------------------------------
 
 FCMP:
-  STI
   PUSH A1
   PUSH A2
   PUSH A3
@@ -216,7 +217,6 @@ CFLT_E:
 
 
 FLMUL:
-  STI
   PUSH A5
   PUSH A6
   PUSH A7
@@ -281,7 +281,6 @@ FMUL_E:
   RETI
 
 FLDIV: 
-  STI
   PUSH A5
   PUSH A6
   PUSH A7
@@ -343,7 +342,6 @@ FDIV_E:
   RETI
 
 FLADD: 
-  STI
   PUSH A5
   PUSH A6
   PUSH A7
@@ -921,7 +919,7 @@ PHX2:		MOVI	A0,4
 ; INT5 A0=1  fixed point 16.16 
 ; Div A2 by A1 res in A1 (FRAC1),   restoring division 9/5/2017
 
-FDIV:		STI	
+FDIV:		
 		PUSH		A3
 		PUSH		A4
 		PUSH		A7
@@ -1018,7 +1016,7 @@ FDIVEND:	MOV		(FRAC1),A4  ; store fraction result
 ;-------------------------------------
 ;  		INT 5 A0=0
 ; fixed point multiply
-FMULT:	STI	
+FMULT:	
 		PUSH		A3
 		PUSH		A4
 		PUSH		A5
@@ -1446,18 +1444,10 @@ SEROUT:	IN		A0,6  ;Wite serial byte if ready
 		OUT		2,1
 		OUT		2,0
 		RETI
-; -------------------------------------
-SKEYBIN:	IN		A0,6  ;Read serial byte if availiable
-		BTST		A0,2  ;Result in A1, A0(2)=0 if not avail
-		JZ		INTEXIT
-		IN		A1,14
-		OUT		15,2
-		OUT		15,0
-		RETI
 
 ;----------------------------------------
  ; VMODE0 PRINT Character in A1 at A2 (XY)
-PUTC:		STI
+PUTC:		
 		PUSHX   
 		PUSH		A4
 		PUSH		A1
@@ -1488,7 +1478,7 @@ LP1:		OUT		A0,(A4)
 		RETI
 
 PUTC1:       ; VMODE1 PRINT Character in A1 at A2 (XY)
-		STI
+	
 		PUSH		A7
 		PUSH		A6
 		PUSH		A5
@@ -1551,7 +1541,7 @@ P3C:		OUT.B		A0,A5
 		RETI
 
 ;----------------------------------------
-PSTR:		STI
+PSTR:		
 		IN		A0,24
 		CMPI		A0,1 ;(VMODE),1
       	JZ		PSTR1
@@ -1606,7 +1596,7 @@ STREXIT:	RETI
 
 ;----------------------------------------
 
-SCROLL:	STI
+SCROLL:	
 		IN		A0,24
 		CMPI		A0,1 ;(VMODE),1
 		JZ		SCROLL1
@@ -1658,7 +1648,7 @@ S1C2:		OUT		A0,A1
 		RETI
 ;----------------------------------------
 
-CLRSCR:	STI
+CLRSCR:	
 		IN	A0,24
 		CMPI	A0,1 ;(VMODE),1
 		JZ	CLRSCR1
@@ -1688,7 +1678,7 @@ CLR1S1:	OUT	A0,A1
 		RETI
 
 ;----------------------------------------
-PLOT:		STI
+PLOT:		
 		IN	A0,24
 		CMPI	A0,1  ;(VMODE),1
 		JZ	PLOT1
@@ -1756,7 +1746,7 @@ LINEXY:
 		RETI
 
 ;----------------------------------------
-PIMG:		STI
+PIMG:		
 		PUSHX
 		PUSH		A1
 		PUSH		A2       ;Draw Image at A1,A2 from A5(A3 bytes)
@@ -1800,42 +1790,12 @@ PIM3:		SWAP		A3
 		POP		A1
 		POPX
 		RETI
-;---------------------------------------
-KEYB:		STI
-		PUSHX
-		CMP		A1,90 
-		JNZ		NOTCR
-		MOVI		A1,13
-		JMP		LP10
-NOTCR:	CMP		A1,102
-		JNZ		NOTBS
-		MOVI		A1,8
-		JMP		LP10
-NOTBS:	CMP		A1,118
-		JNZ		KB1
-		MOV		A1,27
-		JMP		LP10		
-KB1:		SETX 		67           ; Convert Keyboard scan codes to ASCII
-		MOV		A0,KEYBCD
-LP3:		CMP.B		A1,(A0)
-		JZ		LP4
-		;INC		A0
-		JXAB		A0,LP3
-		MOV		A1,0
-		JMP		LP10
-LP4:		MOVX		A0
-		MOV		A1,99
-		SUB		A1,A0
-		CMP.B		A1,94
-		JBE		LP10
-		ADD		A1,28
-LP10:		POPX
-		RETI
+
 
 ;--------------------------------------------------------------
 ; Multiplcation A1*A2 res in A2A1,
 
-MULT:		STI
+MULT:		
 		PUSH		A3
 		MOV		A0,A2
 		XOR		A0,A1
@@ -1860,7 +1820,7 @@ MULEND:	POP		A3
 ;-------------------------------------------------------------
 ; Div A2 by A1 res in A1,A0
 
-DIV:		STI
+DIV:		
 		PUSH		A3
 		MOV		A3,A1
 		MOV		A1,32767
@@ -1926,7 +1886,7 @@ DIVE:		POP		A3
 ;-------------------------------------------------------------
 ; unsigned Div A2 by A1 res in A1,A0
 
-UDIV:		STI
+UDIV:		
 		PUSH		A3
 		MOV		A3,A1
 		MOV		A1,65535
@@ -1979,7 +1939,7 @@ UDIVE:	POP		A3
 ; A1A2 / A3A4 res A1A2, rem A3A4
 ; long divide
 LDIV:
-  STI
+ 
   PUSH A5
   PUSH A7
   PUSHX
@@ -2080,7 +2040,7 @@ _DL14:
 ; long multiply
 
 LMUL:
-  STI
+ 
   PUSH A5
   PUSH A7
   PUSH A6
@@ -2125,6 +2085,83 @@ _MLEXIT:
   POP A5
   RETI
 
+; -------------------------------------
+SKEYBIN:	IN	A0,6  ;Read serial byte if availiable
+		BTST	A0,2  ;Result in A1, A0(2)=0 if not avail
+		JZ	INTEXIT
+		IN	A1,14
+		OUT	15,2
+		OUT	15,0
+		CMP 	A1,$12
+		JNZ	SKB1
+		MOV.B (SHIFT),1
+		JMP	SKEXT
+SKB1:		CMP	A1,$59
+		JNZ   SKB2
+		MOV.B (SHIFT),1
+		JMP	SKEXT		
+SKB2:		CMP   A1,$58
+		JNZ   INTEXIT
+		MOV.B	(SHIFT),0
+		MOV.B	A1,(CAPSL)
+		XOR.B	A1,1
+		MOV.B	(CAPSL),A1
+SKEXT:	MOVI	A0,0
+		RETI
+;---------------------------------------
+KEYB:		
+		PUSHX
+		CMP	A1,$5A 
+		JNZ	NOTCR
+		MOVI	A1,13
+		JMP	KB10
+NOTCR:	CMP	A1,$66
+		JNZ	NOTBS
+		MOVI	A1,8
+		JMP	KB10
+NOTBS:	CMP	A1,$76
+		JNZ	KB1
+		MOV	A1,27
+		JMP	KB10		
+KB1:		SETX 	51           ; Convert Keyboard scan codes to ASCII
+		MOV	A0,KEYBCD
+KB3:		CMP.B	A1,(A0)
+		JZ	KB4
+		JXAB	A0,KB3
+		MOV	A1,0
+		JMP	KB10
+KB4:		SUB   A0,KEYBCD
+		CMP.B   (CAPSL),1
+		JNZ   KB2
+		CMP.B (SHIFT),1
+		JZ	KB2
+		ADD   A0,KEYASCC
+		JMP	KB6
+KB2:		CMP.B (SHIFT),1
+		JNZ   KB5
+		ADD   A0,KEYASCS
+		JMP   KB6
+KB5:		ADD	A0,KEYASC
+KB6:        MOV.B A1,(A0)
+KB10:		MOV.B (SHIFT),0
+		POPX
+		RETI
+
+KEYBCD	DB    $29,$45,$16,$1E,$26,$25,$2E,$36,$3D,$3E,$46,$1C,$32,$21,$23,$24,$2B,$34,$33,$43,$3B,$42,$4B
+            DB    $3A,$31,$44,$4D,$15,$2D,$1B,$2C,$3C,$2A,$1D,$22,$35,$1A
+		DB    $0E,$4E,$55,$5D,$54,$58,$4C,$52,$41,$49,$4A,$72,$6B,$74,$75     ; `-=\[];',./
+
+KEYASC	DB    32,48,49,50,51,52,53,54,55,56,57,65,66,67,68,69,70,71,72,73,74,75,76
+            DB    77,78,79,80,81,82,83,84,85,86,87,88,89,90
+  		DB	96,45,61,92,91,93,59,39,44,46,47,50,52,54,56
+
+KEYASCS	DB    32,41,33,64,35,36,37,94,38,42,40,65,66,67,68,69,70,71,72,73,74,75,76
+            DB    77,78,79,80,81,82,83,84,85,86,87,88,89,90
+  		DB	126,95,43,124,123,125,58,34,60,62,63,50,52,54,56
+
+KEYASCC	DB    32,48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102,103,104,105,106,107,108
+            DB    109,110,111,112,113,114,115,116,117,118,119,120,121,122
+  		DB	96,45,61,92,91,93,59,39,44,46,47,50,52,54,56
 
 ROMEND:
 ; Charcter table Font
@@ -2168,7 +2205,7 @@ CC104_105	DB	130,254,254,16,32,62,30,0, 0,34,190,190,2,0,0,0 ; h  i
 CC106_107	DB	6,7,1,1,191,190,0,0, 130,254,254,8,28,54,34,0 ; j k
 CC108_109	DB	0,130,254,254,2,0,0,0, 62,62,24,28,56,62,30,0 ; l m
 CC110_111	DB	62,62,32,32,62,30,0,0, 28,62,34,34,62,28,0,0 ; n o
-CC112_113	DB	24,60,36,37,31,63,33,0, 24,60,36,37,31,63,33,0 ; p q
+CC112_113	DB	33,63,31,37,36,60,24,0, 24,60,36,37,31,63,33,0 ; p q
 CC114_115	DB	34,62,30,50,32,56,24,0, 18,58,42,42,46,36,0,0 ;r s
 CC116_117	DB	0,32,124,254,34,36,0,0, 60,62,2,2,60,62,2,0 ;t u
 CC118_119	DB	56,60,6,6,60,56,0,0, 60,62,14,28,14,62,60,0 ;v w
@@ -2228,12 +2265,6 @@ C124_125 	DB	54,0,0,0,0,0,0,34,62,8,0,0
 C126  	DB	64,128,64,128,0,0
 
 
-
-KEYBCD	DB    $29,$16,$52,$26,$25,$2E,$3D,$71,$46,$45,$3E,$79,$41,$4E,$49,$4A,$70,$69,$72,$7A
-		DB    $6B,$73,$74,$6C,$75,$7D,$7C,$4C,$7E,$55,$E1,$78,$1E,$1C,$32,$21,$23,$24,$2B,$34
-		DB	$33,$43,$3B,$42,$4B,$3A,$31,$44,$4D,$15,$2D,$1B,$2C,$3C,$2A,$1D,$22,$35,$1A,$54
-		DB	$5D,$58,$36,$3,$0B,$83,$0A,0
-
 BOOTBIN     TEXT		"BOOT    BIN"
 		DB 	0
 SDOK		TEXT		"SD Card OK"
@@ -2268,5 +2299,8 @@ RINT9		DS	4
 RINT15	DS	4 ; TRACE INT service routine
 VMODE		DS	1
 SCOL		DS    1
+SHIFT       DS    1
+CAPSL       DS    1
+RESRVB      DS    16
 START:	
 

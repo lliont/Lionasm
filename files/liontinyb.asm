@@ -36,8 +36,11 @@ XCN         EQU   79
 YCN         EQU   29
 VMODE		EQU   $2434
 SCOL		EQU   $2435
+SHIFT       DS    1
+CAPSL       DS    1
+RESRVB      DS    16
 
-ORG     	$2436  ;Ram
+ORG     	$2448  ;Ram
 
 ; RAM program ENTRY POINT
 ; A7 Reserved for decimal (was num2), in A6 fraction result of TSTNUM
@@ -176,8 +179,7 @@ ST4:
 TSTV:		
 		MOVHL	A0,'@'
 		JSR	IGNBLNK
-		JC	RET01
-TSTV1:	
+		JC	RET2
 		JNZ	TV1
 		JSR	PARN
 		SLL	A1,2
@@ -189,15 +191,17 @@ TSTV1:
 		MOV 	A1,TXTEND
 		SUB	A1,A3
 		POP	A3
-RET01:	
 		RET
 
-TV1:		CMP.B	A0,'Z'  ; TEST VARIABLE
+TV1:		CMP.B	A0,122 ;'z'  ; TEST VARIABLE
 		JA	RET22
-		CMP.B	A0,'A'
+		CMP.B	A0,97
+            JAE   TV2
+		CMP.B A0,'Z'
+		JA    RET22
+		CMP.B A0,'A'
 		JC	RET2
-		INC	A3
-TV1A:	
+TV2:		INC	A3
 		MOV	A1,VARBGN
 		SUB.B	A0,65
 		AND	A0,$00FF
@@ -551,7 +555,12 @@ EXEC:
 	PUSH	A3
 EX1:
 	MOV.B	A0,(A3)
-	INC	A3
+      CMP.B A0,97
+      JB	SKIPUP
+      CMP.B A0,128
+	JAE   SKIPUP
+      AND.B	A0,$DF        ; UPPER CASE 
+SKIPUP: INC	A3
 	CMP.B	A0,'.'   
 	JZ	EX4
 	INC	A1
@@ -1515,7 +1524,7 @@ LD3:	POP	A1
 ;--------------------------
 
 DELAY:	PUSHX
-		SETX	62000
+		SETX	65000
 LDDL: 	JMPX	LDDL    ;delay
 		POPX
 		RET
@@ -2262,7 +2271,7 @@ KEYIN:
 		JC	SKP2
 		CMP.B	A0,122
 		JA	SKP2
-		AND.B	A0,$DF        ; UPPER CASE 
+		;AND.B	A0,$DF        ; UPPER CASE 
 SKP2:	      CMPI.B A0,8       ; BS
 		JNZ   GL2
 		CMP	A4,BUFFER
@@ -2795,9 +2804,9 @@ TXTEND	DS	4
 BUFFER	DS	120
 BUFEND:
 
-VARBGN	DS	240
+VARBGN	DS	256
 
-STKLMT	DS	4094
+STKLMT	DS	2048
 STACK:	
 
 
