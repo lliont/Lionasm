@@ -51,6 +51,7 @@ Signal pixel, prc : natural range 0 to 1023;
 Signal addr2,addr3: natural range 0 to 16383;
 signal m8,p6: natural range 0 to 127;
 Signal vidc: boolean:=false;
+Signal FG,BG: std_logic_vector(3 downto 0);
 
 shared variable addr1:natural range 0 to 16383;
 
@@ -64,7 +65,6 @@ VSINT<='0' when (lines=0) and (pixel<6) else '1';
 
 process (sclk,EN)
 variable m78: natural range 0 to 31;
-variable FG,BG: std_logic_vector(3 downto 0);
 variable lin, p16, pd4, pm4: natural range 0 to 1023;
 
 begin
@@ -111,14 +111,13 @@ begin
 			
 			if p6=0 then 
 				if prc mod 2=0 then
-					FG:=Q(15 downto 12);
-					BG:=Q(11 downto 8);
+					FG<=Q(15 downto 12);
+					BG<=Q(11 downto 8);
 				else 
-					FG:=Q(7 downto 4);
-					BG:=Q(3 downto 0);
+					FG<=Q(7 downto 4);
+					BG<=Q(3 downto 0);
 				end if;
 			end if;
-			
 		end if;
 	end if; --falling_edge
 end process;
@@ -160,6 +159,7 @@ Signal pixel : natural range 0 to 1023;
 Signal addr2: natural range 0 to 16383;
 signal m8: natural range 0 to 31;
 Signal vidc: boolean:=false;
+Signal BRGB: std_logic_vector(3 downto 0);
 
 shared variable addr1:natural range 0 to 16383;
 
@@ -172,7 +172,6 @@ HSYN<='0' when (pixel<96) else '1';
 
 process (sclk,EN)
 
-variable BRGB: std_logic_vector(3 downto 0);
 variable pixm4: natural range 0 to 1023;
 variable pix: natural range 0 to 1023;
 
@@ -207,10 +206,10 @@ begin
 			addr1:= pix/4 + addr2;
 			
 			case pixm4 is
-			when 0 => BRGB:=Q(15 downto 12);  --end if;  --Q(12)&Q(13)&Q(14)&Q(15);
-			when 1 => BRGB:=Q(11 downto 8);  --end if; --Q(8)&Q(9)&Q(10)&Q(11);
-			when 2 => BRGB:=Q(7 downto 4); --end if; -- Q(4)&Q(5)&Q(6)&Q(7);
-			when 3 => BRGB:=Q(3 downto 0); --end if; --Q(0)&Q(1)&Q(2)&Q(3);
+			when 0 => BRGB<=Q(15 downto 12);  --end if;  --Q(12)&Q(13)&Q(14)&Q(15);
+			when 1 => BRGB<=Q(11 downto 8);  --end if; --Q(8)&Q(9)&Q(10)&Q(11);
+			when 2 => BRGB<=Q(7 downto 4); --end if; -- Q(4)&Q(5)&Q(6)&Q(7);
+			when 3 => BRGB<=Q(3 downto 0); --end if; --Q(0)&Q(1)&Q(2)&Q(3);
 			when others=>
 			end case;
 			pixm4:=pix mod 4;
@@ -275,9 +274,9 @@ Signal vidc: boolean:=false;
 Signal SX,SY: sprite_dim;
 Signal SEN:sprite_enable;
 Signal pixel : natural range 0 to 1023;
+Signal sldata: sprite_line_data; 
 
 begin
-
 vidc<=not vidc when falling_edge(sclk);
 spaddr<=addr1;
 SPDET<=det;
@@ -287,7 +286,6 @@ SPDET<=det;
 process (sclk,reset)
 
 variable BRGB: std_logic_vector(3 downto 0);
-variable sldata: sprite_line_data; 
 variable d1,d2:dist;
 variable p16,datab: natural range 0 to 2047;
 variable pixi, lin, pm4,pd4: natural range 0 to 1023;
@@ -357,13 +355,13 @@ begin
 			if (lines>=l1 and lines<l2 and (pixel<(spno*4+4))) then
 				case pm4 is
 				when 0 =>
-					SLData(pd4)(15 downto 0):=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
+					SLData(pd4)(15 downto 0)<=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
 				when 1 =>
-					SLData(pd4)(31 downto 16):=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
+					SLData(pd4)(31 downto 16)<=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
 				when 2 =>
-					SLData(pd4)(47 downto 32):=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
+					SLData(pd4)(47 downto 32)<=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
 				when others =>
-					SLData(pd4)(63 downto 48):=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
+					SLData(pd4)(63 downto 48)<=SPQ(3 downto 0)&SPQ(7 downto 4)&SPQ(11 downto 8)&SPQ(15 downto 12);
 				end case;
 			end if;
 			blvec:="1111"; 

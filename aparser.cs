@@ -62,6 +62,7 @@ namespace Lion_assembler
         public List<int> values;
         public List<string> hexValues;
         public bool merge = false;
+        public int page = 0;
 
         // serializers and enumerators like parameterless constructors
         public InstructionLine()
@@ -77,7 +78,8 @@ namespace Lion_assembler
 
     class aparser
     {
-        public List<InstructionLine> instListArr = new List<InstructionLine>();     // intermediate instruction list
+        public List<InstructionLine> instListArr = new List<InstructionLine>();     //  instruction list
+        public List<InstructionLine> pageListArr = new List<InstructionLine>();     // page instruction list
         public Hashtable varList = new Hashtable();       // variable list
         public Hashtable constList = new Hashtable();  // constants list
         public Hashtable colorList = new Hashtable();     // color list
@@ -94,6 +96,7 @@ namespace Lion_assembler
         string validchar2 = "ABCDEFGHIJKLMNOPQRSTVUWXYZ0123456789.():_-$#+-*/><=?\\%@' ";
         int p = 0, l = 0, error = 0;
         ushort address = 32;
+        int curpage = 0;
         //InstructionLine lastline;
 
         public void fill_clist()
@@ -213,6 +216,13 @@ namespace Lion_assembler
             colorList.Add("JRXAW", Color.Blue);
             colorList.Add("SRSET", Color.Blue);
             colorList.Add("SRCLR", Color.Blue);
+            colorList.Add("PRET", Color.Blue);
+            colorList.Add("PJMP", Color.Blue);
+            colorList.Add("PJSR", Color.Blue);
+            colorList.Add("PMOV", Color.Blue);
+            colorList.Add("SODP", Color.Blue);
+            colorList.Add("SDP", Color.Blue);
+            colorList.Add("SSP", Color.Blue);
             colorList.Add("END", Color.DarkMagenta);
             colorList.Add("ORG", Color.DarkMagenta);
             colorList.Add("DB", Color.DarkMagenta);
@@ -221,6 +231,7 @@ namespace Lion_assembler
             colorList.Add("EQU", Color.DarkMagenta);
             colorList.Add("TEXT", Color.DarkMagenta);
             colorList.Add("DA", Color.DarkMagenta);
+            colorList.Add("PAGE", Color.DarkMagenta);
         }
 
         public void fill_ilist()
@@ -343,6 +354,13 @@ namespace Lion_assembler
             instList.Add("JRXAW", 2);
             instList.Add("SRSET", 1);
             instList.Add("SRCLR", 1);
+            instList.Add("PRET", 0);
+            instList.Add("PJMP", 2);
+            instList.Add("PJSR", 2);
+            instList.Add("PMOV", 2);
+            instList.Add("SODP", 1);
+            instList.Add("SDP", 1);
+            instList.Add("SSP", 1);
         }
 
         public void fill_dlist()
@@ -354,6 +372,7 @@ namespace Lion_assembler
             dirList.Add("DS", Color.Green);
             dirList.Add("TEXT", Color.Green);
             dirList.Add("DA", Color.Green);
+            dirList.Add("PAGE", Color.Green);
         }
 
         public void fill_errlist()
@@ -1440,22 +1459,22 @@ namespace Lion_assembler
                     case OperandType.RegisterADirect:
                         r2 = is_reg(il.op2);
                         il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
-                        il.word1 = "0000110" + s1 + "1" + s2 + "00";
+                        il.word1 = "0000001" + s1 + "1" + s2 + "00";
                         break;
                     case OperandType.RegisterAIndirect:
                         r2 = is_reg_ref(il.op2);
                         il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
-                        il.word1 = "0000110" + s1 + "1" + s2 + "10";
+                        il.word1 = "0000001" + s1 + "1" + s2 + "10";
                         break;
                     case OperandType.MemoryDirect:
                         il.len = 2; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); r2 = conv_int(il.op2);
-                        il.word1 = "0000110" + s1 + "1000" + "01";
+                        il.word1 = "0000001" + s1 + "1000" + "01";
                         il.word2 = Convert.ToString(r2, 2).PadLeft(16, '0');
                         il.word2 = il.word2.Substring(il.word2.Length - 16);
                         break;
                     case OperandType.MemoryIndirect:
                         il.len = 2; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); r2 = conv_int(il.op2.Substring(1, il.op2.Length - 2));
-                        il.word1 = "0000110" + s1 + "1000" + "11";
+                        il.word1 = "0000001" + s1 + "1000" + "11";
                         il.word2 = Convert.ToString(r2, 2).PadLeft(16, '0');
                         il.word2 = il.word2.Substring(il.word2.Length - 16);
                         break;
@@ -1466,7 +1485,7 @@ namespace Lion_assembler
                         if (il.op2t == OperandType.LabelDirect) r2 = (int)lblList[il.op2];
                         if (il.op2t == OperandType.VariableDirect) r2 = (int)varList[il.op2];
                         if (il.op2t == OperandType.ConstantDirect) r2 = (int)constList[il.op2];
-                        il.word1 = "0000110" + s1 + "1000" + "01";
+                        il.word1 = "0000001" + s1 + "1000" + "01";
                         il.word2 = Convert.ToString(r2, 2).PadLeft(16, '0');
                         il.word2 = il.word2.Substring(il.word2.Length - 16);
                         break;
@@ -1478,17 +1497,17 @@ namespace Lion_assembler
                         if (il.op2t == OperandType.LabelIndirect) r2 = (int)lblList[s2];
                         if (il.op2t == OperandType.VariableIndirect) r2 = (int)varList[s2];
                         if (il.op2t == OperandType.ConstantIndirect) r2 = (int)constList[s2];
-                        il.word1 = "0000110" + s1 + "1000" + "11";
+                        il.word1 = "0000001" + s1 + "1000" + "11";
                         il.word2 = Convert.ToString(r2, 2).PadLeft(16, '0');
                         il.word2 = il.word2.Substring(il.word2.Length - 16);
                         break;
                     case OperandType.MemoryNamedDirect: il.len = 2;
                         s1 = Convert.ToString(r1, 2).PadLeft(3, '0');
-                        il.word1 = "0000110" + s1 + "1000" + "01";
+                        il.word1 = "0000001" + s1 + "1000" + "01";
                         break;
                     case OperandType.MemoryNamedIndirect: il.len = 2;
                         s1 = Convert.ToString(r1, 2).PadLeft(3, '0');
-                        il.word1 = "0000110" + s1 + "1000" + "11";
+                        il.word1 = "0000001" + s1 + "1000" + "11";
                         break;
                     default:
                         return false;
@@ -2262,7 +2281,7 @@ namespace Lion_assembler
             return true;
         }
 
-        private bool gen4(InstructionLine il, string op)  // two params regs
+        private bool gen4(InstructionLine il, string op, char bwb='0')  // two params regs
         {
             int r1 = 0, r2 = 0; string s1, s2;
             il.op1t = parameter_type(il.op1);
@@ -2277,7 +2296,7 @@ namespace Lion_assembler
                     case OperandType.RegisterBDirect:
                         r2 = is_reg(il.op2);
                         il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
-                        il.word1 = op + s1 + "0" + s2 + "00";
+                        il.word1 = op + s1 + bwb + s2 + "00";
                         break;
                     default:
                         return false;
@@ -3315,6 +3334,117 @@ namespace Lion_assembler
             return true;
         }
 
+        private bool pmov(InstructionLine il, char bwb = '0')
+        {
+            int r1 = 0, r2 = 0; string s1, s2;
+            il.op1t = parameter_type(il.op1);
+            il.op2t = parameter_type(il.op2);
+            if (il.op1t == OperandType.Undefined || il.op2t == OperandType.Undefined) return false;
+            if (il.op1t == OperandType.RegisterADirect)
+            {
+                r1 = is_reg(il.op1);
+                switch (il.op2t)
+                {
+                    case OperandType.RegisterAIndirect:
+                        r2 = is_reg_ref(il.op2);
+                        il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
+                        il.word1 = "0101000" + s1 + bwb + s2 + "00";
+                        break;
+                    case OperandType.MemoryIndirect:
+                        il.len = 2; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); r2 = conv_int(il.op2.Substring(1, il.op2.Length - 2));
+                        il.word1 = "0101000" + s1 + bwb + "000" + "01";
+                        il.word2 = Convert.ToString(r2, 2).PadLeft(16, '0');
+                        il.word2 = il.word2.Substring(il.word2.Length - 16);
+                        break;
+                    case OperandType.LabelIndirect:
+                    case OperandType.VariableIndirect:
+                    case OperandType.ConstantIndirect:
+                        il.len = 2; s1 = Convert.ToString(r1, 2).PadLeft(3, '0');
+                        s2 = il.op2.Substring(1, il.op2.Length - 2);
+                        if (il.op2t == OperandType.LabelIndirect) r2 = (int)lblList[s2];
+                        if (il.op2t == OperandType.VariableIndirect) r2 = (int)varList[s2];
+                        if (il.op2t == OperandType.ConstantIndirect) r2 = (int)constList[s2];
+                        il.word1 = "0101000" + s1 + bwb + "000" + "01";
+                        il.word2 = Convert.ToString(r2, 2).PadLeft(16, '0');
+                        il.word2 = il.word2.Substring(il.word2.Length - 16);
+                        break;
+                    case OperandType.MemoryNamedIndirect:
+                        il.len = 2;
+                        s1 = Convert.ToString(r1, 2).PadLeft(3, '0');
+                        il.word1 = "0101000" + s1 + bwb + "000" + "01";
+                        break;
+                    default:
+                        return false;
+                }
+            }
+            else if (il.op1t == OperandType.RegisterAIndirect)
+            {
+                r1 = is_reg_ref(il.op1);
+                switch (il.op2t)
+                {
+                    case OperandType.RegisterADirect:
+                        r2 = is_reg(il.op2);
+                        il.len = 1; s1 = Convert.ToString(r1, 2).PadLeft(3, '0'); s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
+                        il.word1 = "0101100" + s1 + bwb + s2 + "00";
+                        break;
+                    default:
+                        return false;
+                }
+            }
+            else if (il.op1t == OperandType.MemoryIndirect)
+            {
+                r1 = conv_int(il.op1.Substring(1, il.op1.Length - 2));
+                switch (il.op2t)
+                {
+                    case OperandType.RegisterADirect:
+                        r2 = is_reg(il.op2);
+                        il.len = 2; s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
+                        il.word1 = "0101100" + "000" + bwb + s2 + "01";
+                        il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
+                        il.word2 = il.word2.Substring(il.word2.Length - 16);
+                        break;
+                    default:
+                        return false;
+                }
+            }
+            else if (il.op1t == OperandType.LabelIndirect || il.op1t == OperandType.VariableIndirect | il.op1t == OperandType.ConstantIndirect)
+            {
+                if (il.op1t == OperandType.LabelIndirect) r1 = (int)lblList[il.op1.Substring(1, il.op1.Length - 2)];
+                if (il.op1t == OperandType.VariableIndirect) r1 = (int)varList[il.op1.Substring(1, il.op1.Length - 2)];
+                if (il.op1t == OperandType.ConstantIndirect) r1 = (int)constList[il.op1.Substring(1, il.op1.Length - 2)];
+                switch (il.op2t)
+                {
+                    case OperandType.RegisterADirect:
+                        r2 = is_reg(il.op2);
+                        il.len = 2; s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
+                        il.word1 = "0101100" + "000" + bwb + s2 + "01";
+                        il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
+                        il.word2 = il.word2.Substring(il.word2.Length - 16);
+                        break;
+                    default:
+                        return false;
+                }
+            }
+            else if (il.op1t == OperandType.MemoryNamedIndirect)
+            {
+                // r1 = conv_int(il.op1.Substring(1, il.op1.Length - 2));
+                switch (il.op2t)
+                {
+                    case OperandType.RegisterADirect:
+                        r2 = is_reg(il.op2);
+                        il.len = 2; s2 = Convert.ToString(r2, 2).PadLeft(3, '0');
+                        il.word1 = "0101100" + "000" + bwb + s2 + "01";
+                        //il.word2 = Convert.ToString(r1, 2).PadLeft(16, '0');
+                        //il.word2 = il.word2.Substring(il.word2.Length - 16);
+                        break;
+                    default:
+                        return false;
+                }
+            }
+            else return false;
+            return true;
+        }
+
         private int conv_int(string s)
         {
             int i = 0;
@@ -3359,6 +3489,7 @@ namespace Lion_assembler
 
         private bool Operation(InstructionLine il)
         {
+            bool rn;
             switch (il.opcode)
             {
                 case "NOP": il.len = 1; il.word1 = "0000000000000000";
@@ -3490,9 +3621,9 @@ namespace Lion_assembler
                     return inter(il, "1000001");
                 case "RETI": il.len = 1; il.word1 = "1000010000000000";
                     break;
-                case "CLI": il.len = 1; il.word1 = "1000011000000000";
+                case "CLI": il.len = 1; il.word1 = "1000011000100000";
                     break;
-                case "STI": il.len = 1; il.word1 = "1000100000000000";
+                case "STI": il.len = 1; il.word1 = "1000011000000000";
                     break;
                 case "OUT":
                     return outop(il);
@@ -3590,6 +3721,29 @@ namespace Lion_assembler
                     break;
                 case "POPX": il.len = 1; il.word1 = "0111110000000000";
                     break;
+                case "PRET":
+                    il.len = 1; il.word1 = "1000010000100000";
+                    break;
+                case "PJSR":
+                    return gen4(il, "1000100");
+                case "SODP":
+                    rn= gen2(il, "0000110");
+                    if (rn) il.word1 = il.word1.Substring(0, 10) + "000000";
+                    return rn;
+                case "SDP":
+                    rn = gen2(il, "0000110");
+                    if (rn) il.word1 = il.word1.Substring(0, 10) + "001000";
+                    return rn;
+                case "SSP":
+                    rn = gen2(il, "0000110");
+                    if (rn) il.word1 = il.word1.Substring(0, 10) + "000100";
+                    return rn;
+                case "PJMP":
+                    return gen4(il, "0000110", '1');
+                case "PMOV":
+                    return pmov(il);
+                case "PMOV.B":
+                    return pmov(il,'1');
             }
             return true;
         }
@@ -3647,6 +3801,32 @@ namespace Lion_assembler
                 }
                 address = (ushort)conv_int(t); il.address = address;
                 if (address > 65535) { error = -7; return false; }
+            }
+            else if (t == "PAGE")
+            {
+                il.opcode = t;
+                il.type = InstructionType.Directive;
+                t = string.Empty;
+                res = get_next_token();
+                if (!res) { error = -1; return false; }
+                if (t[0] == '$')
+                {
+                    try { i = Convert.ToInt32(t.Substring(1), 16); }
+                    catch { return false; }
+                }
+                else if (t[0] == '#')
+                {
+                    try { i = Convert.ToInt32(t.Substring(1), 2); }
+                    catch { return false; }
+                }
+                else
+                {
+                    if (!ushort.TryParse(t, out w)) { error = -2; return false; }
+                }
+                address = (ushort)conv_int(t); il.address = address;
+                if (address > 7) { error = -7; return false; }
+                curpage = il.address;
+                return res;
             }
             else if (t == "END")
             {
@@ -4208,6 +4388,7 @@ namespace Lion_assembler
             while ((res = get_next_token()) && ok)
             {
                 il = new InstructionLine(l);
+                il.page = curpage;
                 if (t[t.Length - 1] == ':') ok = add_label(il);
                 else if (instList.ContainsKey(t)) ok = add_oper(il);
                 else if (dirList.ContainsKey(t)) ok = add_dir(il);
@@ -4274,142 +4455,158 @@ namespace Lion_assembler
             BinaryWriter bw = null;
             string temps = string.Empty;
             LionAsmForm.VHDL.Text = string.Empty;
-            int ad2=0;
-            //create the bin file
-            try
-            {
-                bw = new BinaryWriter(new FileStream(LionAsmForm.fname + ".bin", FileMode.Create));
-            }
-            catch (IOException e)
-            {
-                LionAsmForm.errorbox.Text += "Can't create Binary File! \r\n";
-                LionAsmForm.errorbox.Text += e.Message+"\r\n";
-            }
 
-            //create the mif file
-            StreamWriter sw = new StreamWriter(LionAsmForm.fname + ".mif", false, System.Text.Encoding.GetEncoding(1253));
-            sw.WriteLine("WIDTH=16;\nDEPTH=4096;\nADDRESS_RADIX=UNS;\nDATA_RADIX=BIN;\n\nCONTENT BEGIN\n\n");
-            int bad = 65535;
-            foreach (InstructionLine il1 in instListArr)
+            for (int pg = 0; pg < 8; pg++)
             {
-                if (il1.opcode == "ORG" && il1.address < bad) bad = il1.address;
-            }
-            foreach (InstructionLine il in instListArr)
-            {
-                if (il.opcode == "ORG") temps += "\r\n";
-                if (il.op1t == OperandType.MemoryNamedDirect || il.op1t == OperandType.MemoryNamedIndirect)
+                pageListArr.Clear();
+                foreach (InstructionLine il in instListArr)
                 {
-                    string s = il.op1; f = false;
-                    if (il.op1t == OperandType.MemoryNamedIndirect) s = s.Substring(1, s.Length - 2);
-                    if (lblList.ContainsKey(s)) { i = (int)lblList[s]; f = true; }
-                    if (constList.ContainsKey(s)) { i = (int)constList[s]; f = true; }
-                    if (varList.ContainsKey(s)) { i = (int)varList[s]; f = true; }
-                    if (f)
-                    {
-                        if (il.relative) { il.word2 = Convert.ToString((Int16)i - il.address - il.len * 2, 2).PadLeft(16, '0'); }
-                        else il.word2 = Convert.ToString(i, 2).PadLeft(16, '0');
-                        if (il.type == InstructionType.DataAddress)  //  DA command
-                        {
-                            il.word1 = il.word2;
-                            il.word2 = string.Empty;
-                        }
-                    }
-                    else
-                    {
-                        LionAsmForm.errorbox.Text += "Unknown identifier " + s + " at line: " + (il.lno + 1).ToString() + " \r\n";
-                        return false;
-                    };
+                    if (il.page == pg) { pageListArr.Add(il); }
                 }
-
-                if (il.op2t == OperandType.MemoryNamedDirect || il.op2t == OperandType.MemoryNamedIndirect)
+                if (pageListArr.Count() > 0)
                 {
-                    string s = il.op2; f = false;
-                    if (il.op2t == OperandType.MemoryNamedIndirect) s = s.Substring(1, s.Length - 2);
-                    if (lblList.ContainsKey(s)) { i = (int)lblList[s]; f = true; }
-                    if (constList.ContainsKey(s)) { i = (int)constList[s]; f = true; }
-                    if (varList.ContainsKey(s)) { i = (int)varList[s]; f = true; }
-                    if (f)
-                    {
-                        if ((il.relative && il.op2t == OperandType.MemoryNamedDirect) || il.opcode == "MOVR" || il.opcode == "MOVR.B")
-                        {
-                            if (il.len != 3) il.word2 = Convert.ToString((Int16)i - il.address - il.len * 2, 2).PadLeft(16, '0');
-                            else il.word3 = Convert.ToString((Int16)i - il.address - il.len * 2, 2).PadLeft(16, '0');
-                        }
-                        else
-                            if (il.len != 3) il.word2 = Convert.ToString(i, 2).PadLeft(16, '0');
-                            else il.word3 = Convert.ToString(i, 2).PadLeft(16, '0');
-                    }
-                    else
-                    {
-                        LionAsmForm.errorbox.Text += "Unknown identifier " + s + " at line: " + (il.lno + 1).ToString() + " \r\n";
-                        return false;
-                    };
-                }
-                if (il.word1 != string.Empty)
-                {
-                    if (il.address > 8191) ad = il.address - 8192; else ad = il.address;
-                    ad2 = il.address - bad;
-                    temps += "tmp(" + Convert.ToString(ad / 2) + "):=\"" + il.word1 + "\"; ";
-                    if (il.word2 != string.Empty) temps += "tmp(" + Convert.ToString(1 + ad / 2) + "):=\"" + il.word2 + "\";";
-                    if (il.word3 != string.Empty) temps += " tmp(" + Convert.ToString(2 + ad / 2) + "):=\"" + il.word3 + "\";";
-                    temps += " --" + il.opcode + " \r\n";
+                    int ad2 = 0; i = 0; ad = 0;
+                    string pgs = pg.ToString();
+                    if (pgs == "0") pgs = String.Empty;
+                    else temps += "\r\n" + "PAGE:" + pgs ;
+                    //create the bin file
                     try
                     {
-                        bw.Seek(ad2, 0);
-                        bw.Write(Convert.ToByte(il.word1.Substring(0, 8), 2));
-                        bw.Write(Convert.ToByte(il.word1.Substring(8, 8), 2));
-                        sw.WriteLine(Convert.ToString(ad / 2) + " : " + il.word1 + ";");
-                        if (il.word2 != string.Empty)
-                        {
-                            bw.Write(Convert.ToByte(il.word2.Substring(0, 8), 2));
-                            bw.Write(Convert.ToByte(il.word2.Substring(8, 8), 2));
-                            sw.WriteLine(Convert.ToString(1 + ad / 2) + " : " + il.word2 + ";");
-                        }
-                        if (il.word3 != string.Empty)
-                        {
-                            bw.Write(Convert.ToByte(il.word3.Substring(0, 8), 2));
-                            bw.Write(Convert.ToByte(il.word3.Substring(8, 8), 2));
-                            sw.WriteLine(Convert.ToString(2 + ad / 2) + " : " + il.word3 + ";");
-                        }
+                        bw = new BinaryWriter(new FileStream(Path.GetFileNameWithoutExtension(LionAsmForm.fname) + pgs + ".bin", FileMode.Create));
                     }
                     catch (IOException e)
                     {
-                        //LionAsmForm.errorbox.Text += "Can't write Binary File! \r\n";
+                        LionAsmForm.errorbox.Text += "Can't create Binary File! \r\n";
+                        LionAsmForm.errorbox.Text += e.Message + "\r\n";
                     }
-                }
-                if (il.type == InstructionType.DataWord || il.type == InstructionType.DataByte)
-                {
-                    if (il.address > 8191) ad = il.address - 8192; else ad = il.address;
-                    ad2 = il.address - bad;
-                    int rr = 0;
-                    foreach (int ii in il.values)
-                    {
-                        string s = Convert.ToString(ii, 2).PadLeft(16, '0');
-                        s = s.Substring(s.Length - 16);
-                        temps += "tmp(" + Convert.ToString(ad / 2) + "):=\"" + s + "\"; ";
 
-                        try
-                        {
-                            bw.Seek(ad2, 0);
-                            bw.Write(Convert.ToByte(s.Substring(0, 8), 2));
-                            bw.Write(Convert.ToByte(s.Substring(8, 8), 2));
-                            sw.WriteLine(Convert.ToString(ad / 2) + " : " + s + ";");
-                        }
-                        catch (IOException e)
-                        {
-                        }
-                        ad += 2; ad2 += 2;
-                        if (rr % 2 == 1) temps += " --" + il.opcode + "\r\n";
-                        rr++;
+                    //create the mif file
+                    StreamWriter sw = new StreamWriter(Path.GetFileNameWithoutExtension(LionAsmForm.fname) + pgs + ".mif", false, System.Text.Encoding.GetEncoding(1253));
+                    sw.WriteLine("WIDTH=16;\nDEPTH=4096;\nADDRESS_RADIX=UNS;\nDATA_RADIX=BIN;\n\nCONTENT BEGIN\n\n");
+                    int bad = 65535;
+                    foreach (InstructionLine il1 in pageListArr)
+                    {
+                        if (il1.opcode == "ORG" && il1.address < bad) bad = il1.address;
                     }
-                    if (rr % 2 == 1) temps += " --" + il.opcode + "\r\n";
+
+                    foreach (InstructionLine il in pageListArr)
+                    {
+                        if (il.opcode == "ORG") temps += "\r\n";
+                        if (il.op1t == OperandType.MemoryNamedDirect || il.op1t == OperandType.MemoryNamedIndirect)
+                        {
+                            string s = il.op1; f = false;
+                            if (il.op1t == OperandType.MemoryNamedIndirect) s = s.Substring(1, s.Length - 2);
+                            if (lblList.ContainsKey(s)) { i = (int)lblList[s]; f = true; }
+                            if (constList.ContainsKey(s)) { i = (int)constList[s]; f = true; }
+                            if (varList.ContainsKey(s)) { i = (int)varList[s]; f = true; }
+                            if (f)
+                            {
+                                if (il.relative) { il.word2 = Convert.ToString((Int16)i - il.address - il.len * 2, 2).PadLeft(16, '0'); }
+                                else il.word2 = Convert.ToString(i, 2).PadLeft(16, '0');
+                                if (il.type == InstructionType.DataAddress)  //  DA command
+                                {
+                                    il.word1 = il.word2;
+                                    il.word2 = string.Empty;
+                                }
+                            }
+                            else
+                            {
+                                LionAsmForm.errorbox.Text += "Unknown identifier " + s + " at line: " + (il.lno + 1).ToString() + " \r\n";
+                                return false;
+                            };
+                        }
+
+                        if (il.op2t == OperandType.MemoryNamedDirect || il.op2t == OperandType.MemoryNamedIndirect)
+                        {
+                            string s = il.op2; f = false;
+                            if (il.op2t == OperandType.MemoryNamedIndirect) s = s.Substring(1, s.Length - 2);
+                            if (lblList.ContainsKey(s)) { i = (int)lblList[s]; f = true; }
+                            if (constList.ContainsKey(s)) { i = (int)constList[s]; f = true; }
+                            if (varList.ContainsKey(s)) { i = (int)varList[s]; f = true; }
+                            if (f)
+                            {
+                                if ((il.relative && il.op2t == OperandType.MemoryNamedDirect) || il.opcode == "MOVR" || il.opcode == "MOVR.B")
+                                {
+                                    if (il.len != 3) il.word2 = Convert.ToString((Int16)i - il.address - il.len * 2, 2).PadLeft(16, '0');
+                                    else il.word3 = Convert.ToString((Int16)i - il.address - il.len * 2, 2).PadLeft(16, '0');
+                                }
+                                else
+                                    if (il.len != 3) il.word2 = Convert.ToString(i, 2).PadLeft(16, '0');
+                                else il.word3 = Convert.ToString(i, 2).PadLeft(16, '0');
+                            }
+                            else
+                            {
+                                LionAsmForm.errorbox.Text += "Unknown identifier " + s + " at line: " + (il.lno + 1).ToString() + " \r\n";
+                                return false;
+                            };
+                        }
+                        if (il.word1 != string.Empty)
+                        {
+                            if (il.address > 8191) ad = il.address - 8192; else ad = il.address;
+                            ad2 = il.address - bad;
+                            temps += "tmp(" + Convert.ToString(ad / 2) + "):=\"" + il.word1 + "\"; ";
+                            if (il.word2 != string.Empty) temps += "tmp(" + Convert.ToString(1 + ad / 2) + "):=\"" + il.word2 + "\";";
+                            if (il.word3 != string.Empty) temps += " tmp(" + Convert.ToString(2 + ad / 2) + "):=\"" + il.word3 + "\";";
+                            temps += " --" + il.opcode + " \r\n";
+                            try
+                            {
+                                bw.Seek(ad2, 0);
+                                bw.Write(Convert.ToByte(il.word1.Substring(0, 8), 2));
+                                bw.Write(Convert.ToByte(il.word1.Substring(8, 8), 2));
+                                sw.WriteLine(Convert.ToString(ad / 2) + " : " + il.word1 + ";");
+                                if (il.word2 != string.Empty)
+                                {
+                                    bw.Write(Convert.ToByte(il.word2.Substring(0, 8), 2));
+                                    bw.Write(Convert.ToByte(il.word2.Substring(8, 8), 2));
+                                    sw.WriteLine(Convert.ToString(1 + ad / 2) + " : " + il.word2 + ";");
+                                }
+                                if (il.word3 != string.Empty)
+                                {
+                                    bw.Write(Convert.ToByte(il.word3.Substring(0, 8), 2));
+                                    bw.Write(Convert.ToByte(il.word3.Substring(8, 8), 2));
+                                    sw.WriteLine(Convert.ToString(2 + ad / 2) + " : " + il.word3 + ";");
+                                }
+                            }
+                            catch (IOException e)
+                            {
+                                //LionAsmForm.errorbox.Text += "Can't write Binary File! \r\n";
+                            }
+                        }
+                        if (il.type == InstructionType.DataWord || il.type == InstructionType.DataByte)
+                        {
+                            if (il.address > 8191) ad = il.address - 8192; else ad = il.address;
+                            ad2 = il.address - bad;
+                            int rr = 0;
+                            foreach (int ii in il.values)
+                            {
+                                string s = Convert.ToString(ii, 2).PadLeft(16, '0');
+                                s = s.Substring(s.Length - 16);
+                                temps += "tmp(" + Convert.ToString(ad / 2) + "):=\"" + s + "\"; ";
+
+                                try
+                                {
+                                    bw.Seek(ad2, 0);
+                                    bw.Write(Convert.ToByte(s.Substring(0, 8), 2));
+                                    bw.Write(Convert.ToByte(s.Substring(8, 8), 2));
+                                    sw.WriteLine(Convert.ToString(ad / 2) + " : " + s + ";");
+                                }
+                                catch (IOException e)
+                                {
+                                }
+                                ad += 2; ad2 += 2;
+                                if (rr % 2 == 1) temps += " --" + il.opcode + "\r\n";
+                                rr++;
+                            }
+                            if (rr % 2 == 1) temps += " --" + il.opcode + "\r\n";
+                        }
+                    }
+                    LionAsmForm.VHDL.Text = temps;
+                    if (bad == 0) LionAsmForm.BinSize.Text = ad2.ToString(); else LionAsmForm.BinSize.Text = (ad2 + 2).ToString();
+                    bw.Close();
+                    sw.WriteLine("END;\n");
+                    sw.Close();
                 }
             }
-            LionAsmForm.VHDL.Text = temps;
-            if (bad == 0) LionAsmForm.BinSize.Text = ad2.ToString(); else LionAsmForm.BinSize.Text = (ad2 + 2).ToString(); 
-            bw.Close();
-            sw.WriteLine("END;\n");
-            sw.Close();
             return f;
         }
 

@@ -29,7 +29,6 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmLionAsm));
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -437,11 +436,11 @@
             this.fftxtSource.EnableAutoDragDrop = true;
             this.fftxtSource.Font = new System.Drawing.Font("Courier New", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(161)));
             this.fftxtSource.Location = new System.Drawing.Point(0, 32);
-            this.fftxtSource.MaxLength = 0;
+            this.fftxtSource.MaxLength = 512000;
             this.fftxtSource.Name = "fftxtSource";
             this.fftxtSource.Size = new System.Drawing.Size(640, 600);
             this.fftxtSource.TabIndex = 0;
-            this.fftxtSource.Text = resources.GetString("fftxtSource.Text");
+            this.fftxtSource.Text = "ORG     \t$2448  ;Ram\n\n; RAM program ENTRY POINT\n\nSTART:";
             this.fftxtSource.WordWrap = false;
             this.fftxtSource.SelectionChanged += new System.EventHandler(this.source_SelectionChanged);
             this.fftxtSource.TextChanged += new System.EventHandler(this.source_TextChanged);

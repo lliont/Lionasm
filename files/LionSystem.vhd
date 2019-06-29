@@ -39,7 +39,7 @@ Component LionCPU16 is
 		ADo   : OUT  Std_logic_vector(15 downto 0); 
 		RW, AS, DS: OUT Std_logic;
 		RD, Reset, clock, Int,HOLD: IN Std_Logic;
-		IO,A16,HOLDA : OUT std_logic;
+		IO,HOLDA,A16o,A17o,A18o,A19o : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
 		IACK: OUT std_logic;
 		IA : OUT std_logic_vector(1 downto 0)
@@ -230,7 +230,7 @@ Signal hsyn0,vsyn0,hsyn1,vsyn1: std_logic;
 Signal vq: std_logic_vector (15 downto 0);
 Signal di,do,AD,qa,qro,aq,aq2,q16,count : std_logic_vector(15 downto 0);
 Signal w1,  WAud, WAud2: std_logic;
-Signal HOLDA, A16, IO, Vmod, nen, ne: std_logic:='0';
+Signal HOLDA, A16, A17, A18, A19, IO, Vmod, nen, ne: std_logic:='0';
 Signal AS, DS, RW, Int_in, rst, vint,vint0,vint1: std_logic:='1';
 Signal spw1, spw2, spw3: std_logic;
 Signal SPQ1,spvq1,SPQ2,spvq2,SPQ3,spvq3: std_logic_vector(15 downto 0);
@@ -247,7 +247,7 @@ shared variable Di1,Di2:std_logic_vector(15 downto 0);
 
 begin
 CPU: LionCPU16 
-	PORT MAP ( Di,Do,AD,RW,AS,DS,RD,rst,clock0,Int_in,Hold,IO,A16,Holda,Ii,Iac,IA ) ; 
+	PORT MAP ( Di,Do,AD,RW,AS,DS,RD,rst,clock0,Int_in,Hold,IO,Holda,A16,A17,A18,A19,Ii,Iac,IA ) ; 
 VRAM: dual_port_ram_dual_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 14)
 	PORT MAP ( clock0, clock1, ad1, to_integer(unsigned(AD(14 downto 1))), Do, w1, vq, q16 );
@@ -284,7 +284,7 @@ SoundC: Sound
 --IRAM: single_port_ram
 --	PORT MAP ( clock0, addr1, Do, RW, DS, QA ) ;
 IROM: single_port_rom
-	PORT MAP ( clock2, to_integer(unsigned(AD(12 downto 1))), QRO ) ;
+	PORT MAP ( clock1, to_integer(unsigned(AD(12 downto 1))), QRO ) ;
 MSPI: SPI 
 	PORT MAP ( SCLK,MOSI,MISO,clock1,rst,spi_w,spi_rdy,spi_in,spi_out);
 NOIZ:lfsr
@@ -298,9 +298,9 @@ CPLL:LPLL2
 rst<=reset when rdelay=7 and rising_edge(clock0) else '1' when rising_edge(clock0);
 rdelay<= rdelay+1 when rising_edge(clock0) and rdelay/=7 and reset='0' else 0 when rising_edge(clock0) and reset='1';
 HOLDAo<=HOLDA;
-A17o<='Z';
 Di<=Di1 when IO='1' else DI2;
 A16o<=A16 when HOLDA='0' else 'Z';
+A17o<=A17 when HOLDA='0' else 'Z';
 ASo<=AS when HOLDA='0' else 'Z'; 
 DSo<=DS when HOLDA='0' else 'Z'; 
 IOo<=IO when HOLDA='0' else 'Z'; 
@@ -333,7 +333,6 @@ begin
 if rising_edge(clock1) then
 	if Vmod='1' then Vint<=Vint1; else Vint<=Vint0; end if;
 	if INT='0' then  II<="00"; else II<="11"; end if;
-	--if (VINT='1') and (INT='1') then Int_in <= '1'; else Int_in <='0'; end if;
 	Int_in<= INT and VINT;
 end if;
 end process;
@@ -382,7 +381,7 @@ end process;
 process (clock1,RW,AS,IO)
 begin
 	if rising_edge(clock1) and RW='1' and AS='0' AND IO='0'  then
-		if (AD<8192) then Di2:=qro; else Di2:=D; end if;
+		if (AD<8192) and A16='0' and A17='0' and A18='0' then Di2:=qro; else Di2:=D; end if;
 	end if;
 end process ;
 	
@@ -428,8 +427,8 @@ begin
 	process(clkb)
 	begin
 		if(rising_edge(clkb)) then 
-			if we_b='1' then	ram(addr_b) <= data_b; end if;
-			q_b <= ram(addr_b);
+			if we_b='1' then	ram(addr_b) <= data_b; q_b<=data_b; 
+			else q_b <= ram(addr_b); end if;
 		end if;
 	end process;
 
@@ -466,16 +465,7 @@ architecture rtl of single_port_rom is
 	subtype word_t is std_logic_vector(15 downto 0);
 	type memory_t is array(4095 downto 0) of word_t;
 
-	function init_rom
-		return memory_t is 
-		variable tmp : memory_t; -- := (others => (others => '0'));
-	begin
-	
---  Rom 
-	return tmp;
-	end init_rom;	 
-
-signal rom : memory_t:= init_rom;
+signal rom : memory_t;
 	attribute ram_init_file : string;
 	attribute ram_init_file of rom : signal is "C:\intelFPGA_lite\LionSys_EP4_15\Lionasm\bin\Debug\lionrom.asm.mif";
 	
