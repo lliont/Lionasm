@@ -624,7 +624,7 @@ namespace Lion_assembler
             byte[] bt = new byte[2];
             try
             {
-                br = new BinaryReader(new FileStream(fname + ".bin", FileMode.Open));
+                br = new BinaryReader(new FileStream(Path.GetFileNameWithoutExtension(fname) + ".bin", FileMode.Open));
             }
             catch (IOException ex)
             {

@@ -568,32 +568,22 @@ IF rising_edge(clock) THEN
 				if fetch then Y1:=X; else Y1:=X1; end if;
 				ST<=mtmp;  FF<=StoreState;
 				rest:=true;
-			when "0111100" =>              -- PUSH SR
-					AD:=ST; Y1:=SR; ST<=mtmp; set_stack;
-					rest:=true;  FF<=StoreState;
-			when "0111101" =>              -- PUSHX
-					AD:=ST;	Y1:=IDX; ST<=mtmp; set_stack;
+			when "0111101" =>              -- PUSHX | SR
+					AD:=ST;	
+					if bwb='0' then Y1:=IDX; else Y1:=SR; end if;
+					ST<=mtmp; set_stack;
 					rest:=true; FF<=StoreState;
-			when "0111110" =>              -- POPX 
+			when "0111110" =>              -- POPX | POPSR
 				case TT is
 				when 0 =>
 					AD:=stmp;	AS<='0'; set_stack;
 				when 1 =>
 					ST<=stmp;
 				when others =>
-					IDX<=Di; 
+					if bwb='0' then IDX<=Di; else SR<=Di; end if;
 					rest2:=true;
 				end case;
-			when "0111111" =>              -- POP SR
-				case TT is
-				when 0 =>
-					AD:=stmp;	AS<='0'; set_stack;
-				when 1 =>
-					ST<=stmp; 
-				when others =>
-					SR<=Di; 
-					rest2:=true;
-				end case;
+
 			when "1000000" =>              -- POP Rn
 				case TT is
 				when 0 =>
@@ -625,8 +615,8 @@ IF rising_edge(clock) THEN
 					AS<='0'; 
 				when 7 =>
 				when others =>
-					PC<=Di; SR(TRAP)<='0'; SR(15 downto 7)<=ZERO8&'0'; 
-					A16:='0'; A17:='0'; A18:='0'; A19:='0';
+					PC<=Di; SR(TRAP)<='0'; SR(15 downto 13)<="000"; 
+					A16:='0'; A17:='0'; A18:='0';
 					rest2:=true; 
 				end case;
 			when "1000010" =>              -- RETi  PRET don't change opcode
@@ -637,7 +627,7 @@ IF rising_edge(clock) THEN
 					--ST<=stmp;
 				when 2 =>
 					 ST<=stmp+2;   AS<='1';
-					if bwb='0' then SR<=Di; else SR(15 downto 12)<=Di(15 downto 12); end if;
+					if bwb='0' then SR<=Di; else SR(15 downto 13)<=Di(15 downto 13); end if;
 				when 3 =>
 					AD:=ST;	AS<='0';  
 				when 4 =>
@@ -646,14 +636,10 @@ IF rising_edge(clock) THEN
 					if bwb='0' then icnt:=icnt-1; IA<="11"; IACK<='0'; end if;
 					rest2:=true;
 				end case;
-			when "1000011" =>              -- CLI
+			when "1000011" =>              -- CLI STI
 					SR(INT_DIS)<=bwb;
-			--		rest2:=true;
-			--when "1000100" =>              -- STI
-					--SR(INT_DIS)<='0';
 					rest2:=true;
-			when "1000101" =>   -- GETSP
-				--tmp:=ST;
+			when "1000101" =>   -- GETSP / MOV An,SP
 				set_reg(r1,ST,'0','0');
 				rest2:=true;
 			when "1000110" =>              -- IN Reg, (Reg, n)
@@ -787,7 +773,6 @@ IF rising_edge(clock) THEN
 						set_reg(r2,tmp);		
 						rest2:=true;
 					end case;
-
 			when "1011100" | "1011101" =>              -- ADD SUB [n],reg  ADD.B [n],reg
 				X1:=X; sub:=IR(9); 
 				half:=bwb;	AD:=X2;
@@ -875,7 +860,7 @@ IF rising_edge(clock) THEN
 				when others =>
 					rest2:=true;
 				end case;
-			when "0000110" =>  -- SODP SDP SSP An | PJMP An1,An2
+			when "0000110" =>  -- SODP SDP SSP An | SSP n 
 				case bt is
 					when 0 =>
 						ODP:="0000000000000"&X1(2 downto 0);
@@ -884,10 +869,24 @@ IF rising_edge(clock) THEN
 					when 2 =>
 						SR(12 downto 10)<=X1(2 downto 0);
 					when 8 to 15 =>
-						SR(15 downto 13)<=Y1(2 downto 0);
-						PC<=X1;
+						SR(9 downto 7)<=IR(4 downto 2);
 					when others =>
 				end case;
+				rest2:=true;
+			when "0100100" =>     --SDP n | SODP n
+				if bwb='0' then
+					SR(12 downto 10)<=IR(4 downto 2);
+				else
+					ODP:="0000000000000"&IR(4 downto 2);
+				end if;
+				rest2:=true;
+			when "0111100" => -- PJMP An1,An2 | PJMP A1,n
+				if bwb='1' then
+					SR(15 downto 13)<=Y1(2 downto 0);
+				else
+					SR(15 downto 13)<=IR(4 downto 2);
+				end if;
+				if fetch then PC<=X; else PC<=X1; end if;
 				rest2:=true;
 			when "1000100" =>       --PJSR An1,An2
 				case TT is
@@ -904,9 +903,17 @@ IF rising_edge(clock) THEN
 					ST<=mtmp-2;  
 				when others =>
 					RW<='1'; AS<='1'; DS<='1';  
-					PC<=X1; SR(15 downto 12)<=Y1(15 downto 12); 
+					if fetch then PC<=X;  else PC<=X1; end if;
+					if bwb='1' then
+						SR(15 downto 13)<=Y1(2 downto 0);
+					else
+						SR(15 downto 13)<=IR(4 downto 2);
+					end if;
 					rest2:=true; 
 				end case;
+				
+--			when "0111111" =>              -- 
+
      
 ------instructions  between 1100... and 11010.... cause double fetch -----------------			
 

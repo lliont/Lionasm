@@ -381,7 +381,7 @@ end process;
 process (clock1,RW,AS,IO)
 begin
 	if rising_edge(clock1) and RW='1' and AS='0' AND IO='0'  then
-		if (AD<8192) and A16='0' and A17='0' and A18='0' then Di2:=qro; else Di2:=D; end if;
+		if (AD<8192) and A16='0' and A17='0' then Di2:=qro; else Di2:=D; end if;
 	end if;
 end process ;
 	
@@ -467,7 +467,7 @@ architecture rtl of single_port_rom is
 
 signal rom : memory_t;
 	attribute ram_init_file : string;
-	attribute ram_init_file of rom : signal is "C:\intelFPGA_lite\LionSys_EP4_15\Lionasm\bin\Debug\lionrom.asm.mif";
+	attribute ram_init_file of rom : signal is "C:\intelFPGA_lite\LionSys_EP4_15\Lionasm\bin\Debug\lionrom.mif";
 	
 begin
 	process(clk)

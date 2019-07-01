@@ -30,7 +30,8 @@ INT13		DA          INTEXIT
 INT14		DA          INTEXIT
 INT15		DA		RINT15   ; trace interrupt in ram	
 
-BOOTC:	MOV		(SDFLAG),0
+BOOTC:	SDP		0
+		MOV		(SDFLAG),0
 		MOV		(RHINT0),$8400
 		MOV		(RHINT1),$8400
 		MOV		(RHINT2),$8400
@@ -569,6 +570,7 @@ FILESAV:
 	PUSH	A5	
 	PUSH	A6
 	PUSH	A7
+	SDP	0
 	JSR	FINDFN
 	CMPI	A0,0
 	JZ	FSV7
@@ -644,6 +646,7 @@ FILEDEL:
 	PUSH	A3
 	PUSH	A4
 	PUSH	A5	
+	SDP	0
 	JSR	FINDFN
 	CMPI	A0,0
 	JZ	FDELX
@@ -690,6 +693,7 @@ FDELX:
 VMOUNT:
 	PUSH	A1
 	PUSH	A2
+	SDP	0
 	MOVI	A0,13
 	MOVI	A1,0
 	MOV	A2,SDCBUF1
@@ -729,7 +733,8 @@ VMEX:	POP	A2
 
 ;-------------------------------------------------
 ; INT 5,A0=13 Load screen
-LDSCR:	JSR	FINDFN    
+LDSCR:	SDP	0
+		JSR	FINDFN    
 		MOV	A4,A0
 		CMPI	A0,0
 		JZ	INTEXIT
@@ -785,6 +790,7 @@ SLD2:	MOV	A5,(A2)
 ;---------------------------------------------------
 ; INT 5,A0=3 Load file
 FILELD:	PUSH	A5
+		SDP	0
 		JSR	FINDFN    
 		MOV	A4,A0
 		CMPI	A0,0
@@ -924,6 +930,7 @@ FDIV:
 		PUSH		A4
 		PUSH		A7
 		PUSHX
+		SDP		0
 		MOV		A0,A2
 		XOR		A0,A1
 		PUSH		A0
@@ -1021,6 +1028,7 @@ FMULT:
 		PUSH		A4
 		PUSH		A5
 		PUSH		A6
+		SDP		0
 		MOV		A0,A2
 		XOR		A0,A1
 		PUSH		A0
@@ -1451,6 +1459,7 @@ PUTC:
 		PUSHX   
 		PUSH		A4
 		PUSH		A1
+		SDP		0
 		IN		A0,24
 		CMPI		A0,1 ;(VMODE),1
 		JZ		PUTC1             
@@ -1597,6 +1606,7 @@ STREXIT:	RETI
 ;----------------------------------------
 
 SCROLL:	
+		SDP		0
 		IN		A0,24
 		CMPI		A0,1 ;(VMODE),1
 		JZ		SCROLL1
@@ -1649,6 +1659,7 @@ S1C2:		OUT		A0,A1
 ;----------------------------------------
 
 CLRSCR:	
+		SDP	0
 		IN	A0,24
 		CMPI	A0,1 ;(VMODE),1
 		JZ	CLRSCR1
@@ -1679,6 +1690,7 @@ CLR1S1:	OUT	A0,A1
 
 ;----------------------------------------
 PLOT:		
+		SDP	0
 		IN	A0,24
 		CMPI	A0,1  ;(VMODE),1
 		JZ	PLOT1
@@ -1751,6 +1763,7 @@ PIMG:
 		PUSH		A1
 		PUSH		A2       ;Draw Image at A1,A2 from A5(A3 bytes)
 		PUSH		A3
+		SDP		0
 		MOV		A0,A2
 		AND		A0,7
 		SRL		A2,3
@@ -2086,7 +2099,8 @@ _MLEXIT:
   RETI
 
 ; -------------------------------------
-SKEYBIN:	IN	A0,6  ;Read serial byte if availiable
+SKEYBIN:	SDP	0
+		IN	A0,6  ;Read serial byte if availiable
 		BTST	A0,2  ;Result in A1, A0(2)=0 if not avail
 		JZ	INTEXIT
 		IN	A1,14
@@ -2110,6 +2124,7 @@ SKEXT:	MOVI	A0,0
 		RETI
 ;---------------------------------------
 KEYB:		
+		SDP	0
 		PUSHX
 		CMP	A1,$5A 
 		JNZ	NOTCR
