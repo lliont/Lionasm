@@ -223,6 +223,12 @@ namespace Lion_assembler
             colorList.Add("SODP", Color.Blue);
             colorList.Add("SDP", Color.Blue);
             colorList.Add("SSP", Color.Blue);
+            colorList.Add("MTOM", Color.Blue);
+            colorList.Add("MTOI", Color.Blue);
+            colorList.Add("ITOM", Color.Blue);
+            colorList.Add("ITOI", Color.Blue);
+            colorList.Add("NTOM", Color.Blue);
+            colorList.Add("NTOI", Color.Blue);
             colorList.Add("END", Color.DarkMagenta);
             colorList.Add("ORG", Color.DarkMagenta);
             colorList.Add("DB", Color.DarkMagenta);
@@ -361,6 +367,12 @@ namespace Lion_assembler
             instList.Add("SODP", 1);
             instList.Add("SDP", 1);
             instList.Add("SSP", 1);
+            instList.Add("MTOI", 2);
+            instList.Add("MTOM", 2);
+            instList.Add("ITOI", 2);
+            instList.Add("ITOM", 2);
+            instList.Add("NTOI", 2);
+            instList.Add("NTOM", 2);
         }
 
         public void fill_dlist()
@@ -2693,7 +2705,7 @@ namespace Lion_assembler
             return true;
         }
 
-        private bool inter(InstructionLine il, string op)  // one param for 0-16
+        private bool inter(InstructionLine il, string op, char bit8 = '0')  // one param for 0-16
         {
             int r1 = 0;
             il.op1t = parameter_type(il.op1);
@@ -2703,13 +2715,13 @@ namespace Lion_assembler
                 case OperandType.MemoryDirect:
                     il.len = 1; r1 = conv_int(il.op1);
                     if (r1 > 15 || r1 < 0) { error = -7; return false; }
-                    il.word1 = op + "000" + Convert.ToString(r1, 2).PadLeft(4, '0') + "00";
+                    il.word1 = op + bit8 + "00" + Convert.ToString(r1, 2).PadLeft(4, '0') + "00";
                     break;
                 case OperandType.ConstantDirect:
                     il.len = 1;
                     if (il.op1t == OperandType.ConstantDirect) r1 = (int)constList[il.op1];
                     if (r1 > 15 || r1 < 0) { error = -7; return false; }
-                    il.word1 = op + "000" + Convert.ToString(r1, 2).PadLeft(4, '0') + "00";
+                    il.word1 = op + bit8 + "00" + Convert.ToString(r1, 2).PadLeft(4, '0') + "00";
                     break;
                 default:
                     return false;
@@ -3529,9 +3541,13 @@ namespace Lion_assembler
                 case "JR":
                     return gen6(il, "1110000");
                 case "JRΕ":
-                    return gen6(il, "1110001");
+                    return gen6(il, "1111001", '1');
                 case "JRZ":
-                    return gen6(il, "1110001");
+                    return gen6(il, "1111001", '1');
+                case "JRNΕ":
+                    return gen6(il, "1111001");
+                case "JRNZ":
+                    return gen6(il, "1111001");
                 case "JRN":
                     return gen6(il, "1110010");
                 case "JRO":
@@ -3601,17 +3617,13 @@ namespace Lion_assembler
                 case "BCLR":
                     return gen3(il, "0011000");
                 case "SRSET":
-                    return inter(il, "0100110");
+                    return inter(il, "0100110",'1');
                 case "SRCLR":
-                    return inter(il, "0101010");
+                    return inter(il, "0100110");
                 case "MULU.B":
                     return gen1(il, "0001010", '1');
                 case "MULU":
                     return gen1(il, "0001010", '0');
-                case "JRNΕ":
-                    return gen6(il, "1111001");
-                case "JRNZ":
-                    return gen6(il, "1111001");
                 case "MOVI":
                     return gen3(il, "0100000");
                 case "MOVI.B":
@@ -3649,9 +3661,21 @@ namespace Lion_assembler
                 case "JXAW":
                     return gen1(il,"0110011",'0');
                 case "JRXAB":
-                    return gen7(il, "1101001", '1');
+                    return gen7(il, "1110001", '1');
                 case "JRXAW":
-                    return gen7(il, "1101001", '0');
+                    return gen7(il, "1110001", '0');
+                case "MTOI":
+                    return gen4(il, "0111111", '1');
+                case "MTOM":
+                    return gen4(il, "0111111", '0');
+                case "ITOI":
+                    return gen4(il, "1101000", '1');
+                case "ITOM":
+                    return gen4(il, "1101000", '0');
+                case "NTOI":
+                    return gen1(il, "0101010", '1');
+                case "NTOM":
+                    return gen1(il, "0101010", '0');
                 case "PUSHX": il.len = 1; il.word1 = "0111101000000000"; 
                     break;
                 case "POPX": il.len = 1; il.word1 = "0111110000000000";

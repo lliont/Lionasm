@@ -43,9 +43,10 @@ BOOTC:	SDP		0
 		MOV.B		(SCOL),$1F
 		SETX		1589       ; Set default color 
 		MOV		A1,61152 
-COLINI:	OUT		A1,$1F1F
-		;ADDI		A1,2
-		JXAW		A1,COLINI
+;COLINI:	OUT		A1,$1F1F
+;		;ADDI		A1,2
+;		JXAW		A1,COLINI
+		NTOI		A1,$1F1F
 		MOV		A2,32767
 		SETX		56*1024-2    ;  memory test
 		MOV		A1,8192
@@ -123,7 +124,7 @@ INT4T11	DA		SPI_INIT ; initialize spi sd card
 INT4T12	DA		SPISEND  ; spi send/rec byt in A1 mode A2 1=CS low 3=CS h res a0
 INT4T13	DA		READSEC  ; read in buffer at A2, n in A1
 INT4T14	DA		WRITESEC ; WRITE BUFFER at A2 TO A1 BLOCK
-INT4T15	DA		PIMG     ; plot 8xA4 image from (A5) to A1,A2
+;INT4T15	DA		PIMG     ; 
 
 ;  INT5 FUNCTION TABLE  function in a0
 INT5T0	DA		FMULT	   ; Fixed point multiply A1*A2
@@ -144,7 +145,7 @@ INT5T14     DA          LINEXY   ; plot a line a1,a2 to a3,a4
 
 ;Hardware interrupt
 HINT:		INC		(COUNTER)
-		RETI        ; trace interrupt
+INTEXIT:	RETI        ; trace interrupt
 		
 INTR4:	SLL		A0,1
 		ADD		A0,INT4T0
@@ -764,11 +765,14 @@ SLD1:	MOV	A6,A4
 	INT 	4              ; Load sector
 	SETX  255
 	MOV	A2,SDCBUF1
-SLD2:	MOV	A5,(A2)
-	OUT	A3,A5
-	ADDI	A3,2
-	JXAW	A2,SLD2
-	;ADD	A3,512
+;SLD2:	MOV	A5,(A2)
+;	OUT	A3,A5
+;	ADDI	A3,2
+;	JXAW	A2,SLD2
+	MTOI	A3,A2
+	CMP	A3,64768
+	JA	SLDE
+	ADD	A3,512
 	AND	A4,$00FF  ; mod 256
 	SLL	A4,1  
 	MOV	A5,SDCBUF2
@@ -777,7 +781,7 @@ SLD2:	MOV	A5,(A2)
 	SWAP	A4
 	CMP	A4,$FFFF
 	JNZ	SLD1
-	POP	A6
+SLDE:	POP	A6
 	POP	A5
 	POP	A4
 	POP	A3
@@ -794,10 +798,10 @@ FILELD:	PUSH	A5
 		JSR	FINDFN    
 		MOV	A4,A0
 		CMPI	A0,0
-		JZ	INTEXIT
+		JZ	FLEXIT
 		JSR	FLOAD
-		POP	A5
-INTEXIT:	RETI
+FLEXIT:	POP	A5
+		RETI
 ;-------------------------------------------------
 
 DELAY: PUSHX
@@ -1476,11 +1480,8 @@ PUTC:
 		MULU.B	A1,8
 		ADD		A0,A1
 		ADD		A0,VBASE   ; video base
-		SETX		3          ; 6 bytes
-LP1:		OUT		A0,(A4)
-		ADDI		A4,2
-		;ADDI		A0,2          ; next   
-		JXAW		A0,LP1
+		SETX		3          ; 8 bytes
+		MTOI		A0,A4
 		POP		A1
 		POP		A4
 		POPX	
@@ -1537,7 +1538,6 @@ P3C:		OUT.B		A0,A5
 		CMPI		A6,7
 		JBE		P1C
 		POP		A0
-		;ADDI		A0,1
 		JXAB		A0,P2C
 		POP		A2
 		POP		A3
@@ -1576,7 +1576,6 @@ PSTR2:	PUSH 		A1
 PSTR3:	INC		A1
 		JMP		PSTR0
 		RETI
-
 PSTR1:  
 		MOVI		A0,0     ; PRINT 0 OR 13 TERM.STR POINTED BY A1 AT A2
 		MOV.B		A0,(A1)
@@ -1612,47 +1611,31 @@ SCROLL:
 		JZ		SCROLL1
 		PUSHX
 		PUSH		A1
-		PUSH		A4
 		SETX		9279     ;4639 ;5759	
 		MOV		A0,VBASE
 		MOV		A1,33408   ; 49152+384
-SC1:		IN		A4,A1
-		OUT		A0,A4  ;  word access to video ram
-		;ADDI		A0,2
-		ADDI		A1,2
-		JXAW		A0,SC1
-		ADDI		A0,2
+		ITOI		A0,A1
+		MOV 		A0,51328
 		SETX		319
-SC2:		OUT		A0,0
-		;ADDI		A0,2
-		JXAW		A0,SC2
-		POP		A4		
+		NTOI		A0,0		
 		POP		A1
 		POPX
 		RETI
 
 SCROLL1:	PUSHX
 		PUSH		A1
-		PUSH		A4
 		SETX		15359          ;5759	
 		MOV		A0,VBASE1
 		MOV		A1,34048   ; 49152+384
-S1C1:		IN		A4,A1
-		OUT		A0,A4  ;  word access to video ram
-		;ADDI		A0,2
-		ADDI		A1,2
-		JXAW		A0,S1C1
-		ADDI		A0,2
+		ITOI		A0,A1
+		MOV		A0,63488
 		MOV.B		A1,(SCOL)
 		SLL		A1,4
 		MOV.B		A1,(SCOL)
 		SRL		A1,4
 		MOVHL		A1,A1
 		SETX		639
-S1C2:		OUT		A0,A1
-		;ADDI		A0,2
-		JXAW		A0,S1C2
-		POP		A4		
+		NTOI		A0,A1	
 		POP		A1
 		POPX
 		RETI
@@ -1666,9 +1649,7 @@ CLRSCR:
 		PUSHX
 		SETX	9599      ;5952	
 		MOV	A0,VBASE
-CLRS1:	OUT	A0,0
-		;ADDI	A0,2
-		JXAW	A0,CLRS1
+		NTOI  A0,0
 		POPX
 		RETI
 
@@ -1681,9 +1662,7 @@ CLRSCR1:	PUSHX
 		MOVHL		A1,A1
 		SETX	15999    ;5952	
 		MOV	A0,VBASE1
-CLR1S1:	OUT	A0,A1
-		;ADDI	A0,2
-		JXAW	A0,CLR1S1
+		NTOI	A0,A1
 		POP	A1
 		POPX
 		RETI
@@ -1756,55 +1735,6 @@ P1L5:		OR.B		A1,A3    ; mode 1  set
 ;--------------------------------------
 LINEXY:
 		RETI
-
-;----------------------------------------
-PIMG:		
-		PUSHX
-		PUSH		A1
-		PUSH		A2       ;Draw Image at A1,A2 from A5(A3 bytes)
-		PUSH		A3
-		SDP		0
-		MOV		A0,A2
-		AND		A0,7
-		SRL		A2,3
-		MULU		A2,XDIM
-		ADD		A2,A1
-		ADD		A2,VBASE 
-		
-		DEC		A3
-		SETX		A3
-PIM1:		MOVI		A3,0
-		MOV.B		A3,(A5)
-		SWAP		A3
-		PUSH		A0
-
-PIM2:		CMPI		A0,0
-		JZ		PIM3
-		SRL		A3,1
-		DEC		A0
-		JNZ		PIM2
-	
-PIM3:		SWAP		A3
-		IN.B		A1,A2
-		XOR		A1,A3
-		OUT.B		A2,A1
-		MOV		A0,XDIM
-		ADD		A0,A2
-		IN.B		A1,A0
-		SWAP		A3
-		XOR		A1,A3
-		OUT.B		A0,A1
-		INC		A2
-		;INC		A5
-		POP		A0	
-		JXAB		A5,PIM1
-		POP		A3
-		POP		A2
-		POP		A1
-		POPX
-		RETI
-
-
 ;--------------------------------------------------------------
 ; Multiplcation A1*A2 res in A2A1,
 

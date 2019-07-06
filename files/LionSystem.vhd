@@ -214,13 +214,6 @@ COMPONENT VideoSp is
 	);
 end COMPONENT;
 
---    component Lclock is
---        port (
---            inclk  : in  std_logic := 'X'; -- inclk
---            outclk : out std_logic         -- outclk
---        );
---    end component Lclock;
-
 constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 
 Signal rdelay: natural range 0 to 7 :=0;

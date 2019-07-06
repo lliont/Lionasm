@@ -1,8 +1,8 @@
 ## Generated SDC file "LionSystem.sdc"
 
-## Copyright (C) 2018  Intel Corporation. All rights reserved.
+## Copyright (C) 2019  Intel Corporation. All rights reserved.
 ## Your use of Intel Corporation's design tools, logic functions 
-## and other software and tools, and its AMPP partner logic 
+## and other software and tools, and any partner logic 
 ## functions, and any output files from any of the foregoing 
 ## (including device programming or simulation files), and any 
 ## associated documentation or information are expressly subject 
@@ -12,14 +12,15 @@
 ## agreement, including, without limitation, that your use is for
 ## the sole purpose of programming logic devices manufactured by
 ## Intel and sold by Intel or its authorized distributors.  Please
-## refer to the applicable agreement for further details.
+## refer to the applicable agreement for further details, at
+## https://fpgasoftware.intel.com/eula.
 
 
 ## VENDOR  "Altera"
 ## PROGRAM "Quartus Prime"
-## VERSION "Version 18.1.0 Build 625 09/12/2018 SJ Lite Edition"
+## VERSION "Version 18.1.1 Build 646 04/11/2019 SJ Lite Edition"
 
-## DATE    "Thu Mar 07 14:38:50 2019"
+## DATE    "Fri Jul 05 13:36:27 2019"
 
 ##
 ## DEVICE  "EP4CE15E22C8"
@@ -39,7 +40,6 @@ set_time_format -unit ns -decimal_places 3
 #**************************************************************
 
 create_clock -name {iClock} -period 20.000 -waveform { 0.000 10.000 } [get_ports {iClock}]
-create_clock -name {LionCPU16:CPU|AS} -period 20.000 -waveform { 0.000 10.000 } [get_registers {LionCPU16:CPU|AS}]
 
 
 #**************************************************************
@@ -48,7 +48,6 @@ create_clock -name {LionCPU16:CPU|AS} -period 20.000 -waveform { 0.000 10.000 } 
 
 create_generated_clock -name {CPLL|altpll_component|auto_generated|pll1|clk[0]} -source [get_pins {CPLL|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 1 -master_clock {iClock} [get_pins {CPLL|altpll_component|auto_generated|pll1|clk[0]}] 
 create_generated_clock -name {CPLL|altpll_component|auto_generated|pll1|clk[1]} -source [get_pins {CPLL|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 1 -phase 180.000 -master_clock {iClock} [get_pins {CPLL|altpll_component|auto_generated|pll1|clk[1]}] 
-create_generated_clock -name {CPLL|altpll_component|auto_generated|pll1|clk[2]} -source [get_pins {CPLL|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 2 -master_clock {iClock} [get_pins {CPLL|altpll_component|auto_generated|pll1|clk[2]}] 
 
 
 #**************************************************************
@@ -61,102 +60,30 @@ create_generated_clock -name {CPLL|altpll_component|auto_generated|pll1|clk[2]} 
 # Set Clock Uncertainty
 #**************************************************************
 
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -rise_to [get_clocks {LionCPU16:CPU|AS}] -setup 0.100  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -rise_to [get_clocks {LionCPU16:CPU|AS}] -hold 0.070  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -fall_to [get_clocks {LionCPU16:CPU|AS}] -setup 0.100  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -fall_to [get_clocks {LionCPU16:CPU|AS}] -hold 0.070  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -rise_to [get_clocks {LionCPU16:CPU|AS}] -setup 0.100  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -rise_to [get_clocks {LionCPU16:CPU|AS}] -hold 0.070  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -fall_to [get_clocks {LionCPU16:CPU|AS}] -setup 0.100  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -fall_to [get_clocks {LionCPU16:CPU|AS}] -hold 0.070  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {LionCPU16:CPU|AS}] -setup 0.100  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {LionCPU16:CPU|AS}] -hold 0.070  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {LionCPU16:CPU|AS}] -setup 0.100  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {LionCPU16:CPU|AS}] -hold 0.070  
 set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {iClock}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}]  0.020  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {LionCPU16:CPU|AS}] -setup 0.100  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {LionCPU16:CPU|AS}] -hold 0.070  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {LionCPU16:CPU|AS}] -setup 0.100  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {LionCPU16:CPU|AS}] -hold 0.070  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {iClock}]  0.020  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {LionCPU16:CPU|AS}] -setup 0.100  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {LionCPU16:CPU|AS}] -hold 0.070  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {LionCPU16:CPU|AS}] -setup 0.100  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {LionCPU16:CPU|AS}] -hold 0.070  
 set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {iClock}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}]  0.020  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {LionCPU16:CPU|AS}] -setup 0.100  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {LionCPU16:CPU|AS}] -hold 0.070  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {LionCPU16:CPU|AS}] -setup 0.100  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {LionCPU16:CPU|AS}] -hold 0.070  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {iClock}]  0.020  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -setup 0.070  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -hold 0.100  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -setup 0.070  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -hold 0.100  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -setup 0.070  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -hold 0.100  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -setup 0.070  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -hold 0.100  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -setup 0.070  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -hold 0.100  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -setup 0.070  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -hold 0.100  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {LionCPU16:CPU|AS}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {LionCPU16:CPU|AS}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -setup 0.070  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -hold 0.100  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -setup 0.070  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[2]}] -hold 0.100  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -setup 0.070  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -hold 0.100  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -setup 0.070  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -hold 0.100  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -setup 0.070  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -hold 0.100  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -setup 0.070  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -hold 0.100  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -rise_to [get_clocks {LionCPU16:CPU|AS}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {LionCPU16:CPU|AS}] -fall_to [get_clocks {LionCPU16:CPU|AS}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {iClock}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {iClock}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
 set_clock_uncertainty -rise_from [get_clocks {iClock}] -rise_to [get_clocks {iClock}]  0.020  

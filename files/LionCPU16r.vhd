@@ -1,8 +1,6 @@
 -- 16bit Lion CPU
 -- Theodoulos Liontakis (C) 2015 
 
-
-
 Library ieee;
 USE ieee.std_logic_1164.all;
 USE ieee.numeric_std.all ; 
@@ -55,7 +53,7 @@ SIGNAL ST: Std_logic_vector(15 downto 0):="1111111111111110";
 SIGNAL FF: Std_logic_vector(2 downto 0):=InitialState;
 SIGNAL TT: natural range 0 to 15;
 SIGNAL carry, overflow, zero, neg: Std_logic;
-SIGNAL fetch,fetch1,fetch2,fetch3: boolean;
+SIGNAL fetch,fetch1,fetch2,fetch3,mem_trans: boolean;
 --SIGNAL ds, as: Std_logic;
 
 COMPONENT ALU_LA4 IS
@@ -156,20 +154,20 @@ IF rising_edge(clock) THEN
 		HOLDA<='0'; rest2:=false; mtmp:=ST-2; FF<=ExecutionState; Wen:='0';
 	ELSE
 		rest:=false;   
-		case  FF is -- Fetch Instruction 
-		when InitialState =>
+		case  FF is 
+		when InitialState =>      -- Fetch Instruction 
 			case TT is
 			when 0 =>
 				Wen:='0'; HOLDA<='0';	AD:=PC; half:='0';   stmp:=ST+2; rest2:=false;
 				AS<='0'; sub:='0'; cin:='0'; rhalf:='0'; setreg:=true; set_code;
 			when 1 =>	 
-				 fetch<=false; fetch1<=false; fetch2<=false;
+				 fetch<=false; fetch1<=false; fetch2<=false; mem_trans<=false;
 				 PC<=PC+2; mtmp:=ST-2;
 			when others => 
 				AS<='1'; rest:=true; 
 				IR:=Di; RR:=Di(4 downto 2); R:=Di(8 downto 6);
 				bt:=to_integer(unsigned(Di(5 downto 2)));
-				bwb:=Di(5); rel:=(Di(15 downto 13)="111") or (Di(15 downto 12)="1101");  
+				bwb:=Di(5); rel:=(Di(15 downto 13)="111");  
 				fetch3<=(Di(15 downto 12)="1100"); r2:=Di(4 downto 2); r1:=Di(8 downto 6);	
 				if Di(0)='1' then
 					FF<=FetchState; AD:=PC; AS<='0'; 
@@ -230,8 +228,8 @@ IF rising_edge(clock) THEN
 			if fetch then RPC<=PC+X; else RPC<=PC+X1; end if;
 			if IR(1)='1' then FF<=IndirectState; else FF<=ExecutionState; end if;
 			rest:=true; 
-		when ExecutionState =>               --- F="110" Operation execution cycles   
-			if TT=0 then X1:=Ao;	Y1:=AoII; end if;
+		when ExecutionState =>                        --- F="110" Operation execution cycles   
+			if TT=0 and not mem_trans then X1:=Ao;	Y1:=AoII; end if;
 			case IR(15 downto 9) is
 			when "0000000" =>              -- NOP
 					rest2:=true;
@@ -457,11 +455,8 @@ IF rising_edge(clock) THEN
 				if fetch then PC<=X;
 				else	PC<=Y1; end if;
 				rest2:=true;
-			when "0100110" =>              -- SRSET  n
-				SR(to_integer(unsigned(Y1(2 downto 0))))<='1'; 
-				rest2:=true;
-			when "0101010" =>              -- SRCLR  n
-				SR(to_integer(unsigned(Y1(2 downto 0))))<='0';  
+			when "0100110" =>              -- SRSET SRCLR n
+				SR(to_integer(unsigned(Y1(3 downto 0))))<=IR(8); 
 				rest2:=true;
 			when "0100111" =>              -- JZ & JNZ (Reg,NUM,[reg],[n])
 				If SR(ZR)=bwb then
@@ -888,7 +883,7 @@ IF rising_edge(clock) THEN
 				end if;
 				if fetch then PC<=X; else PC<=X1; end if;
 				rest2:=true;
-			when "1000100" =>       --PJSR An1,An2
+			when "1000100" =>       --PJSR (An1 | address),(An2 | n 0..7)
 				case TT is
 				when 0 =>
 					AD:=ST; Do:=PC; RW<='0'; set_stack;
@@ -911,9 +906,57 @@ IF rising_edge(clock) THEN
 					end if;
 					rest2:=true; 
 				end case;
-				
---			when "0111111" =>              -- 
-
+			when "0111111" =>              -- MTOI An1,An2 | MTOM An1,An2
+				case TT is
+				when 0 =>
+					IO<='0'; AD:=Y1; AS<='0'; RW<='1'; DS<='1'; mem_trans<=true;
+				when 1 =>
+				when 2 =>
+					AD:=X1; RW<='0'; Do:=Di; IO<=bwb; AS<='0'; DS<='0';
+				when others =>
+					if (IDX/=ZERO16) then 
+						IDX<=IDX-1;
+						X1:=X1+2;
+						Y1:=Y1+2;
+						rest:=true;
+					else
+						rest2:=true;
+					end if;
+				end case;
+			when "0101010" =>              -- NTOI An1,An2 NTOM An1,An2
+				case TT is
+				when 0 =>
+					mem_trans<=true;
+					if fetch then Do:=X; else Do:=Y1; end if;
+					AD:=X1; RW<='0';  IO<=bwb; AS<='0'; DS<='0';
+				when 1 =>
+				when others =>
+					AS<='0'; DS<='0'; RW<='1';
+					if (IDX/=ZERO16) then 
+						IDX<=IDX-1;
+						X1:=X1+2;
+						rest:=true;
+					else
+						rest2:=true;
+					end if;
+				end case;
+			when "1101000" =>              -- ITOI ITOM An1,An2 
+				case TT is
+				when 0 =>
+					IO<='1'; AD:=Y1; AS<='0'; RW<='1'; DS<='1'; mem_trans<=true;
+				when 1 =>
+				when 2 =>
+					AD:=X1; RW<='0'; Do:=Di; IO<=bwb; AS<='0'; DS<='0';
+				when others =>
+					if (IDX/=ZERO16) then 
+						IDX<=IDX-1;
+						X1:=X1+2;
+						Y1:=Y1+2;
+						rest:=true;
+					else
+						rest2:=true;
+					end if;
+				end case;
      
 ------instructions  between 1100... and 11010.... cause double fetch -----------------			
 
@@ -960,8 +1003,11 @@ IF rising_edge(clock) THEN
 					sub:='0';
 				end case;
 				
-		-----------    instructions after "1101..." relative 
-			when "1101001" =>   --JRXAB JRXAW
+		-----------    instructions after "111..." relative 
+			when "1110000" =>              -- JR (Reg,NUM,[reg],[n])
+				PC<=RPC; 
+				rest2:=true;
+			when "1110001" =>   --JRXAB JRXAW
 				IDX<=IDX-1;	
 				if (IDX/=ZERO16) then 
 					PC<=RPC;
@@ -969,12 +1015,6 @@ IF rising_edge(clock) THEN
 					set_reg(r1,tmp,'0','0'); 
 				end if;
 				rest2:=true;				
-			when "1110000" =>              -- JR (Reg,NUM,[reg],[n])
-				PC<=RPC; 
-				rest2:=true;
-			when "1110001" =>              -- JRZ (Reg,NUM,[reg],[n])
-				if SR(ZR)='1' then PC<=RPC; end if;
-				rest2:=true;
 			when "1110010" =>              -- JRN (Reg,NUM,[reg],[n])
 				if SR(NG)='1' then	PC<=RPC; 	end if;
 				rest2:=true;
@@ -1004,8 +1044,8 @@ IF rising_edge(clock) THEN
 			when "1111000" =>              -- JRLE (Reg,NUM,[reg],[n])
 				If SR(ZR)='1' or (SR(NG)/=SR(OV)) then	PC<=RPC; end if;
 				rest2:=true;
-			when "1111001" =>              -- JRNZ (Reg,NUM,[reg],[n])
-				if SR(ZR)='0' then	PC<=RPC; end if;
+			when "1111001" =>              -- JRZ JRNZ (Reg,NUM,[reg],[n])
+				if SR(ZR)=bwb then	PC<=RPC; end if;
 				rest2:=true;
 			when "1111010" =>              -- JRA (Reg,NUM,[reg],[n])
 				If SR(ZR)='0' and SR(CA)='0' then PC<=RPC; end if;
