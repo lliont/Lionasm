@@ -909,7 +909,7 @@ IF rising_edge(clock) THEN
 			when "0111111" =>              -- MTOI An1,An2 | MTOM An1,An2
 				case TT is
 				when 0 =>
-					IO<='0'; AD:=Y1; AS<='0'; RW<='1'; DS<='1'; mem_trans<=true;
+					IO<='0'; AD:=Y1; AS<='0'; RW<='1'; DS<='1'; mem_trans<=true; set_data;
 				when 1 =>
 				when 2 =>
 					AD:=X1; RW<='0'; Do:=Di; IO<=bwb; AS<='0'; DS<='0';
@@ -926,7 +926,7 @@ IF rising_edge(clock) THEN
 			when "0101010" =>              -- NTOI An1,An2 NTOM An1,An2
 				case TT is
 				when 0 =>
-					mem_trans<=true;
+					mem_trans<=true; set_data;
 					if fetch then Do:=X; else Do:=Y1; end if;
 					AD:=X1; RW<='0';  IO<=bwb; AS<='0'; DS<='0';
 				when 1 =>
@@ -943,7 +943,7 @@ IF rising_edge(clock) THEN
 			when "1101000" =>              -- ITOI ITOM An1,An2 
 				case TT is
 				when 0 =>
-					IO<='1'; AD:=Y1; AS<='0'; RW<='1'; DS<='1'; mem_trans<=true;
+					IO<='1'; AD:=Y1; AS<='0'; RW<='1'; DS<='1'; mem_trans<=true; set_data;
 				when 1 =>
 				when 2 =>
 					AD:=X1; RW<='0'; Do:=Di; IO<=bwb; AS<='0'; DS<='0';
@@ -986,8 +986,8 @@ IF rising_edge(clock) THEN
 			when "1100100" | "1100101" =>              -- ADD,SUB  [n],n  ADD.B, SUB.B [n],n
 				case TT is
 				when 0 =>
-					X1:=X; Y1:=Y;
-					sub:=IR(9); half:=bwb;	AD:=X2; 
+					X1:=X; Y1:=Y; 
+					sub:=IR(9); half:=bwb;	AD:=X2; set_data;
 				when 1  =>
 				when others =>
 					if bwb='1' then 
