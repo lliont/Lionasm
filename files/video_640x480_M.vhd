@@ -27,7 +27,7 @@ USE ieee.numeric_std.all ;
 entity VideoRGB80 is
 	port
 	(
-		sclk, EN: IN std_logic;
+		sclk, vclk, EN: IN std_logic;
 		R,G,B,BRI0,VSYN,HSYN, VSINT: OUT std_logic;
 		addr : OUT natural range 0 to 16383; 
 		Q : IN std_logic_vector(15 downto 0)
@@ -58,10 +58,10 @@ shared variable addr1:natural range 0 to 16383;
 begin
 
 addr<=addr1;
-vidc<=not vidc when falling_edge(sclk);
+vidc<=not vidc when rising_edge(vclk);
 HSYN<='0' when (pixel<96) else '1'; 
 VSYN<='0' when lines<2 else '1';
-VSINT<='0' when (lines=0) and (pixel<6) else '1';
+VSINT<='0' when (lines=0) and (pixel<12) else '1';
 
 process (sclk,EN)
 variable m78: natural range 0 to 31;
@@ -97,7 +97,7 @@ begin
 			end if;
 			
 			if pixel=799 then
-				if lines<=l1 then 
+				if lines=l1-1 then 
 					addr3<=(ctbl)/2;  --p8<=0;
 				else
 					if m8=15 then addr3<=addr3+cxno/2; end if;
@@ -137,7 +137,7 @@ USE ieee.numeric_std.all ;
 entity VideoRGB1 is
 	port
 	(
-		sclk, EN: IN std_logic;
+		sclk, vclk, EN: IN std_logic;
 		R,G,B,BRI,VSYN,HSYN, VSINT: OUT std_logic;
 		addr : OUT natural range 0 to 16383;
 		Q : IN std_logic_vector(15 downto 0)
@@ -158,16 +158,14 @@ Signal lines: natural range 0 to 1023;
 Signal pixel : natural range 0 to 1023;
 Signal addr2: natural range 0 to 16383;
 signal m8: natural range 0 to 31;
-Signal vidc: boolean:=false;
+Signal vidc: boolean:=true;
 Signal BRGB: std_logic_vector(3 downto 0);
 
-shared variable addr1:natural range 0 to 16383;
-
 begin
-addr<=addr1;
-vidc<=not vidc when falling_edge(sclk);
+--addr<=addr1;
+vidc<=not vidc when rising_edge(vclk);
 VSYN<='0' when lines<2 else '1';	
-VSINT<='0' when (lines=0) and (pixel<6) else '1';	
+VSINT<='0' when (lines=0) and (pixel<12) else '1';	
 HSYN<='0' when (pixel<96) else '1'; 
 
 process (sclk,EN)
@@ -176,7 +174,7 @@ variable pixm4: natural range 0 to 1023;
 variable pix: natural range 0 to 1023;
 
 begin
-	if  rising_edge(sclk)  and EN='1' then
+	if  rising_edge(sclk) and EN='1' then
 		if  vidc then 
 		-- sprites  ---------------------
 			if (lines>=l1 and lines<l2 and pixel>=p1 and pixel<p2) then
@@ -187,10 +185,10 @@ begin
 			if pixel=799 then
 				pixel<=0; pix:=0; pixm4:=0;
 				if lines=524 then	lines<=0; else lines<=lines+1; end if;
-				if lines=l1-1 then 
+				if lines<l1 or lines>l2  then 
 					m8<=0; addr2<=vbase/2; 
 				else
-					if m8=1 then m8<=0; addr2<=addr2+pno/4; else m8<=m8+1; end if;
+					if m8=1 then m8<=0; addr2<=addr2+pno/4; else m8<=1; end if;
 				end if;
 			else
 				pixel<=pixel+1;
@@ -203,7 +201,7 @@ begin
 					pix:=pix+1; 
 				end if;
 			end if;
-			addr1:= pix/4 + addr2;
+			addr<= pix/4 + addr2;
 			
 			case pixm4 is
 			when 0 => BRGB<=Q(15 downto 12);  --end if;  --Q(12)&Q(13)&Q(14)&Q(15);
@@ -223,7 +221,7 @@ end;
 
 
 -----------------------------------------------------------------------------
--- Multicolor Sprites for Lion Computer Set II & III
+-- Multicolor Sprites for Lion Computer 
 -- Theodoulos Liontakis (C) 2018
 
 Library ieee;
@@ -238,7 +236,7 @@ entity VideoSp is
 	);
 	port
 	(
-		sclk: IN std_logic;
+		sclk,vclk: IN std_logic;
 		R,G,B,BRI,SPDET: OUT std_logic;
 		reset, pbuffer, dbuffer : IN std_logic;
 		spaddr: OUT natural range 0 to 2047;
@@ -277,7 +275,7 @@ Signal pixel : natural range 0 to 1023;
 Signal sldata: sprite_line_data; 
 
 begin
-vidc<=not vidc when falling_edge(sclk);
+vidc<=not vidc when rising_edge(vclk);
 spaddr<=addr1;
 SPDET<=det;
 --pm4<=pixel mod 4;
@@ -341,7 +339,6 @@ begin
 			if pixel=799 then
 				pixel<=0; p16:=0;
 				if lines=524 then	lines:=0; else lines:=lines+1; end if;
-				 
 			else
 				pixel<=pixel+1; pixi:=(pixel-p1)/2;
 			end if;	
@@ -393,21 +390,21 @@ begin
 				end if;
 			end if;
 			
-			if (d1(0)<maxd*4) and (d2(0)<maxd) and (SEN(0)='1') and (SLData(0)(3+d1(0))='0') then blvec:="0000"; end if;
-			if (d1(1)<maxd*4) and (d2(1)<maxd) and (SEN(1)='1') and (SLData(1)(3+d1(1))='0') then blvec:="0001"; end if;
-			if (d1(2)<maxd*4) and (d2(2)<maxd) and (SEN(2)='1') and (SLData(2)(3+d1(2))='0') then blvec:="0010"; end if;
-			if (d1(3)<maxd*4) and (d2(3)<maxd) and (SEN(3)='1') and (SLData(3)(3+d1(3))='0') then blvec:="0011"; end if;
-			if (d1(4)<maxd*4) and (d2(4)<maxd) and (SEN(4)='1') and (SLData(4)(3+d1(4))='0') then blvec:="0100"; end if;
-			if (d1(5)<maxd*4) and (d2(5)<maxd) and (SEN(5)='1') and (SLData(5)(3+d1(5))='0') then blvec:="0101"; end if;
-			if (d1(6)<maxd*4) and (d2(6)<maxd) and (SEN(6)='1') and (SLData(6)(3+d1(6))='0') then blvec:="0110"; end if;
-			if (d1(7)<maxd*4) and (d2(7)<maxd) and (SEN(7)='1') and (SLData(7)(3+d1(7))='0') then blvec:="0111"; end if;
-			if (d1(8)<maxd*4) and (d2(8)<maxd) and (SEN(8)='1') and (SLData(8)(3+d1(8))='0') then blvec:="1000"; end if;
-			if (d1(9)<maxd*4) and (d2(9)<maxd) and (SEN(9)='1') and (SLData(9)(3+d1(9))='0') then blvec:="1001"; end if;
-			if (d1(10)<maxd*4) and (d2(10)<maxd) and (SEN(10)='1') and (SLData(10)(3+d1(10))='0') then blvec:="1010"; end if;
-			if (d1(11)<maxd*4) and (d2(11)<maxd) and (SEN(11)='1') and (SLData(11)(3+d1(11))='0') then blvec:="1011"; end if;
-			if (d1(12)<maxd*4) and (d2(12)<maxd) and (SEN(12)='1') and (SLData(12)(3+d1(12))='0') then blvec:="1100"; end if;
-			if (d1(13)<maxd*4) and (d2(13)<maxd) and (SEN(13)='1') and (SLData(13)(3+d1(13))='0') then blvec:="1101"; end if;			
-			if (d1(14)<maxd*4) and (d2(14)<maxd) and (SEN(14)='1') and (SLData(14)(3+d1(14))='0') then blvec:="1110"; end if;		
+			if (d1(0)<maxd*4) and (d2(0)<maxd) and (SEN(0)='1') and (SLData(0)(3+d1(0) downto d1(0))/="1111") then blvec:="0000"; end if;
+			if (d1(1)<maxd*4) and (d2(1)<maxd) and (SEN(1)='1') and (SLData(1)(3+d1(1) downto d1(1))/="1111") then blvec:="0001"; end if;
+			if (d1(2)<maxd*4) and (d2(2)<maxd) and (SEN(2)='1') and (SLData(2)(3+d1(2) downto d1(2))/="1111") then blvec:="0010"; end if;
+			if (d1(3)<maxd*4) and (d2(3)<maxd) and (SEN(3)='1') and (SLData(3)(3+d1(3) downto d1(3))/="1111") then blvec:="0011"; end if;
+			if (d1(4)<maxd*4) and (d2(4)<maxd) and (SEN(4)='1') and (SLData(4)(3+d1(4) downto d1(4))/="1111") then blvec:="0100"; end if;
+			if (d1(5)<maxd*4) and (d2(5)<maxd) and (SEN(5)='1') and (SLData(5)(3+d1(5) downto d1(5))/="1111") then blvec:="0101"; end if;
+			if (d1(6)<maxd*4) and (d2(6)<maxd) and (SEN(6)='1') and (SLData(6)(3+d1(6) downto d1(6))/="1111") then blvec:="0110"; end if;
+			if (d1(7)<maxd*4) and (d2(7)<maxd) and (SEN(7)='1') and (SLData(7)(3+d1(7) downto d1(7))/="1111") then blvec:="0111"; end if;
+			if (d1(8)<maxd*4) and (d2(8)<maxd) and (SEN(8)='1') and (SLData(8)(3+d1(8) downto d1(8))/="1111") then blvec:="1000"; end if;
+			if (d1(9)<maxd*4) and (d2(9)<maxd) and (SEN(9)='1') and (SLData(9)(3+d1(9) downto d1(9))/="1111") then blvec:="1001"; end if;
+			if (d1(10)<maxd*4) and (d2(10)<maxd) and (SEN(10)='1') and (SLData(10)(3+d1(10) downto d1(10))/="1111") then blvec:="1010"; end if;
+			if (d1(11)<maxd*4) and (d2(11)<maxd) and (SEN(11)='1') and (SLData(11)(3+d1(11) downto d1(11))/="1111") then blvec:="1011"; end if;
+			if (d1(12)<maxd*4) and (d2(12)<maxd) and (SEN(12)='1') and (SLData(12)(3+d1(12) downto d1(12))/="1111") then blvec:="1100"; end if;
+			if (d1(13)<maxd*4) and (d2(13)<maxd) and (SEN(13)='1') and (SLData(13)(3+d1(13) downto d1(13))/="1111") then blvec:="1101"; end if;			
+			if (d1(14)<maxd*4) and (d2(14)<maxd) and (SEN(14)='1') and (SLData(14)(3+d1(14) downto d1(14))/="1111") then blvec:="1110"; end if;		
 		end if;
 	end if; --reset
 end process;
@@ -466,7 +463,7 @@ variable f:std_logic_vector(15 downto 0);
 				c1<=c1+1;
 				if c3=0 and dur/=0 then dur<=dur-1; end if;
 			end if;
-			if c1="111110011" then  -- c1=502 100khz (clock =50.347.222) c1=499 100Khz was c1=999  50Khz
+			if c1="011111001" then  -- c1=249 100Khz c1==499 50Khz was c1=999  25Khz
 				c1<="0000000000";
 				c3<=c3+1; c2<=c2+1; 
 				if dur=0 then
@@ -478,7 +475,7 @@ variable f:std_logic_vector(15 downto 0);
 					end if;
 					--play<='1';
 				end if;
-				if i=99 then i<=0; count<=count+'1'; else i<=i+1; end if;
+				if i=199 then i<=0; count<=count+'1'; else i<=i+1; end if;
 			else
 			end if;
 		end if;
@@ -536,7 +533,76 @@ variable f:std_logic_vector(15 downto 0);
 				c1<=c1+1;
 				if c3=0 and dur/=0 then dur<=dur-1; end if;
 			end if;
-			if c1="000111110011" then  -- c1=499 100Khz was c1=999  50Khz
+			if c1="011111001" then  -- c1=249 100Khz c1==499 50Khz was c1=999  25Khz
+				c1<="0000000000";
+				c3<=c3+1; c2<=c2+1; 
+				if dur=0 then
+					Aud<='0';	c2<=(others => '0'); c3<=0; play<='0';
+				else 
+					if c2=f(11 downto 0) then
+						if c2/="000000000000" then Aud<=not Aud; end if;
+						c2<=(others => '0');			
+					end if;
+				end if;
+			end if;
+		end if;
+	end process ;
+end;
+
+---------------------------------------------------
+
+Library ieee;
+USE ieee.std_logic_1164.all;
+USE ieee.std_logic_unsigned.all ;
+USE ieee.numeric_std.all ;
+
+entity SoundV is
+	port
+	(
+		Aud: OUT std_logic;
+		reset, clk, wr : IN std_logic;
+		Q : IN std_logic_vector(15 downto 0);
+		V : IN std_logic_vector(15 downto 0);
+		play: OUT  std_logic
+	);
+end SoundV;
+
+
+Architecture Behavior of SoundV is
+
+Signal c3:natural range 0 to 255;
+
+Signal c2:std_logic_vector(11 downto 0);
+Signal c1:std_logic_vector(9 downto 0);
+Signal dur: natural range 0 to 65535*2+1;
+begin
+
+--f<=Q when wr='0';
+process (clk,reset,wr)	
+variable f:std_logic_vector(15 downto 0);
+	begin
+		if (reset='1') then
+		   Aud<='0'; c3<=0;  play<='0'; dur<=0;
+		elsif  Clk'EVENT AND Clk = '1' then
+			if wr='0' then 
+				f:=Q;
+				play<='1';
+				CASE f(15 downto 14) is
+					when "00" =>
+						dur<=100000;  -- 1 sec
+					when "01" =>
+						dur<=50000;  -- 0.5 sec
+					when "10" =>
+						dur<=25000;
+					when others =>
+						dur<=12500;
+					end case;
+				c1<=(others => '0'); 
+			else 
+				c1<=c1+1;
+				if c3=0 and dur/=0 then dur<=dur-1; end if;
+			end if;
+			if c1="011111001" then  -- c1=249 100Khz c1==499 50Khz was c1=999  25Khz
 				c1<="0000000000";
 				c3<=c3+1; c2<=c2+1; 
 				if dur=0 then
@@ -558,25 +624,28 @@ end;
 -- Function    : Linear feedback shift register
 -- Coder       : Deepak Kumar Tala (Verilog)
 -- Translator  : Alexander H Pham (VHDL)
--- adapted to 1bit stream, 18bit counter, by Theodoulos Liontakis
+-- adapted to 1bit stream, 20bit counter, band width by Theodoulos Liontakis
 -------------------------------------------------------
 library ieee;
-    use ieee.std_logic_1164.all;
+   use ieee.std_logic_1164.all;
+	USE ieee.std_logic_unsigned.all ;
+	USE ieee.numeric_std.all ;
 
 entity lfsr is
   port (
     cout   :out std_logic;		-- Output of the counter
     clk    :in  std_logic;    -- Input rlock
-    reset  :in  std_logic     -- Input reset
+    reset  :in  std_logic;     -- Input reset
+	 bw     :in std_logic_vector(15 downto 0) --band width
   );
 end entity;
 
 architecture rtl of lfsr is
-    signal count           :std_logic_vector (17 downto 0);
+    signal count           :std_logic_vector (19 downto 0);
     signal linear_feedback :std_logic;
     
 begin
-    linear_feedback <= not(count(17) xor count(6));
+    linear_feedback <= not(count(19) xor count(2));
 
 	 process (clk, reset) 
 	 variable cnt: natural range 0 to 65535;
@@ -586,8 +655,8 @@ begin
 				count <= (others=>'0'); cnt:=0;
 		  elsif (rising_edge(clk)) then
 				cnt:=cnt+1;
-				if cnt=32000 then
-					count <= ( count(16) & count(15)&
+				if cnt=to_integer(unsigned(bw)) then
+					count <= ( count(18) & count(17)& count(16) & count(15)&
 								count(14) & count(13) & count(12) & count(11)&
 								count(10) & count(9) & count(8) & count(7)&
 								count(6) & count(5) & count(4) & count(3) 
@@ -596,7 +665,7 @@ begin
 				end if;
 		  end if;
 	 end process;
-	cout <= count(17);
+	cout <= count(19);
 end architecture;
 
 -----------------------------------------------------------------------------

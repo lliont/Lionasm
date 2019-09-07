@@ -2194,7 +2194,7 @@ CLRMEM:	PUSH	A1
 		SRL	A0,1
 		DEC	A0
 		SETX	A0	
-		NTOM  A0,0
+		NTOM  A1,0
 		POPX
 		POP	A0
 		POP	A1
@@ -2208,9 +2208,11 @@ GETLN:
 GL1:
 		MOVI	A0,0
 		INT	4           ; Get keyboard code for serial port
-		BTST	A0,1        ; if availiable
-		JNZ	KEYIN
-		MOVI	A0,7
+		BTST  A0,1
+		JNZ   KEYIN
+		BTST	A0,2        ; if availiable
+		JZ	GL1
+GL6:		MOVI	A0,7
 		INT	4
 		BTST	A0,2
 		JZ	GL1

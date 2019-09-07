@@ -12,7 +12,8 @@ entity UART is
 		Tx  : OUT std_logic ;
 		Rx  : IN std_logic ;
 		clk, reset, r, w : IN std_logic ;
-		data_ready, ready : OUT std_logic;
+		data_ready : OUT std_logic:='0';
+		ready : OUT std_logic:='1';
 		data_in : IN std_logic_vector (7 downto 0);
 		data_out :OUT std_logic_vector (7 downto 0)
 	);
@@ -26,7 +27,10 @@ constant divider:natural :=2604; -- 19200       650  25MHz/38400   1302 ; -- 50M
 type FIFO_t is array (0 to tblen-1) of std_logic_vector(9 downto 2);
 type FIFO_r is array (0 to rblen-1) of std_logic_vector(9 downto 2);
 Signal tFIFO: FIFO_t;
+	attribute ramstyle : string;
+   attribute ramstyle of tFIFO : signal is "no_rw_check";
 Signal rFIFO: FIFO_r;
+   attribute ramstyle of rFIFO : signal is "no_rw_check";
 Signal inb,outb: std_logic_vector(9 downto 2);
 Signal rcounter,tcounter :natural range 0 to 4095:=1;
 signal dr: boolean:=false;

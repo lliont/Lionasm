@@ -20,10 +20,10 @@
 ## PROGRAM "Quartus Prime"
 ## VERSION "Version 18.1.1 Build 646 04/11/2019 SJ Lite Edition"
 
-## DATE    "Fri Jul 05 13:36:27 2019"
+## DATE    "Wed Jun 05 00:48:06 2019"
 
 ##
-## DEVICE  "EP4CE15E22C8"
+## DEVICE  "5CEFA2F23I7"
 ##
 
 
@@ -46,8 +46,9 @@ create_clock -name {iClock} -period 20.000 -waveform { 0.000 10.000 } [get_ports
 # Create Generated Clock
 #**************************************************************
 
-create_generated_clock -name {CPLL|altpll_component|auto_generated|pll1|clk[0]} -source [get_pins {CPLL|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 1 -master_clock {iClock} [get_pins {CPLL|altpll_component|auto_generated|pll1|clk[0]}] 
-create_generated_clock -name {CPLL|altpll_component|auto_generated|pll1|clk[1]} -source [get_pins {CPLL|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 1 -phase 180.000 -master_clock {iClock} [get_pins {CPLL|altpll_component|auto_generated|pll1|clk[1]}] 
+create_generated_clock -name {CPLL|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|vcoph[0]} -source [get_pins {CPLL|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|refclkin}] -duty_cycle 50/1 -multiply_by 12 -divide_by 2 -master_clock {iClock} [get_pins {CPLL|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|vcoph[0]}] 
+create_generated_clock -name {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk} -source [get_pins {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|vco0ph[0]}] -duty_cycle 50/1 -multiply_by 1 -divide_by 6 -master_clock {CPLL|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|vcoph[0]} [get_pins {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] 
+create_generated_clock -name {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk} -source [get_pins {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|vco0ph[0]}] -duty_cycle 50/1 -multiply_by 1 -divide_by 6 -phase 180/1 -master_clock {CPLL|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|vcoph[0]} [get_pins {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] 
 
 
 #**************************************************************
@@ -60,38 +61,46 @@ create_generated_clock -name {CPLL|altpll_component|auto_generated|pll1|clk[1]} 
 # Set Clock Uncertainty
 #**************************************************************
 
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -rise_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}] -fall_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[1]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -rise_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}] -fall_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {iClock}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {iClock}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {iClock}] -rise_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {iClock}] -fall_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {iClock}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {iClock}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|pll1|clk[0]}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {iClock}] -rise_to [get_clocks {iClock}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {iClock}] -fall_to [get_clocks {iClock}]  0.020  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -rise_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
+set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
+set_clock_uncertainty -rise_from [get_clocks {iClock}] -rise_to [get_clocks {iClock}] -setup 0.080  
+set_clock_uncertainty -rise_from [get_clocks {iClock}] -rise_to [get_clocks {iClock}] -hold 0.060  
+set_clock_uncertainty -rise_from [get_clocks {iClock}] -fall_to [get_clocks {iClock}] -setup 0.080  
+set_clock_uncertainty -rise_from [get_clocks {iClock}] -fall_to [get_clocks {iClock}] -hold 0.060  
+set_clock_uncertainty -fall_from [get_clocks {iClock}] -rise_to [get_clocks {iClock}] -setup 0.080  
+set_clock_uncertainty -fall_from [get_clocks {iClock}] -rise_to [get_clocks {iClock}] -hold 0.060  
+set_clock_uncertainty -fall_from [get_clocks {iClock}] -fall_to [get_clocks {iClock}] -setup 0.080  
+set_clock_uncertainty -fall_from [get_clocks {iClock}] -fall_to [get_clocks {iClock}] -hold 0.060  
 
 
 #**************************************************************
