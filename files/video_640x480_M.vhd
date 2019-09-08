@@ -420,9 +420,10 @@ USE ieee.numeric_std.all ;
 entity SoundI is
 	port
 	(
-		Aud: OUT std_logic;
+		Audio: OUT std_logic;
 		reset, clk, wr : IN std_logic;
 		Q : IN std_logic_vector(15 downto 0);
+		Vol : IN std_logic_vector(7 downto 0);
 		count: OUT std_logic_vector(15 downto 0);
 		play: OUT  std_logic
 	);
@@ -432,11 +433,11 @@ end SoundI;
 Architecture Behavior of SoundI is
 
 Signal c3:natural range 0 to 255;
-
 Signal c2:std_logic_vector(11 downto 0);
 Signal c1:std_logic_vector(9 downto 0);
-Signal dur: natural range 0 to 65535*2+1;
+Signal dur: natural range 0 to 256*1024-1;
 signal i: natural range 0 to 511;
+Signal Aud:std_logic;
 begin
 
 process (clk,reset,wr)	
@@ -448,20 +449,33 @@ variable f:std_logic_vector(15 downto 0);
 			if wr='0' then 
 				f:=Q;
 			   play<='1';
-				CASE f(15 downto 14) is
-					when "00" =>
+				CASE f(15 downto 13) is
+					when "000" =>
 						dur<=100000;  -- 1 sec
-					when "01" =>
-						dur<=50000;  -- 0.5 sec
-					when "10" =>    
-						dur<=25000;  -- 0.25
-					when others =>  
+					when "001" =>
+						dur<=3125;  -- 0.031 sec
+					when "010" =>    
+						dur<=6250;  -- 0.063
+					when "011" =>  
 						dur<=12500;  -- 0.125
+					when "100" =>
+						dur<=25000;  -- 0.25 sec
+					when "101" =>
+						dur<=50000;  -- 0.5 sec
+					when "110" =>    
+						dur<=100000;  -- 1
+					when others =>  
+						dur<=200000;  -- 2
 					end case;
 				c1<=(others => '0'); 
 			else 
 				c1<=c1+1;
 				if c3=0 and dur/=0 then dur<=dur-1; end if;
+			end if;
+			if Aud='1' and c1(7 downto 0)<Vol then
+				Audio<='1';	
+			else
+				Audio<='0';
 			end if;
 			if c1="011111001" then  -- c1=249 100Khz c1==499 50Khz was c1=999  25Khz
 				c1<="0000000000";
@@ -477,142 +491,6 @@ variable f:std_logic_vector(15 downto 0);
 				end if;
 				if i=199 then i<=0; count<=count+'1'; else i<=i+1; end if;
 			else
-			end if;
-		end if;
-	end process ;
-end;
-
------------------------------------------------------------------------------
-Library ieee;
-USE ieee.std_logic_1164.all;
-USE ieee.std_logic_unsigned.all ;
-USE ieee.numeric_std.all ;
-
-entity Sound is
-	port
-	(
-		Aud: OUT std_logic;
-		reset, clk, wr : IN std_logic;
-		Q : IN std_logic_vector(15 downto 0);
-		play: OUT  std_logic
-	);
-end Sound;
-
-
-Architecture Behavior of Sound is
-
-Signal c3:natural range 0 to 255;
-
-Signal c2:std_logic_vector(11 downto 0);
-Signal c1:std_logic_vector(9 downto 0);
-Signal dur: natural range 0 to 65535*2+1;
-begin
-
---f<=Q when wr='0';
-process (clk,reset,wr)	
-variable f:std_logic_vector(15 downto 0);
-	begin
-		if (reset='1') then
-		   Aud<='0'; c3<=0;  play<='0'; dur<=0;
-		elsif  Clk'EVENT AND Clk = '1' then
-			if wr='0' then 
-				f:=Q;
-				play<='1';
-				CASE f(15 downto 14) is
-					when "00" =>
-						dur<=100000;  -- 1 sec
-					when "01" =>
-						dur<=50000;  -- 0.5 sec
-					when "10" =>
-						dur<=25000;
-					when others =>
-						dur<=12500;
-					end case;
-				c1<=(others => '0'); 
-			else 
-				c1<=c1+1;
-				if c3=0 and dur/=0 then dur<=dur-1; end if;
-			end if;
-			if c1="011111001" then  -- c1=249 100Khz c1==499 50Khz was c1=999  25Khz
-				c1<="0000000000";
-				c3<=c3+1; c2<=c2+1; 
-				if dur=0 then
-					Aud<='0';	c2<=(others => '0'); c3<=0; play<='0';
-				else 
-					if c2=f(11 downto 0) then
-						if c2/="000000000000" then Aud<=not Aud; end if;
-						c2<=(others => '0');			
-					end if;
-				end if;
-			end if;
-		end if;
-	end process ;
-end;
-
----------------------------------------------------
-
-Library ieee;
-USE ieee.std_logic_1164.all;
-USE ieee.std_logic_unsigned.all ;
-USE ieee.numeric_std.all ;
-
-entity SoundV is
-	port
-	(
-		Aud: OUT std_logic;
-		reset, clk, wr : IN std_logic;
-		Q : IN std_logic_vector(15 downto 0);
-		V : IN std_logic_vector(15 downto 0);
-		play: OUT  std_logic
-	);
-end SoundV;
-
-
-Architecture Behavior of SoundV is
-
-Signal c3:natural range 0 to 255;
-
-Signal c2:std_logic_vector(11 downto 0);
-Signal c1:std_logic_vector(9 downto 0);
-Signal dur: natural range 0 to 65535*2+1;
-begin
-
---f<=Q when wr='0';
-process (clk,reset,wr)	
-variable f:std_logic_vector(15 downto 0);
-	begin
-		if (reset='1') then
-		   Aud<='0'; c3<=0;  play<='0'; dur<=0;
-		elsif  Clk'EVENT AND Clk = '1' then
-			if wr='0' then 
-				f:=Q;
-				play<='1';
-				CASE f(15 downto 14) is
-					when "00" =>
-						dur<=100000;  -- 1 sec
-					when "01" =>
-						dur<=50000;  -- 0.5 sec
-					when "10" =>
-						dur<=25000;
-					when others =>
-						dur<=12500;
-					end case;
-				c1<=(others => '0'); 
-			else 
-				c1<=c1+1;
-				if c3=0 and dur/=0 then dur<=dur-1; end if;
-			end if;
-			if c1="011111001" then  -- c1=249 100Khz c1==499 50Khz was c1=999  25Khz
-				c1<="0000000000";
-				c3<=c3+1; c2<=c2+1; 
-				if dur=0 then
-					Aud<='0';	c2<=(others => '0'); c3<=0; play<='0';
-				else 
-					if c2=f(11 downto 0) then
-						if c2/="000000000000" then Aud<=not Aud; end if;
-						c2<=(others => '0');			
-					end if;
-				end if;
 			end if;
 		end if;
 	end process ;
@@ -636,21 +514,20 @@ entity lfsr is
     cout   :out std_logic;		-- Output of the counter
     clk    :in  std_logic;    -- Input rlock
     reset  :in  std_logic;     -- Input reset
+	 Vol    :in std_logic_vector(7 downto 0);
 	 bw     :in std_logic_vector(15 downto 0) --band width
   );
 end entity;
 
 architecture rtl of lfsr is
     signal count           :std_logic_vector (19 downto 0);
-    signal linear_feedback :std_logic;
-    
+    signal linear_feedback,temp :std_logic:='0';
 begin
     linear_feedback <= not(count(19) xor count(2));
 
 	 process (clk, reset) 
 	 variable cnt: natural range 0 to 65535;
 	 begin
-				
 		  if (reset = '1') then
 				count <= (others=>'0'); cnt:=0;
 		  elsif (rising_edge(clk)) then
@@ -661,11 +538,12 @@ begin
 								count(10) & count(9) & count(8) & count(7)&
 								count(6) & count(5) & count(4) & count(3) 
 							  & count(2) & count(1) & count(0) & linear_feedback);
+					if vol > to_integer(unsigned(count(7 downto 0))) then temp<=count(19); else temp<='0'; end if;
 					cnt:=0;
 				end if;
 		  end if;
 	 end process;
-	cout <= count(19);
+	 cout <=temp; -- count(19) when vol > to_integer(unsigned(count(7 downto 0)));
 end architecture;
 
 -----------------------------------------------------------------------------

@@ -21,7 +21,7 @@ entity LionSystem is
 		R,G,B,VSYN,HSYN,VSYN2,HSYN2, BRI : OUT std_Logic;
 		Tx  : OUT std_logic ;
 		Rx, Rx2  : IN std_logic ;
-		AUDIO,AUDIOB,NOIS: OUT std_logic;
+		AUDIOA,AUDIOB,AUDIOC,NOISEO: OUT std_logic;
 		SCLK,MOSI,SPICS: OUT std_logic;
 		MISO: IN std_logic;
 		JOYST1,JOYST2: IN std_logic_vector(4 downto 0);
@@ -63,6 +63,7 @@ Component lfsr is
     cout   :out std_logic;      -- Output
     clk    :in  std_logic;      -- Input rlock
     reset  :in  std_logic;       -- Input reset
+	 Vol    :in std_logic_vector(7 downto 0);
 	 bw     :in std_logic_vector(15 downto 0) --band width
   );
 end Component;
@@ -134,23 +135,24 @@ end Component;
 Component SoundI is
 	port
 	(
-		Aud: OUT std_logic;
+		Audio: OUT std_logic;
 		reset, clk, wr : IN std_logic;
 		Q : IN std_logic_vector(15 downto 0);
+		Vol : IN std_logic_vector(7 downto 0);
 		count: OUT std_logic_vector(15 downto 0);
 		play: OUT  std_logic
 	);
 end Component;
 
-Component Sound is
-	port
-	(
-		Aud: OUT std_logic;
-		reset, clk, wr : IN std_logic;
-		Q : IN std_logic_vector(15 downto 0);
-		play: OUT  std_logic
-	);
-end Component;
+--Component Sound is
+--	port
+--	(
+--		Aud: OUT std_logic;
+--		reset, clk, wr : IN std_logic;
+--		Q : IN std_logic_vector(15 downto 0);
+--		play: OUT  std_logic
+--	);
+--end Component;
 
 COMPONENT single_port_ram is
 	port 
@@ -207,9 +209,9 @@ Signal R0,B0,G0,BRI0,R1,G1,B1,BRI1,SR2,SG2,SB2,SBRI2,SPDET2,SR3,SG3,SB3,SBRI3,SP
 Signal clock0,clock1,clock2:std_logic;
 Signal hsyn0,vsyn0,hsyn1,vsyn1, Vmod: std_logic:='0';
 Signal vq: std_logic_vector (15 downto 0);
-Signal di,do,AD,qa,qro,aq,aq2,q16,count : std_logic_vector(15 downto 0);
+Signal di,do,AD,qa,qro,aq,aq2,aq3,q16,count,count2,count3 : std_logic_vector(15 downto 0);
 Signal lfsr_bw : std_logic_vector(15 downto 0):="0010000000000000";
-Signal w1,  WAud, WAud2: std_logic;
+Signal w1,  WAud, WAud2,WAud3: std_logic;
 Signal HOLDA, A16,A17,A18,A19, IO,  nen, ne: std_logic:='0';
 Signal rst, rst2, AS, DS, RW, Int_in, vint,vint0,vint1: std_logic:='1';
 Signal spw1, spw2, spw3: std_logic:='0';
@@ -219,8 +221,9 @@ Signal ad1,vad0,vad1 :  natural range 0 to 16383;
 Signal spad1,spad3,spad5 :  natural range 0 to 2047;
 Signal sr,sw,sdready,sready,kr,kready,ser2,sdready2, noise: std_Logic;
 Signal sdi,sdo,sdo2,kdo : std_logic_vector (7 downto 0);
+Signal Vol1,Vol2,Vol3,Voln : std_logic_vector (7 downto 0):="11111100";
 SIGNAL Spi_in,Spi_out: STD_LOGIC_VECTOR (7 downto 0);
-Signal Spi_w, spi_rdy, play, play2, spb, sdb : std_logic;
+Signal Spi_w, spi_rdy, play,play2,play3, spb, sdb : std_logic;
 
 shared variable Di1:std_logic_vector(15 downto 0);
 
@@ -260,14 +263,16 @@ Serial: UART
 	PORT MAP ( Tx,Rx,clock1,rst,sr,sw,sdready,sready,sdi,sdo );
 --SERKEYB: SKEYB
 --	PORT MAP (Rx2,clock1,reset,ser2,sdready2,sdo2);
-SoundIC: SoundI
-	PORT MAP (AUDIO,rst,clock1,Waud,aq,count,play);
-SoundC: Sound
-	PORT MAP (AUDIOB, rst, clock1, Waud2, aq2, play2);     
+SoundC1: SoundI
+	PORT MAP (AUDIOA,rst,clock1,Waud,aq,Vol1,count,play);
+SoundC2: SoundI
+	PORT MAP (AUDIOB,rst,clock1,Waud2,aq2,Vol2,count2,play2);     
+SoundC3: SoundI
+	PORT MAP (AUDIOC,rst,clock1,Waud3,aq3,Vol3,count3,play3); 
 MSPI: SPI 
 	PORT MAP ( SCLK,MOSI,MISO,clock1,rst,spi_w,spi_rdy,spi_in,spi_out);
 NOIZ:lfsr
-	PORT MAP ( noise, clock1, rst, lfsr_bw);
+	PORT MAP ( noise, clock1, rst, Voln, lfsr_bw);
 CPLL:LPLL2
 	PORT MAP (iClock,Clock0,Clock1,clock2);
 PS2:PS2KEYB
@@ -291,7 +296,7 @@ ADo<= AD when AS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 --IACK<=IAC;
 
 ne<='1' when (nen='1') and (aq(11 downto 0)/="000000000000") else '0';
-NOIS<=NOISE and (play or play2) and ne;
+NOISEO<=NOISE and play and ne;
 
 R<= SR1 when  SPDET1='1' else SR2 when  SPDET2='1' else SR3 when SPDET3='1' else R1 when Vmod='1' else R0;
 G<= SG1 when  SPDET1='1' else SG2 when  SPDET2='1' else SG3 when SPDET3='1' else G1 when Vmod='1' else G0;
@@ -342,10 +347,16 @@ sdb<=Do(0) when AD=20 and IO='1' and AS='0' and DS='0' and RW='0' and rising_edg
  --Sound IO decoding 
 aq<=Do when AD=8 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   -- port 8
 aq2<=Do when  AD=10 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  -- port 10
+aq3<=Do when  AD=12 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  -- port 12
+Vol1<=Do(7 downto 0) when AD=25 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   -- port 25
+Vol2<=Do(7 downto 0) when  AD=26 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  -- port 26
+Vol3<=Do(7 downto 0) when  AD=27 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  -- port 27
+Voln<=Do(7 downto 0) when  AD=28 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  -- port 28
 nen<=Do(0) when  AD=11 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);    -- noise enable
 Waud<='0' when AD=8  and IO='1' and AS='0'  and RW='0' and rising_edge(clock1) else '1' when rising_edge(clock1);
 Waud2<='0' when AD=10 and IO='1' and AS='0' and RW='0' and rising_edge(clock1) else '1' when rising_edge(clock1);
-lfsr_bw<=Do when AD=12 and IO='1' and AS='0' and RW='0' and rising_edge(clock1);
+Waud3<='0' when AD=12 and IO='1' and AS='0' and RW='0' and rising_edge(clock1) else '1' when rising_edge(clock1);
+lfsr_bw<=Do when AD=13 and IO='1' and AS='0' and RW='0' and rising_edge(clock1);
 
 -- Read decoder
 process (clock1,RW,AS,IO)
@@ -360,7 +371,7 @@ begin
 		if AD=6 then Di1:="0000000000000" & kready & sdready & sready; end if; -- serial status
 		if AD=16 then Di1:="00000000"&spi_out; end if; --spi 
 		if AD=17 then Di1:="000000000000000" & spi_rdy; end if; --spi 
-		if AD=9 then Di1:="00000000000000"& play2 & play; end if; -- audio status
+		if AD=9 then Di1:="0000000000000"& play3 & play2 & play; end if; -- audio status
 		if AD=22 then Di1:="000"&JOYST2&"000"& JOYST1; end if;     -- joysticks
 		if AD=20 then Di1:=count; end if;
 		if AD=21 then Di1:="00000000000000"&Vsyn&hsyn; end if;  -- VSYNCH HSYNCH STATUS
