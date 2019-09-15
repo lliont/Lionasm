@@ -165,9 +165,7 @@ set_global_assignment -name OUTPUT_IO_TIMING_ENDPOINT "NEAR END"
 set_global_assignment -name ACTIVE_SERIAL_CLOCK FREQ_100MHZ
 set_location_assignment PIN_L18 -to VSYN2
 set_location_assignment PIN_L19 -to HSYN2
-set_location_assignment PIN_M18 -to AUDIO
 set_location_assignment PIN_N19 -to AUDIOB
-set_location_assignment PIN_M21 -to NOIS
 set_location_assignment PIN_AA1 -to KCLK
 set_location_assignment PIN_AA2 -to KDATA
 set_location_assignment PIN_N16 -to RTC_CLK
@@ -178,4 +176,12 @@ set_location_assignment PIN_W2 -to JOYST1[1]
 set_location_assignment PIN_Y3 -to JOYST1[2]
 set_location_assignment PIN_U1 -to JOYST1[3]
 set_location_assignment PIN_U2 -to JOYST1[4]
+set_location_assignment PIN_M21 -to NOISEO
+set_location_assignment PIN_M18 -to AUDIOA
+set_location_assignment PIN_M20 -to AUDIOC
+set_global_assignment -name OPTIMIZE_SSN "NORMAL COMPILATION"
+set_location_assignment PIN_A13 -to PG
+set_location_assignment PIN_D13 -to PR
+set_location_assignment PIN_C13 -to PB
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to G
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

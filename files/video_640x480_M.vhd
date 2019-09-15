@@ -432,10 +432,12 @@ end SoundI;
 
 Architecture Behavior of SoundI is
 
+type wave is array (0 to 255) of std_logic_vector(7 downto 0);
+
 Signal c3:natural range 0 to 255;
-Signal c2:std_logic_vector(11 downto 0);
+Signal c2:std_logic_vector(12 downto 0);
 Signal c1:std_logic_vector(9 downto 0);
-Signal dur: natural range 0 to 256*1024-1;
+Signal dur: natural range 0 to 512*1024-1;
 signal i: natural range 0 to 511;
 Signal Aud:std_logic;
 begin
@@ -451,21 +453,21 @@ variable f:std_logic_vector(15 downto 0);
 			   play<='1';
 				CASE f(15 downto 13) is
 					when "000" =>
-						dur<=100000;  -- 1 sec
+						dur<=3125;  -- 0.015 sec
 					when "001" =>
-						dur<=3125;  -- 0.031 sec
+						dur<=6250;  -- 0.031 sec
 					when "010" =>    
-						dur<=6250;  -- 0.063
+						dur<=12500;  -- 0.062
 					when "011" =>  
-						dur<=12500;  -- 0.125
+						dur<=25000;  -- 0.125
 					when "100" =>
-						dur<=25000;  -- 0.25 sec
+						dur<=50000;  -- 0.25 sec
 					when "101" =>
-						dur<=50000;  -- 0.5 sec
+						dur<=100000;  -- 0.5 sec
 					when "110" =>    
-						dur<=100000;  -- 1
+						dur<=200000;  -- 1
 					when others =>  
-						dur<=200000;  -- 2
+						dur<=400000;  -- 2
 					end case;
 				c1<=(others => '0'); 
 			else 
@@ -477,19 +479,19 @@ variable f:std_logic_vector(15 downto 0);
 			else
 				Audio<='0';
 			end if;
-			if c1="011111001" then  -- c1=249 100Khz c1==499 50Khz was c1=999  25Khz
+			if c1="001111100" then  -- c1=124 200Khz c1=249 100Khz
 				c1<="0000000000";
 				c3<=c3+1; c2<=c2+1; 
 				if dur=0 then
 					Aud<='0';	c2<=(others => '0'); c3<=0; play<='0';
 				else 
-					if c2=f(11 downto 0) then
+					if c2=f(12 downto 0) then
 						if c2/="000000000000" then Aud<=not Aud; end if;
 						c2<=(others => '0');			
 					end if;
 					--play<='1';
 				end if;
-				if i=199 then i<=0; count<=count+'1'; else i<=i+1; end if;
+				if i=399 then i<=0; count<=count+'1'; else i<=i+1; end if;
 			else
 			end if;
 		end if;
@@ -526,13 +528,13 @@ begin
     linear_feedback <= not(count(19) xor count(2));
 
 	 process (clk, reset) 
-	 variable cnt: natural range 0 to 65535;
+	 variable cnt: natural range 0 to 512*1024;
 	 begin
 		  if (reset = '1') then
 				count <= (others=>'0'); cnt:=0;
 		  elsif (rising_edge(clk)) then
 				cnt:=cnt+1;
-				if cnt=to_integer(unsigned(bw)) then
+				if cnt=to_integer(unsigned(bw&"11")) then
 					count <= ( count(18) & count(17)& count(16) & count(15)&
 								count(14) & count(13) & count(12) & count(11)&
 								count(10) & count(9) & count(8) & count(7)&
