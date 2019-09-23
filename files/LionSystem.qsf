@@ -145,7 +145,6 @@ set_location_assignment PIN_M9 -to iClock
 set_global_assignment -name EDA_TIME_SCALE "1 ps" -section_id eda_simulation
 set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE SPEED
 set_global_assignment -name ENABLE_DRC_SETTINGS ON
-set_location_assignment PIN_B5 -to Rx2
 set_global_assignment -name VHDL_FILE LionSystem.vhd
 set_global_assignment -name VHDL_FILE LionCPU16r.vhd
 set_global_assignment -name VHDL_FILE video_640x480_M.vhd
@@ -179,7 +178,6 @@ set_location_assignment PIN_U2 -to JOYST1[4]
 set_location_assignment PIN_M21 -to NOISEO
 set_location_assignment PIN_M18 -to AUDIOA
 set_location_assignment PIN_M20 -to AUDIOC
-set_global_assignment -name OPTIMIZE_SSN "NORMAL COMPILATION"
 set_location_assignment PIN_A13 -to PG
 set_location_assignment PIN_D13 -to PR
 set_location_assignment PIN_C13 -to PB

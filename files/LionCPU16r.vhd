@@ -16,7 +16,7 @@ entity LionCPU16 is
 		ADo  : OUT  Std_logic_vector(15 downto 0); 
 		RW,AS,DS : OUT Std_logic;
 		RD, Reset, Clock, Int, HOLD: IN Std_Logic;
-		IO,HOLDA, A16o,A17o,A18o,A19o : OUT std_logic;
+		IO,HOLDA, A16o,A17o,A18o : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
 		IACK : OUT std_logic;
 		IA : OUT std_logic_vector(1 downto 0)
@@ -71,7 +71,7 @@ PORT (Ai : IN STD_logic_vector(15 downto 0);
 END COMPONENT;
 
 shared variable Do,AD,X1,Y1,X,Y,Ai,IR,ODP: Std_logic_vector(15 downto 0):=ZERO16;
-shared variable cin,Wen,sub,half,rhalf,A16,A17,A18,A19: Std_logic;
+shared variable cin,Wen,sub,half,rhalf,A16,A17,A18: Std_logic;
 shared variable M : Std_logic_vector(31 downto 0);
 shared variable R,RR: std_logic_vector(2 downto 0);
 
@@ -160,7 +160,7 @@ IF rising_edge(clock) THEN
 			when 0 =>
 				Wen:='0'; HOLDA<='0';	AD:=PC; half:='0';   stmp:=ST+2; rest2:=false;
 				AS<='0'; sub:='0'; cin:='0'; rhalf:='0'; setreg:=true; set_code;
-			when 1 =>	 
+			--when 1 =>	 --cyclone IV
 				 fetch<=false; fetch1<=false; fetch2<=false; mem_trans<=false;
 				 PC<=PC+2; mtmp:=ST-2;
 			when others => 
@@ -212,7 +212,7 @@ IF rising_edge(clock) THEN
 			when 0 =>
 				fetch2<=true; fetch<=true; AS<='0';  set_data;
 				if IR(0)='1' then	AD:=X; X2<=X; else AD:=Y1; X2<=y1; end if;
-			when 1 =>
+			--when 1 =>  -Cyclone IV
 			when others =>
 				if X2(0)='0' and bwb='1' and (not rel) then
 					X(7 downto 0):=Di(15 downto 8);
@@ -726,7 +726,7 @@ IF rising_edge(clock) THEN
 				case TT is
 				when 0 =>
 					if fetch then AD:=X; else AD:=X1; end if;
-					IO<='1'; RW<='1'; AS<='0';   
+					IO<='1'; RW<='1'; AS<='0'; 
 				when 1 =>
 				when 2 =>
 					if AD(0)='0' then
@@ -795,7 +795,7 @@ IF rising_edge(clock) THEN
 					else 
 						Y1:=Z1;
 					end if;    
-					set_flags;	FF<=StoreState;	rest:=true;
+					set_flags;	FF<=StoreState; set_data;	rest:=true;
 					sub:='0';
 				end case;
 				
@@ -1092,7 +1092,7 @@ IF rising_edge(clock) THEN
  			case TT is
 			when 0 =>
 				IO<='0'; AS<='0';  Do:=Y1; DS<='0'; RW<='0';	
-			when	1 =>
+			--when	1 =>   --cyclone IV
 			when others =>	
 				rest2:=true;
 			end case;
@@ -1100,7 +1100,7 @@ IF rising_edge(clock) THEN
 			rest2:=true;
 		end case;
 		----------------------------------------------------------------
-		if rest or rest2 then TT<=0; else TT<=TT+1; end if;
+		if rest or rest2 then TT<=0;  else 	TT<=TT+1; end if;
 		if rest2 then 
 			RW<='1'; IO<='0'; DS<='1'; AS<='1'; FF<=InitialState;
 		end if;

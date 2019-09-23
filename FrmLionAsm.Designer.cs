@@ -81,7 +81,7 @@
             this.helpToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1126, 24);
+            this.menuStrip1.Size = new System.Drawing.Size(1176, 24);
             this.menuStrip1.TabIndex = 1;
             this.menuStrip1.Text = "menuStrip1";
             this.menuStrip1.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.menuStrip1_ItemClicked);
@@ -212,12 +212,12 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.errorbox.BackColor = System.Drawing.SystemColors.Info;
             this.errorbox.Font = new System.Drawing.Font("Courier New", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(161)));
-            this.errorbox.Location = new System.Drawing.Point(0, 631);
+            this.errorbox.Location = new System.Drawing.Point(0, 632);
             this.errorbox.Multiline = true;
             this.errorbox.Name = "errorbox";
             this.errorbox.ReadOnly = true;
             this.errorbox.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.errorbox.Size = new System.Drawing.Size(640, 94);
+            this.errorbox.Size = new System.Drawing.Size(690, 94);
             this.errorbox.TabIndex = 2;
             // 
             // VHDL
@@ -227,12 +227,12 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.VHDL.CausesValidation = false;
             this.VHDL.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(161)));
-            this.VHDL.Location = new System.Drawing.Point(646, 33);
+            this.VHDL.Location = new System.Drawing.Point(696, 33);
             this.VHDL.MaxLength = 0;
             this.VHDL.Multiline = true;
             this.VHDL.Name = "VHDL";
             this.VHDL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.VHDL.Size = new System.Drawing.Size(480, 723);
+            this.VHDL.Size = new System.Drawing.Size(480, 724);
             this.VHDL.TabIndex = 4;
             this.VHDL.WordWrap = false;
             this.VHDL.TextChanged += new System.EventHandler(this.VHDL_TextChanged);
@@ -241,9 +241,9 @@
             // 
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.SLine});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 728);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 729);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(1126, 22);
+            this.statusStrip1.Size = new System.Drawing.Size(1176, 22);
             this.statusStrip1.TabIndex = 5;
             this.statusStrip1.Text = "statusStrip1";
             this.statusStrip1.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.statusStrip1_ItemClicked);
@@ -316,7 +316,7 @@
             // 
             // btnAssemble
             // 
-            this.btnAssemble.Location = new System.Drawing.Point(421, 7);
+            this.btnAssemble.Location = new System.Drawing.Point(399, 6);
             this.btnAssemble.Name = "btnAssemble";
             this.btnAssemble.Size = new System.Drawing.Size(60, 21);
             this.btnAssemble.TabIndex = 11;
@@ -438,7 +438,7 @@
             this.fftxtSource.Location = new System.Drawing.Point(0, 32);
             this.fftxtSource.MaxLength = 512000;
             this.fftxtSource.Name = "fftxtSource";
-            this.fftxtSource.Size = new System.Drawing.Size(640, 600);
+            this.fftxtSource.Size = new System.Drawing.Size(690, 601);
             this.fftxtSource.TabIndex = 0;
             this.fftxtSource.Text = "ORG     \t$2448  ;Ram\n\n; RAM program ENTRY POINT\n\nSTART:";
             this.fftxtSource.WordWrap = false;
@@ -451,7 +451,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.ClientSize = new System.Drawing.Size(1126, 750);
+            this.ClientSize = new System.Drawing.Size(1176, 751);
             this.Controls.Add(this.scmnd);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.button1);
@@ -477,7 +477,7 @@
             this.Name = "frmLionAsm";
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Show;
             this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
-            this.Text = "frmLionAsm";
+            this.Text = "Lion Assembler";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Lionasm_FormClosing);
             this.Load += new System.EventHandler(this.Lionasm_Load);
             this.menuStrip1.ResumeLayout(false);

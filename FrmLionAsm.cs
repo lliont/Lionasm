@@ -300,7 +300,7 @@ namespace Lion_assembler
                     fftxtSource.Text = string.Empty;
                     bufs = string.Empty;
                     string temp = string.Empty;
-
+                    Directory.SetCurrentDirectory(Path.GetDirectoryName(fname));
                     using (StreamReader sr = new StreamReader(fname, System.Text.Encoding.GetEncoding(1253)))
                     {
                         while ((line = sr.ReadLine()) != null)
@@ -340,6 +340,7 @@ namespace Lion_assembler
                 if (d == DialogResult.OK)
                 {
                     fname = openFileDialog1.FileName;
+                    Directory.SetCurrentDirectory(Path.GetDirectoryName(fname));
                     fftxtSource.Text = string.Empty;
                     bufs = string.Empty;
                     string temp = string.Empty;
@@ -354,7 +355,7 @@ namespace Lion_assembler
                         //fftxtSource.Text = fftxtSource.Text.Replace("\t", "      ");
                     }
                     fftxtSource.Text = bufs;
-                    frmLionAsm.ActiveForm.Text = "frmLionAsm - " + fname;
+                    if (frmLionAsm.ActiveForm.Text != null) frmLionAsm.ActiveForm.Text = "Lion Assembler - " + fname;
                     // oldtext[0] = fftxtSource.Text;
                     //try
                     //{
@@ -596,7 +597,10 @@ namespace Lion_assembler
 
         private void btnAssemble_Click(object sender, EventArgs e)
         {
+            errorbox.Text = "*** Assembling ***";
+            errorbox.Refresh();
             par.parse();
+            errorbox.Text += "  *** End ***";
         }
 
         private void btnPaint_Click(object sender, EventArgs e)
@@ -624,6 +628,7 @@ namespace Lion_assembler
             byte[] bt = new byte[2];
             try
             {
+                
                 br = new BinaryReader(new FileStream(Path.GetFileNameWithoutExtension(fname) + ".bin", FileMode.Open));
             }
             catch (IOException ex)

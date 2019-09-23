@@ -129,7 +129,7 @@ Component SoundI is
 		reset, clk, wr : IN std_logic;
 		Q : IN std_logic_vector(15 downto 0);
 		Vol : IN std_logic_vector(7 downto 0);
-		count: OUT std_logic_vector(15 downto 0);
+		count: OUT std_logic_vector(31 downto 0);
 		play: OUT  std_logic
 	);
 end Component;
@@ -189,7 +189,8 @@ Signal R0,B0,G0,BRI0,R1,G1,B1,BRI1,SR2,SG2,SB2,SBRI2,SPDET2,SR3,SG3,SB3,SBRI3,SP
 Signal clock0,clock1,clock2:std_logic;
 Signal hsyn0,vsyn0,hsyn1,vsyn1,Vmod: std_logic:='0';
 Signal vq: std_logic_vector (15 downto 0);
-Signal di,do,AD,qa,qro,aq,aq2,aq3,q16,count,count2,count3 : std_logic_vector(15 downto 0);
+Signal di,do,AD,qa,qro,aq,aq2,aq3,q16 : std_logic_vector(15 downto 0);
+Signal count,count2,count3 : std_logic_vector(31 downto 0);
 Signal lfsr_bw : std_logic_vector(15 downto 0):="0010000000000000";
 Signal WAud, WAud2,WAud3: std_logic:='1';
 Signal HOLDA, A16,A17,A18,IO,nen1,nen2,nen3,ne1,ne2,ne3: std_logic:='0';
@@ -273,8 +274,8 @@ ADo<= AD when AS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 
 nen1<='1' when (ne1='1') and (play='1') and (aq(12 downto 0)/="0000000000000") else '0';
 nen2<='1' when (ne2='1') and (play2='1') and (aq2(12 downto 0)/="0000000000000") else '0';
---nen3<='1' when (ne3='1') and (play3='1') and (aq3(12 downto 0)/="0000000000000") else '0';
-NOISEO<=NOISE and (nen1 or nen2);
+nen3<='1' when (ne3='1') and (play3='1') and (aq3(12 downto 0)/="0000000000000") else '0';
+NOISEO<=NOISE and (nen1 or nen2 or nen3);
 
 R<= SR1 when  SPDET1='1' else SR2 when  SPDET2='1' else SR3 when SPDET3='1' else R1 when Vmod='1' else R0;
 G<= SG1 when  SPDET1='1' else SG2 when  SPDET2='1' else SG3 when SPDET3='1' else G1 when Vmod='1' else G0;
@@ -361,8 +362,9 @@ begin
 		if AD=17 then Di1:="000000000000000" & spi_rdy; end if; --spi 
 		if AD=9 then Di1:="0000000000000"& play3 & play2 & play; end if; -- audio status
 		if AD=22 then Di1:="000"&JOYST2&"000"& JOYST1; end if;     -- joysticks
-		if AD=20 then Di1:=count; end if;
-		if AD=21 then Di1:="00000000000000"&Vsyn&hsyn; end if;  -- VSYNCH HSYNCH STATUS
+		if AD=20 then Di1:=count(15 downto 0); end if;
+		if AD=21 then Di1:=count(31 downto 16); end if;
+		if AD=23 then Di1:="00000000000000"&Vsyn&hsyn; end if;  -- VSYNCH HSYNCH STATUS
 		if AD=24 then Di1:="000000000000000"&Vmod; end if;
 	end if;
 end process;

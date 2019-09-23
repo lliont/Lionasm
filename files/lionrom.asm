@@ -132,7 +132,7 @@ INT5T1	DA		FDIV	   ; Fixed point divide A2.(FRAC2)/A1.(FRAC1)
 INT5T2	DA		FILELD   ; Load file A4 points to filename, at A3
 INT5T3	DA		VMOUNT   ; Load First Volume, return A0=fat root 1st cluster
 INT5T4	DA		FILEDEL  ; Delete file A4 points to filename
-INT5T5	DA		FILESAV  ; Save memory range to file A4 points to filename
+INT5T5	DA		FILESAV  ; Save memory to file A4 filename, a6 address, a7 size
 INT5T6	DA		UDIV     ; Unsigned 16bit  Div A2 by A1 res in A1,A0
 INT5T7      DA		LDIV     ; 32bit div A1A2/A3A4 res A1A2 rem A3A4
 INT5T8      DA		LMUL     ; 32bit mult A1A2*A3A4 res A1A2 

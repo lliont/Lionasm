@@ -299,35 +299,35 @@ begin
 				det:='1';
 				case blvec is
 				when "0000" => 	
-					BRGB:='0'&SLData(0)(2+d1(0) downto d1(0));
+					BRGB:=SLData(0)(3+d1(0) downto d1(0));
 				when "0001" => 
-					BRGB:='0'&SLData(1)(2+d1(1) downto d1(1));
+					BRGB:=SLData(1)(3+d1(1) downto d1(1));
 				when "0010" => 
-					BRGB:='0'&SLData(2)(2+d1(2) downto d1(2));
+					BRGB:=SLData(2)(3+d1(2) downto d1(2));
 				when "0011" => 
-					BRGB:='0'&SLData(3)(2+d1(3) downto d1(3));
+					BRGB:=SLData(3)(3+d1(3) downto d1(3));
 				when "0100" => 	
-					BRGB:='0'&SLData(4)(2+d1(4) downto d1(4));
+					BRGB:=SLData(4)(3+d1(4) downto d1(4));
 				when "0101" => 	
-					BRGB:='0'&SLData(5)(2+d1(5) downto d1(5));
+					BRGB:=SLData(5)(3+d1(5) downto d1(5));
 				when "0110" => 	
-					BRGB:='0'&SLData(6)(2+d1(6) downto d1(6));
+					BRGB:=SLData(6)(3+d1(6) downto d1(6));
 				when "0111" => 	
-					BRGB:='0'&SLData(7)(2+d1(7) downto d1(7));
+					BRGB:=SLData(7)(3+d1(7) downto d1(7));
 				when "1000" => 	
-					BRGB:='0'&SLData(8)(2+d1(8) downto d1(8));
+					BRGB:=SLData(8)(3+d1(8) downto d1(8));
 				when "1001" => 
-					BRGB:='0'&SLData(9)(2+d1(9) downto d1(9));
+					BRGB:=SLData(9)(3+d1(9) downto d1(9));
 				when "1010" => 
-					BRGB:='0'&SLData(10)(2+d1(10) downto d1(10));
+					BRGB:=SLData(10)(3+d1(10) downto d1(10));
 				when "1011" => 
-					BRGB:='0'&SLData(11)(2+d1(11) downto d1(11));
+					BRGB:=SLData(11)(3+d1(11) downto d1(11));
 				when "1100" => 
-					BRGB:='0'&SLData(12)(2+d1(12) downto d1(12));
+					BRGB:=SLData(12)(3+d1(12) downto d1(12));
 				when "1101" => 
-					BRGB:='0'&SLData(13)(2+d1(13) downto d1(13));
+					BRGB:=SLData(13)(3+d1(13) downto d1(13));
 				when "1110" => 
-					BRGB:='0'&SLData(14)(2+d1(14) downto d1(14));
+					BRGB:=SLData(14)(3+d1(14) downto d1(14));
 				when others =>
 					det:='0'; BRGB:="0000";
 				end case;
@@ -424,7 +424,7 @@ entity SoundI is
 		reset, clk, wr : IN std_logic;
 		Q : IN std_logic_vector(15 downto 0);
 		Vol : IN std_logic_vector(7 downto 0);
-		count: OUT std_logic_vector(15 downto 0);
+		count: OUT std_logic_vector(31 downto 0);
 		play: OUT  std_logic
 	);
 end SoundI;

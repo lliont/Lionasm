@@ -4407,7 +4407,8 @@ namespace Lion_assembler
         private bool pass1()
         {
             bool res = true; l = 0; error = 0;
-            LionAsmForm.errorbox.Text += "*** Pass1 - start \r\n";
+            LionAsmForm.errorbox.Text += "\r\n*** Pass1 - start \r\n";
+            LionAsmForm.errorbox.Refresh();
             while (l < sourceLinesArr.Length && res)
             {
                 p = 0;
@@ -4420,6 +4421,7 @@ namespace Lion_assembler
                 return false;
             }
             LionAsmForm.errorbox.Text += "*** Pass1 - end \r\n";
+            LionAsmForm.errorbox.Refresh();
             return true;
         }
 
@@ -4429,7 +4431,8 @@ namespace Lion_assembler
             BinaryWriter bw = null;
             string temps = string.Empty;
             LionAsmForm.VHDL.Text = string.Empty;
-
+            LionAsmForm.errorbox.Text += "*** Pass2 - start \r\n";
+            LionAsmForm.errorbox.Refresh();
             for (int pg = 0; pg < 8; pg++)
             {
                 pageListArr.Clear();
@@ -4665,9 +4668,9 @@ namespace Lion_assembler
                 res = pass2();
                 if (!res)
                 {
-                    LionAsmForm.errorbox.Text += "*** Pass 2 failed. \r\n";
+                    LionAsmForm.errorbox.Text += "*** Pass 2 failed. ";
                 }
-                else { LionAsmForm.errorbox.Text += "*** Pass 2 end. \r\n"; }
+                else { LionAsmForm.errorbox.Text += "*** Pass 2 end. "; }
             }
             else { LionAsmForm.errorbox.Text += "*** Pass 1 failed. \r\n"; }
             LionAsmForm.errorbox.SelectionStart = LionAsmForm.errorbox.TextLength;
