@@ -28,7 +28,12 @@ entity LionSystem is
 		JOYST1,JOYST2: IN std_logic_vector(4 downto 0);
 		KCLK,KDATA:INOUT std_logic;
 		RTC_CE,RTC_CLK:OUT std_logic;
-		RTC_DATA:INOUT std_logic
+		RTC_DATA:INOUT std_logic;
+		XY_DECODE,XY_MUX: OUT std_logic;
+		DACA: OUT std_logic_vector(1 downto 0);
+		DACD: OUT std_logic_vector(7 downto 0);
+		I2CC: OUT std_logic:='1';
+		I2CD1,I2CD2,I2CD3: INOUT std_logic :='1'
 	);
 end LionSystem;
 
@@ -54,8 +59,8 @@ Component LPLL2 IS
 	(
 		inclk0 : IN STD_LOGIC  := '0';
 		c0		 : OUT STD_LOGIC ;
-		c1		 : OUT STD_LOGIC ;
-		c2		 : OUT STD_LOGIC 
+		c1		 : OUT STD_LOGIC 
+		--c2		 : OUT STD_LOGIC 
 	);
 END Component;
 
@@ -182,11 +187,50 @@ COMPONENT PS2KEYB is
 	);
 end COMPONENT;
 
+COMPONENT XY_Display_TLC_i is
+	port
+	(
+		sclk,sclk2: IN std_logic;
+		reset: IN std_logic;
+		addr: OUT natural range 0 to 1023;
+		Q: IN std_logic_vector(15 downto 0);
+		DACW,MUX: OUT std_logic;
+		DACA: OUT std_logic_vector(1 downto 0);
+		DACD: OUT std_logic_vector(7 downto 0)
+	);
+end COMPONENT;
+
+COMPONENT XY_Display_TLC is
+	port
+	(
+		sclk,sclk2: IN std_logic;
+		reset: IN std_logic;
+		addr: OUT natural range 0 to 1023;
+		Q: IN std_logic_vector(15 downto 0);
+		DACW,MUX: OUT std_logic;
+		DACA: OUT std_logic_vector(1 downto 0);
+		DACD: OUT std_logic_vector(7 downto 0)
+	);
+end COMPONENT;
+
+--
+--COMPONENT XY_Display_MCP is
+--	port
+--	(
+--		sclk: IN std_logic;
+--		reset: IN std_logic;
+--		addr: OUT natural range 0 to 1023;
+--		Q: IN std_logic_vector(15 downto 0);
+--		I2CC: OUT std_logic:='1';
+--		I2CD1,I2CD2,I2CD3: INOUT std_logic:='1'
+--	);
+--end COMPONENT;
+
 constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 
 Signal pdelay: natural range 0 to 2047 :=0;
 Signal R0,B0,G0,BRI0,R1,G1,B1,BRI1,SR2,SG2,SB2,SBRI2,SPDET2,SR3,SG3,SB3,SBRI3,SPDET3,SR1,SB1,SG1,SBRI1,SPDET1: std_logic:='0';
-Signal clock0,clock1,clock2:std_logic;
+Signal clock0,clock1:std_logic;
 Signal hsyn0,vsyn0,hsyn1,vsyn1,Vmod: std_logic:='0';
 Signal vq: std_logic_vector (15 downto 0);
 Signal di,do,AD,qa,qro,aq,aq2,aq3,q16 : std_logic_vector(15 downto 0);
@@ -194,12 +238,13 @@ Signal count,count2,count3 : std_logic_vector(31 downto 0);
 Signal lfsr_bw : std_logic_vector(15 downto 0):="0010000000000000";
 Signal WAud, WAud2,WAud3: std_logic:='1';
 Signal HOLDA, A16,A17,A18,IO,nen1,nen2,nen3,ne1,ne2,ne3: std_logic:='0';
-Signal rst, rst2, AS, DS, RW, Int_in, vint,vint0,vint1: std_logic:='1';
-Signal w1,spw1, spw2, spw3: std_logic:='0';
-Signal SPQ1,spvq1,SPQ2,spvq2,SPQ3,spvq3: std_logic_vector(15 downto 0);
+Signal rst, rst2, AS, DS, RW, Int_in, vint,vint0,vint1,xyd: std_logic:='1';
+Signal w1,spw1, spw2, spw3,xyw,xyen: std_logic:='0';
+Signal SPQ1,spvq1,SPQ2,spvq2,SPQ3,spvq3,xyq1,xyq2: std_logic_vector(15 downto 0);
 Signal Ii : std_logic_vector(1 downto 0);
 Signal ad1,vad0,vad1 :  natural range 0 to 16383;
-Signal spad1,spad3,spad5 :  natural range 0 to 2047;
+Signal spad1,spad3,spad5:  natural range 0 to 2047;
+Signal xyadr :  natural range 0 to 1023;
 Signal sr,sw,sdready,sready,kr,kready,ser2,sdready2, noise: std_Logic;
 Signal sdi,sdo,sdo2,kdo : std_logic_vector (7 downto 0);
 Signal Vol1,Vol2,Vol3,Voln : std_logic_vector (7 downto 0):="11111111";
@@ -226,6 +271,9 @@ SPRAM2: dual_port_ram_dual_clock
 SPRAM3: dual_port_ram_dual_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 11)
 	PORT MAP ( clock0,clock1, spad5, to_integer(unsigned(AD(11 downto 1))), Do, spw3, spvq3, SPQ3 );
+XYRAM: dual_port_ram_dual_clock
+	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 11)
+	PORT MAP ( clock0,clock1, xyadr, to_integer(unsigned(AD(10 downto 1))), Do, xyw, xyq1, xyq2 );
 VIDEO0: videoRGB80
 	PORT MAP ( clock1,clock0,Vmod,R0,G0,B0,BRI0,VSYN0,HSYN0,vint0,vad0,vq);
 VIDEO1: videoRGB1
@@ -252,10 +300,13 @@ MSPI: SPI
 NOIZ:lfsr
 	PORT MAP ( noise, clock1, rst, Voln, lfsr_bw);
 CPLL:LPLL2
-	PORT MAP (iClock,Clock0,Clock1,clock2);
+	PORT MAP (iClock,Clock0,Clock1);
 PS2:PS2KEYB
 	PORT MAP (KDATA,KCLK,clock1,rst,kr,kready,kdo);
-	
+XYC:XY_Display_TLC
+	PORT MAP (clock1,clock0,rst,xyadr,xyq1,XY_decode,XY_MUX,DACA,DACD);
+--XYC:XY_Display_MCP
+--	PORT MAP (clock1,rst,xyadr,xyq1,I2CC,I2CD1,I2CD2,I2CD3);
 rst2<=not reset when rising_edge(clock0);
 rst<=rst2 when rising_edge(clock0);
 
@@ -271,6 +322,7 @@ RWo<=RW when HOLDA='0' else 'Z';
 D<= Do when RW='0' and DS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 ADo<= AD when AS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 --IACK<=IAC;
+
 
 nen1<='1' when (ne1='1') and (play='1') and (aq(12 downto 0)/="0000000000000") else '0';
 nen2<='1' when (ne2='1') and (play2='1') and (aq2(12 downto 0)/="0000000000000") else '0';
@@ -298,10 +350,11 @@ RTC_DATA<='Z';
 RTC_CLK<='0';
 RTC_CE<='0';
 
-w1<='1' when DS='0' and AS='0' and IO='1' and AD(15)='1' and RW='0' else '0'; 
+w1<='1'   when DS='0' and AS='0' and IO='1' and AD(15)='1' and RW='0' else '0'; 
 spw1<='1' when DS='0' and AS='0' and IO='1' and AD(15 downto 12)="0100" and RW='0' else '0';
 spw2<='1' when DS='0' and AS='0' and IO='1' and AD(15 downto 12)="0101" and RW='0' else '0';
 spw3<='1' when DS='0' and AS='0' and IO='1' and AD(15 downto 12)="0110" and RW='0' else '0';
+xyw<='1'  when DS='0' and AS='0' and IO='1' and AD(15 downto 12)="0111" and RW='0' else '0';
 
 -- Interrupts 
 process (clock1,INT)
@@ -315,7 +368,7 @@ if rising_edge(clock1) then
 end if;
 end process;
 
-Vmod<='0' when rst='1' else Do(0) when AD=24 and IO='1' and AS='0' and DS='0' and RW='0';
+Vmod<='0' when rst='1' and rising_edge(clock1) else Do(0) when AD=24 and IO='1' and AS='0' and DS='0' and RW='0' and rising_edge(clock1);
 
 -- UART SKEYB SPI IO decoding
 sdi<=Do(7 downto 0) when AD=0 and IO='1' and AS='0' and DS='0' and RW='0' and rising_edge(clock1);
@@ -354,7 +407,9 @@ begin
 		if AD(15)='1' then Di1:=q16; --video
 		elsif AD(14 downto 12)="100" then Di1:=SPQ1;
 	   elsif AD(14 downto 12)="101" then Di1:=SPQ2;
-		elsif AD(14 downto 12)="110" then Di1:=SPQ3; end if;
+		elsif AD(14 downto 12)="110" then Di1:=SPQ3;
+		elsif AD(14 downto 12)="111" then Di1:=xyq2;
+		end if;
 		if AD=4 then Di1:="00000000"&sdo; end if; -- serial1
 		if AD=14 then Di1:="00000000"&kdo; end if; -- serial2 keyboard
 		if AD=6 then Di1:="0000000000000" & kready & sdready & sready; end if; -- serial status

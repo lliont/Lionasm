@@ -120,7 +120,6 @@ set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -
 set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -fall
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to JOYST1[4]
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to JOYST1[3]
-set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to JOYST1
 set_global_assignment -name ROUTER_EFFORT_MULTIPLIER 1.2
 set_location_assignment PIN_B15 -to R
 set_location_assignment PIN_C15 -to G
@@ -145,20 +144,6 @@ set_location_assignment PIN_M9 -to iClock
 set_global_assignment -name EDA_TIME_SCALE "1 ps" -section_id eda_simulation
 set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE SPEED
 set_global_assignment -name ENABLE_DRC_SETTINGS ON
-set_global_assignment -name VHDL_FILE LionSystem.vhd
-set_global_assignment -name VHDL_FILE LionCPU16r.vhd
-set_global_assignment -name VHDL_FILE video_640x480_M.vhd
-set_global_assignment -name VHDL_FILE UART.vhd
-set_global_assignment -name VHDL_FILE SPI.vhd
-set_global_assignment -name VHDL_FILE LPLL2.vhd
-set_global_assignment -name BDF_FILE 3_to_8.bdf
-set_global_assignment -name BDF_FILE regs.bdf
-set_global_assignment -name BDF_FILE ALU_LA2.bdf
-set_global_assignment -name BDF_FILE ALU_LA4.bdf
-set_global_assignment -name BDF_FILE 74251_l.bdf
-set_global_assignment -name SDC_FILE LionSystem.sdc
-set_global_assignment -name CDF_FILE output_files/LionSystem.cdf
-set_global_assignment -name CDF_FILE output_files/Chain1.cdf
 set_global_assignment -name STRATIXV_CONFIGURATION_SCHEME "PASSIVE SERIAL"
 set_global_assignment -name OUTPUT_IO_TIMING_ENDPOINT "NEAR END"
 set_global_assignment -name ACTIVE_SERIAL_CLOCK FREQ_100MHZ
@@ -182,4 +167,76 @@ set_location_assignment PIN_A13 -to PG
 set_location_assignment PIN_D13 -to PR
 set_location_assignment PIN_C13 -to PB
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to G
+set_location_assignment PIN_AA18 -to ADo[2]
+set_location_assignment PIN_AA17 -to ADo[3]
+set_location_assignment PIN_AA20 -to ADo[4]
+set_location_assignment PIN_AA19 -to ADo[5]
+set_location_assignment PIN_Y20 -to ADo[6]
+set_location_assignment PIN_Y19 -to ADo[7]
+set_location_assignment PIN_AB21 -to ADo[8]
+set_location_assignment PIN_AB20 -to ADo[9]
+set_location_assignment PIN_AA22 -to ADo[10]
+set_location_assignment PIN_AB22 -to ADo[11]
+set_location_assignment PIN_W22 -to ADo[12]
+set_location_assignment PIN_Y22 -to ADo[13]
+set_location_assignment PIN_Y21 -to ADo[14]
+set_location_assignment PIN_W21 -to ADo[15]
+set_location_assignment PIN_V20 -to A18o
+set_location_assignment PIN_V21 -to A17o
+set_location_assignment PIN_U22 -to A16o
+set_location_assignment PIN_G6 -to D[8]
+set_location_assignment PIN_H6 -to D[9]
+set_location_assignment PIN_G8 -to D[10]
+set_location_assignment PIN_H8 -to D[11]
+set_location_assignment PIN_F7 -to D[12]
+set_location_assignment PIN_E7 -to D[13]
+set_location_assignment PIN_D6 -to D[14]
+set_location_assignment PIN_C6 -to D[15]
+set_location_assignment PIN_U21 -to JOYST2[0]
+set_location_assignment PIN_U20 -to JOYST2[1]
+set_location_assignment PIN_R22 -to JOYST2[2]
+set_location_assignment PIN_T22 -to JOYST2[3]
+set_location_assignment PIN_P22 -to JOYST2[4]
+set_location_assignment PIN_B5 -to ASo
+set_location_assignment PIN_A5 -to DSo
+set_location_assignment PIN_B6 -to Holdao
+set_location_assignment PIN_A7 -to IA[1]
+set_location_assignment PIN_A8 -to IA[0]
+set_location_assignment PIN_A9 -to IACK
+set_location_assignment PIN_A10 -to IOo
+set_location_assignment PIN_B10 -to Iv[1]
+set_location_assignment PIN_C9 -to Iv[0]
+set_location_assignment PIN_G10 -to RWo
+set_location_assignment PIN_AB18 -to XY_DECODE
+set_global_assignment -name OPTIMIZE_SSN "NORMAL COMPILATION"
+set_location_assignment PIN_Y17 -to DACA[0]
+set_location_assignment PIN_Y16 -to DACA[1]
+set_location_assignment PIN_L1 -to DACD[0]
+set_location_assignment PIN_L2 -to DACD[1]
+set_location_assignment PIN_G1 -to DACD[2]
+set_location_assignment PIN_G2 -to DACD[3]
+set_location_assignment PIN_E2 -to DACD[4]
+set_location_assignment PIN_D3 -to DACD[5]
+set_location_assignment PIN_C1 -to DACD[6]
+set_location_assignment PIN_C2 -to DACD[7]
+set_location_assignment PIN_AB17 -to XY_MUX
+set_location_assignment PIN_E12 -to I2CC
+set_location_assignment PIN_D12 -to I2CD1
+set_location_assignment PIN_B12 -to I2CD2
+set_location_assignment PIN_A12 -to I2CD3
+set_global_assignment -name VHDL_FILE XY_Disp.vhd
+set_global_assignment -name VHDL_FILE LionCPU16r.vhd
+set_global_assignment -name VHDL_FILE video_640x480_M.vhd
+set_global_assignment -name VHDL_FILE UART.vhd
+set_global_assignment -name VHDL_FILE SPI.vhd
+set_global_assignment -name VHDL_FILE LPLL2.vhd
+set_global_assignment -name BDF_FILE 3_to_8.bdf
+set_global_assignment -name BDF_FILE regs.bdf
+set_global_assignment -name BDF_FILE ALU_LA2.bdf
+set_global_assignment -name BDF_FILE ALU_LA4.bdf
+set_global_assignment -name BDF_FILE 74251_l.bdf
+set_global_assignment -name VHDL_FILE LionSystem.vhd
+set_global_assignment -name SDC_FILE LionSystem.sdc
+set_global_assignment -name CDF_FILE output_files/LionSystem.cdf
+set_global_assignment -name CDF_FILE output_files/Chain1.cdf
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
