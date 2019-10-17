@@ -3,6 +3,10 @@
 
 VBASE		EQU		32768
 VBASE1	EQU		32768
+COLTBL      EQU		61152 
+VSBLOCK     EQU		64770
+HSBLOCK     EQU		64780
+SCRLBUF     EQU         64790
 XDIM		EQU		640    ; XDIM Screen Horizontal Dim. 
 XDIM22	EQU		160     ; mode xdim /2 
 YDIM		EQU		240    ; Screen Vertical Dimention
@@ -42,10 +46,7 @@ BOOTC:	SDP		0
 		MOV.B		(VMODE),0
 		MOV.B		(SCOL),$1F
 		SETX		1589       ; Set default color 
-		MOV		A1,61152 
-;COLINI:	OUT		A1,$1F1F
-;		;ADDI		A1,2
-;		JXAW		A1,COLINI
+		MOV		A1,COLTBL
 		NTOI		A1,$1F1F
 		MOV		A2,32767
 		SETX		56*1024-2    ;  memory test
@@ -124,7 +125,7 @@ INT4T11	DA		SPI_INIT ; initialize spi sd card
 INT4T12	DA		SPISEND  ; spi send/rec byt in A1 mode A2 1=CS low 3=CS h res a0
 INT4T13	DA		READSEC  ; read in buffer at A2, n in A1
 INT4T14	DA		WRITESEC ; WRITE BUFFER at A2 TO A1 BLOCK
-;INT4T15	DA		PIMG     ; 
+INT4T15	DA		VSCROLL  ; 
 
 ;  INT5 FUNCTION TABLE  function in a0
 INT5T0	DA		FMULT	   ; Fixed point multiply A1*A2
@@ -136,12 +137,13 @@ INT5T5	DA		FILESAV  ; Save memory to file A4 filename, a6 address, a7 size
 INT5T6	DA		UDIV     ; Unsigned 16bit  Div A2 by A1 res in A1,A0
 INT5T7      DA		LDIV     ; 32bit div A1A2/A3A4 res A1A2 rem A3A4
 INT5T8      DA		LMUL     ; 32bit mult A1A2*A3A4 res A1A2 
-INT5T9      DA		FLMUL     ; float mult A1A2*A3A4 res A1A2 
-INT5T10     DA		FLDIV     ; float div A1A2/A3A4 res A1A2
-INT5T11     DA		FLADD     ; float add A1A2+A3A4 res A1A2 
+INT5T9      DA		FLMUL    ; float mult A1A2*A3A4 res A1A2 
+INT5T10     DA		FLDIV    ; float div A1A2/A3A4 res A1A2
+INT5T11     DA		FLADD    ; float add A1A2+A3A4 res A1A2 
 INT5T12     DA		FCMP     ; float cmp  A1A2,A3A4 res A0 
-INT5T13     DA		LDSCR     ; Load Screen A4 fname @A3 
+INT5T13     DA		LDSCR    ; Load Screen A4 fname @A3 
 INT5T14     DA          LINEXY   ; plot a line a1,a2 to a3,a4
+INT5T15	DA		HSCROLL  ;
 
 ;Hardware interrupt
 HINT:		INC		(COUNTER)
@@ -157,6 +159,287 @@ INTR5:	STI
 		ADD		A0,INT5T0
 		JMP		(A0)
 ;---------------------------------------------------
+
+; General Horizontal Scroll INT5 A0=15 for MODE 1
+; Block at 64780 
+;---------------------------------------------------
+
+HSCROLL:	
+		SDP	0
+		IN	A0,24
+		CMPI	A0,1    
+		JZ	HSCROLL1
+		RETI
+
+HSCROLL1:	PUSHX
+		PUSH	A1
+		PUSH	A2
+		PUSH	A3	
+		PUSH	A4
+		PUSH	A5
+		IN	A1,64788 ; pixels to scroll
+		CMPI 	A1,0
+		JZ	HS1EX
+		JL    HS1NG
+		IN  	A1,64780 ; l1
+		MULU  A1,160
+		IN	A2,64784  ;p1
+		SRL   A2,1
+		ADD	A1,A2
+		IN	A3,64786  ; length pix/2
+		ADD   A1,A3
+		ADD	A1,VBASE1
+		DEC	A1
+		PUSH	A1  
+		MOV	A4,SCRLBUF
+		IN	A2,64782  ; lines
+		IN	A3,64788  ; pixels*2 to scroll
+		DEC	A3
+HSCRL1:	SETX 	A3
+		MOV	A0,A1
+HSCRL2:	IN.B	A5,A0
+		OUT.B	A4,A5
+		DEC	A0
+		;INC	A4
+		JXAB 	A4,HSCRL2
+		INC	A4
+		ADD	A1,160
+		DEC   A2
+		JNZ	HSCRL1
+		POP	A1
+		PUSH	A1 
+		IN	A2,64782  ; lines
+		IN	A3,64786  ; pixels
+		IN	A0,64788  ; pixels*2 to scroll
+		SUB	A3,A0
+		DEC	A3
+HSCRL3:	SETX 	A3
+		IN	A0,64788  ; pixels*2 to scroll
+		MOV	A4,A1
+		SUB	A4,A0
+		MOV	A0,A1
+HSCRL4:	IN.B	A5,A4
+		SUBI	A4,1
+		OUT.B	A0,A5
+		SUBI	A0,1
+		JMPX	HSCRL4
+		ADD	A1,160
+		DEC   A2
+		JNZ	HSCRL3
+		POP	A1
+		IN	A3,64786  ; pixels
+		SUB	A1,A3
+		;INC	A1
+		IN	A3,64788  ; pixels*2 to scroll
+		ADD	A1,A3
+		MOV	A4,SCRLBUF
+		IN	A2,64782  ; lines
+		DEC	A3
+HSCRL5:	SETX 	A3
+		MOV	A0,A1
+HSCRL6:	IN.B	A5,A4
+		OUT.B	A0,A5
+		DEC	A0
+		;INC	A4
+		JXAB	A4,HSCRL6
+		INC	A4
+		ADD	A1,160
+		DEC   A2
+		JNZ	HSCRL5
+		JMP	HS1EX
+
+HS1NG:	IN	A1,64788 ; pixels to scroll
+		NEG	A1
+		OUT	64788,A1
+		IN  	A1,64780 ; l1
+		MULU  A1,160
+		IN	A2,64784  ;p1
+		SRL   A2,1
+		ADD	A1,A2
+		ADD	A1,VBASE1
+		PUSH	A1  
+		MOV	A4,SCRLBUF
+		IN	A2,64782  ; lines
+		IN	A3,64788  ; pixels*2 to scroll
+		DEC	A3
+HSCRL7:	SETX 	A3
+		MOV	A0,A1
+HSCRL8:	IN.B	A5,A0
+		OUT.B	A4,A5
+		INC	A0
+		JXAB 	A4,HSCRL8
+		INC	A4
+		ADD	A1,160
+		DEC   A2
+		JNZ	HSCRL7
+		POP	A1
+		PUSH	A1 
+		IN	A2,64782  ; lines
+		IN	A3,64786  ; pixels
+		IN	A0,64788  ; pixels*2 to scroll
+		SUB	A3,A0
+		SUBI	A3,1
+HSCRL9:	SETX 	A3
+		IN	A0,64788  ; pixels*2 to scroll
+		MOV	A4,A1
+		ADD	A4,A0
+		MOV	A0,A1
+HSCRL10:	IN.B	A5,A4
+		ADDI	A4,1
+		OUT.B	A0,A5
+		ADDI	A0,1
+		JMPX	HSCRL10
+		ADD	A1,160
+		DEC   A2
+		JNZ	HSCRL9
+		POP	A1
+		IN	A3,64786  ; pixels
+		ADD	A1,A3
+		IN	A3,64788  ; pixels*2 to scroll
+		DEC	A1
+		SUB	A1,A3
+		MOV	A4,SCRLBUF
+		IN	A2,64782  ; lines
+		DEC	A3
+HSCRL11:	SETX 	A3
+		MOV	A0,A1
+HSCRL12:	IN.B	A5,A4
+		OUT.B	A0,A5
+		ADDI	A0,1
+		JXAB	A4,HSCRL12
+		INC	A4
+		ADD	A1,160
+		DEC   A2
+		JNZ	HSCRL11
+		
+HS1EX:	POP	A5
+		POP	A4
+		POP	A3
+		POP	A2
+		POP	A1
+		POPX
+		RETI
+
+;----------------------------------------------
+
+;General Vertical Scroll INT4 A0=15 MODE 1
+; Block at 64770
+;----------------------------------------------
+VSCROLL:	
+		SDP		0
+		IN		A0,24
+		CMPI		A0,1 
+		JZ		VSCROLL1
+		RETI
+
+VSCROLL1:	PUSHX
+		PUSH	A1
+		PUSH	A2
+		PUSH	A3	
+		PUSH	A4
+		PUSH	A5
+		IN	A1,64778
+		CMPI 	A1,0
+		JZ	VS1EX
+		JL    VS1NG
+		IN  	A1,VSBLOCK
+		MULU  A1,160
+		ADD	A1,VBASE1
+		IN	A2,64774  ;p1
+		SRL   A2,1
+		ADD	A1,A2
+		PUSH	A1  
+		IN	A2,64778  ; lines to scroll
+		IN	A3,64776  ; length pix/2
+		SRL	A3,1
+		DEC	A3
+		MOV	A4,SCRLBUF
+		IN	A5,64776
+VSCRL1:	SETX	A3
+		ITOI  A4,A1
+		ADD   A4,A5
+		ADD	A1,160
+		DEC	A2
+		JNZ   VSCRL1
+		POP	A1
+		IN    A4,64778  ; lines to scroll
+		MULU	A4,160
+		ADD	A4,A1
+		IN	A2,64772  ; length in lines
+		IN	A5,64778  ; lines to scroll
+		SUB	A2,A5
+VSCRL2:	SETX	A3
+		ITOI	A1,A4
+		ADD	A1,160
+		ADD	A4,160
+		DEC	A2
+		JNZ	VSCRL2
+		MOV	A4,SCRLBUF
+		MOV	A2,A5
+		IN	A5,64776
+VSCRL3:	SETX  A3
+		ITOI  A1,A4
+		ADD	A1,160
+		ADD   A4,A5
+		DEC	A2
+		JNZ	VSCRL3
+		JMP	VS1EX
+
+VS1NG:	NEG   A1
+		OUT	64778,A1
+		IN  	A1,VSBLOCK ; LINE
+		IN	A2,64772  ; length in lines
+		ADD	A1,A2
+		MULU  A1,160
+		ADD	A1,VBASE1
+		IN	A2,64774  ;p1
+		SRL   A2,1
+		ADD	A1,A2
+		PUSH	A1  
+		IN	A2,64778  ; lines to scroll
+		IN	A3,64776  ; length pix/2
+		SRL	A3,1
+		SUBI	A3,1
+		MOV	A4,SCRLBUF
+		IN	A5,64776
+VSCRL4:	SETX	A3
+		ITOI  A4,A1
+		ADD   A4,A5
+		SUB	A1,160
+		DEC	A2
+		JNZ   VSCRL4
+		POP	A1
+		IN    A4,64778  ; lines to scroll
+		MULU	A4,160
+		SUB	A4,A1
+		NEG   A4
+		IN	A2,64772  ; length in lines
+		IN	A5,64778  ; lines to scroll
+		SUB	A2,A5
+VSCRL5:	SETX	A3
+		ITOI	A1,A4
+		SUB	A1,160
+		SUB	A4,160
+		DEC	A2
+		JNZ	VSCRL5
+		MOV	A4,SCRLBUF
+		MOV	A2,A5
+		IN	A5,64776
+VSCRL6:	SETX  A3
+		ITOI  A1,A4
+		SUB	A1,160
+		ADD   A4,A5
+		DEC	A2
+		JNZ	VSCRL6
+		
+VS1EX:	POP	A5
+		POP	A4
+		POP	A3
+		POP	A2
+		POP	A1
+		POPX
+		RETI
+;----------------------------------------
 
 FCMP:
   PUSH A1
@@ -852,6 +1135,7 @@ FLD1:	MOV	A6,A4
 ;Find filename in root directory
 ; A4 pointer to filename, A0 return cluster relative to (FSTCLST)
 ; file name in header at A2, directory cluster at A5 
+; changes A1,A2,A5! 
 FINDFN:     PUSHX
 		PUSH	A3
 		PUSH	A4
@@ -860,7 +1144,7 @@ TFF4:		MOV	A1,(FATROOT)
 		ADD	A1,A5
 		MOVI	A0,13
 		MOV	A2,SDCBUF1
-		INT	4              ; Load Root Folder 1st sector
+		INT	4              ; Load Root Folder 1st (next) sector
 		MOVI	A0,0
 		MOVI	A3,0
 TFF1:		CMP.B (A2),0
