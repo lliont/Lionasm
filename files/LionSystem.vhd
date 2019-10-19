@@ -190,7 +190,7 @@ end COMPONENT;
 COMPONENT XY_Display_TLC_i is
 	port
 	(
-		sclk,sclk2: IN std_logic;
+		sclk: IN std_logic;
 		reset: IN std_logic;
 		addr: OUT natural range 0 to 1023;
 		Q: IN std_logic_vector(15 downto 0);
@@ -203,7 +203,7 @@ end COMPONENT;
 COMPONENT XY_Display_TLC is
 	port
 	(
-		sclk,sclk2: IN std_logic;
+		sclk: IN std_logic;
 		reset: IN std_logic;
 		addr: OUT natural range 0 to 1023;
 		Q: IN std_logic_vector(15 downto 0);
@@ -304,7 +304,7 @@ CPLL:LPLL2
 PS2:PS2KEYB
 	PORT MAP (KDATA,KCLK,clock1,rst,kr,kready,kdo);
 XYC:XY_Display_TLC
-	PORT MAP (clock1,clock0,rst,xyadr,xyq1,XY_decode,XY_MUX,DACA,DACD);
+	PORT MAP (clock1,rst,xyadr,xyq1,XY_decode,XY_MUX,DACA,DACD);
 --XYC:XY_Display_MCP
 --	PORT MAP (clock1,rst,xyadr,xyq1,I2CC,I2CD1,I2CD2,I2CD3);
 rst2<=not reset when rising_edge(clock0);

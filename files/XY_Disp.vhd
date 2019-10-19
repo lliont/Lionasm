@@ -282,13 +282,13 @@ end;
 
 Library ieee;
 USE ieee.std_logic_1164.all;
---USE ieee.std_logic_unsigned.all ;
+USE ieee.std_logic_signed.all ;
 USE ieee.numeric_std.all ;
 
 entity XY_Display_TLC is
 	port
 	(
-		sclk,sclk2: IN std_logic;
+		sclk: IN std_logic;
 		reset: IN std_logic;
 		addr: OUT natural range 0 to 1023;
 		Q: IN std_logic_vector(15 downto 0);
@@ -303,56 +303,112 @@ Architecture Behavior of XY_Display_TLC is
 
 Signal turn: std_logic:='0';
 Signal mcnt :  natural range 0 to 2047:=0;
-Signal x,y,z,lx,ly: std_logic_vector(7 downto 0);
-Shared variable caddr:  natural range 0 to 1023:=0;
+Signal x,y,z: std_logic_vector(7 downto 0);
+Shared variable caddr,step,cnt: natural range 0 to 1023:=0;
+Shared variable e,lx,ly,cx,cy,dx,dy,maxd,sx,sy:integer range -2048 to 2047;
 Shared variable WR,WR2: std_logic:='1';
+Shared variable restart: natural range 0 to 3:=0;
 begin
 
 addr<=caddr;
 DACW<=WR;
 
-process (sclk,sclk2,reset)
+process (sclk,reset)
 
 begin
 	if  rising_edge(sclk) then
 		if (reset='1') then
 			mcnt<=0; turn<='0';
 			caddr:=0;
-			WR:='1';
-			MUX<='0';
+			WR:='1'; x<="00000000"; y<="00000000";
+			MUX<='0'; cnt:=1; restart:=0;
 		else 
-			if mcnt<80 then mcnt<=mcnt+1;  
-				else 	mcnt<=0; end if; --TURN <= NOT TURN;
 			case mcnt is
-			when 0 =>	
+			when 0 =>
+				lx:=to_integer(unsigned(x)); 
+				ly:=to_integer(unsigned(y));
 			when 1 =>
-				z<=Q(7 downto 0);  
-			when 2 =>
-				caddr:=caddr+1; lx<=x; ly<=y;
-			when 3 => 
+				z<=Q(7 downto 0); cnt:=1;
+			when 2 =>	
+				caddr:=caddr+1; step:=0;
+			when 3 =>
+				DACA<="00"; DACD<=z; 
 			when 4 =>
 				y<=Q(7 downto 0); 
 				x<=Q(15 downto 8);
-				DACA<="00"; DACD<=z;
 			when 5 =>
-				WR:='0'; 
+				cx:=to_integer(unsigned(x)); cy:=to_integer(unsigned(y)); 
+				if cx>lx then dx:=cx-lx; else dx:=lx-cx;  end if;
+				if cy>ly then dy:=cy-ly; else dy:=ly-cy;  end if;
 			when 6 =>
-				 WR:='1'; 
-				 DACA<="10";
-				 DACD<=x;
-			when 7 =>
 				WR:='0'; 
-		   when 8 =>
+				if cx>lx then sx:=1; elsif lx>cx then sx:=-1; else sx:=0; end if;
+				if cy>ly then sy:=1; elsif ly>cy then sy:=-1; else sy:=0; end if;
+			when 7 =>
 				WR:='1';
 				caddr:=caddr+1;
+				if dx>=dy then maxd:=dx; e:=2*dy-dx; else maxd:=dy; e:=2*dx-dy; end if;
+				if maxd>1 then restart:=2; end if; 
+				 DACA<="10";
+				 DACD<=x;
+			when 8 =>
+				WR:='0'; 
+		   when 9 =>
+				WR:='1';
 				DACA<="11"; DACD<=y;
-				WR:='0';
-			when 9 =>
-				WR:='1';
+				restart:=0;
 			when 10 =>
+				WR:='0';
+			when 11 =>
 				WR:='1';
+			when 12 =>
+				restart:=1;
 			when others=>
+				case step is
+			   when 0 =>
+					if e>=0 then 
+						if dy>dx then 
+							lx:=lx+sx;
+							e:=e-2*dy;
+						else 
+							ly:=ly+sy;
+							e:=e-2*dx;
+						end if;
+					else step:=step+1; end if;
+				when 1 =>
+					if dy>dx then
+						ly:=ly+sy;
+						e:=e+2*dx;
+					else
+						lx:=lx+sx;
+						e:=e+2*dy;
+					end if;
+					step:=step+1;
+					DACA<="10";
+					DACD<=std_logic_vector(to_unsigned(lx,8));
+				when 2 =>
+					step:=step+1;
+					WR:='0';
+				when 3 =>
+					WR:='1';
+					step:=step+1;
+					DACA<="11"; DACD<=std_logic_vector(to_unsigned(ly,8));
+				when 4 =>
+					WR:='0';
+					step:=step+1;
+				when 5 =>
+					WR:='1';
+					cnt:=cnt+1;
+					step:=step+1;
+				when 6 =>
+					step:=step+1;
+				when 7 =>
+					step:=0;		
+					if cnt>maxd then restart:=1; end if;
+				when others=>
+				end case;
 			end case;
+			if restart=1 then mcnt<=0; restart:=0; elsif restart=2 then mcnt<=20; restart:=0; else mcnt<=mcnt+1; end if;
 		end if; --reset
 	end if;
 end process;
@@ -372,7 +428,7 @@ USE ieee.numeric_std.all ;
 entity XY_Display_TLC_i is
 	port
 	(
-		sclk,sclk2: IN std_logic;
+		sclk: IN std_logic;
 		reset: IN std_logic;
 		addr: OUT natural range 0 to 1023;
 		Q: IN std_logic_vector(15 downto 0);
@@ -395,7 +451,7 @@ begin
 addr<=caddr;
 DACW<=WR;
 
-process (sclk,sclk2,reset)
+process (sclk,reset)
 
 begin
 	if  rising_edge(sclk) then
@@ -427,15 +483,21 @@ begin
 			when 7 =>
 				WR:='0'; 
 		   when 8 =>
-				WR:='1'; 
+				WR:='1';
 				caddr:=caddr+1;
 				DACA<="11"; DACD<=y;
 				WR:='0';
 			when 9 =>
 				WR:='1';
-			when 10 =>
-				WR:='1';
+			when 51 =>
+				DACA<="00"; DACD<="00000000";
+			when 52 =>
+				WR:='0'; 
+			when 53 =>
+			when 54 =>
+			   WR:='1';
 			when others=>
+--				if mcnt>11+maxd then mcnt<=0; end if;
 			end case;
 		end if; --reset
 	end if;
