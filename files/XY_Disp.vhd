@@ -461,7 +461,7 @@ begin
 			WR:='1';
 			MUX<='0';
 		else 
-			if mcnt<80 then mcnt<=mcnt+1;  
+			if mcnt<86 then mcnt<=mcnt+1;  
 				else 	mcnt<=0; end if; --TURN <= NOT TURN;
 			case mcnt is
 			when 0 =>	
@@ -505,5 +505,636 @@ end process;
 
 end;
 
+-----------------------------------------------------------------------------
+-- XY Display controller for Lion Computer 
+-- Theodoulos Liontakis (C) 2019  MCP4822
+
+Library ieee;
+USE ieee.std_logic_1164.all;
+USE ieee.std_logic_signed.all ;
+USE ieee.numeric_std.all ;
+
+entity XY_Display_MCP4822 is
+	port
+	(
+		sclk: IN std_logic;
+		reset: IN std_logic;
+		addr: OUT natural range 0 to 1023;
+		Q: IN std_logic_vector(15 downto 0);
+		DACW: OUT std_logic;
+		DACA: OUT std_logic_vector(1 downto 0);
+		DACD: OUT std_logic_vector(7 downto 0);
+		CS,SCK,SDI: OUT std_logic;
+		LDAC: OUT std_logic:='1'
+	);
+end XY_Display_MCP4822;
 
 
+Architecture Behavior of XY_Display_MCP4822 is
+
+Signal spi_rdy,spi_w: std_logic:='0';
+Shared variable mcnt,cnt :  natural range 0 to 255:=0;
+Signal x,y,z: std_logic_vector(7 downto 0);
+Signal spi_in: std_logic_vector(15 downto 0);
+Shared variable caddr: natural range 0 to 1023:=0;
+Shared variable e,lx,ly,cx,cy,dx,dy,maxd,sx,sy:integer range -2048 to 2047;
+Shared variable restart: natural range 0 to 3:=0;
+Shared variable swait: std_logic:='0';
+
+Component SPI16_fast is
+	port
+	(
+		SCLK, MOSI: OUT std_logic ;
+		clk, reset, w : IN std_logic ;
+		ready : OUT std_logic;
+		data_in : IN std_logic_vector (15 downto 0)
+	);
+end Component;
+ 
+
+begin
+FSPI: spi16_fast
+	PORT MAP ( SCK,SDI,sclk,reset,spi_w,spi_rdy,spi_in);
+addr<=caddr;
+
+process (sclk,reset)
+
+begin
+	if  rising_edge(sclk) then
+		if (reset='1') then
+			mcnt:=0; 
+			caddr:=0; swait:='0'; cs<='1';
+			DACW<='1'; x<="00000000"; y<="00000000";
+			cnt:=0; restart:=0; LDAC<='0';
+		else 
+			case mcnt is
+			when 0 =>
+				swait:='0';
+				lx:=to_integer(unsigned(x)); 
+				ly:=to_integer(unsigned(y));
+			when 1 =>	
+				z<=Q(7 downto 0);
+			when 2 =>
+				 cnt:=0;
+				caddr:=caddr+1;  
+			when 3 =>
+				DACA<="00"; DACD<=z;
+			when 4 =>
+				y<=Q(7 downto 0); 
+				x<=Q(15 downto 8);
+			when 5 =>
+				caddr:=caddr+1;
+				cx:=to_integer(unsigned(x)); cy:=to_integer(unsigned(y)); 
+				DACW<='0';
+			when 6 =>
+				if cx>lx then dx:=cx-lx; else dx:=lx-cx;  end if;
+				if cy>ly then dy:=cy-ly; else dy:=ly-cy;  end if;
+			when 7 =>
+				if cx>lx then sx:=1; elsif lx>cx then sx:=-1; else sx:=0; end if;
+				if cy>ly then sy:=1; elsif ly>cy then sy:=-1; else sy:=0; end if;
+			when 8 =>
+				 DACW<='1';
+				if dx>=dy then maxd:=dx; e:=2*dy-dx; else maxd:=dy; e:=2*dx-dy; end if;
+				if maxd=0 then mcnt:=mcnt+2; end if;
+			when 9 =>  -- loop start
+				if e>=0 then
+					swait:='1';
+					if dy>dx then 
+						lx:=lx+sx;
+						e:=e-2*dy;
+					else 
+						ly:=ly+sy;
+						e:=e-2*dx;
+					end if;
+				else swait:='0'; end if;
+			when 10 =>
+				if dy>dx then
+					ly:=ly+sy;
+					e:=e+2*dx;
+				else
+					lx:=lx+sx;
+					e:=e+2*dy;
+				end if;
+			when 11 =>
+				cs<='0';
+				spi_in<="10110"&std_logic_vector(to_unsigned(lx,8))&"000";
+			when 12 =>
+				spi_w<='1';
+			when 13 =>
+			when 14 =>
+			when 15 =>
+				spi_w<='0';
+			when 16 =>
+			when 17 =>
+				swait:=spi_rdy;
+			when 18 =>
+				cs<='1';
+			when 19 =>
+				spi_in<="00110"&std_logic_vector(to_unsigned(ly,8))&"000";
+			when 20 =>
+				cs<='0';
+			when 21 =>
+				spi_w<='1';
+			when 22 =>
+			when 23 =>
+			when 24 =>
+				spi_w<='0'; 
+			when 25 =>
+			when 26 =>
+				swait:=spi_rdy;
+			when 27 =>
+				cs<='1';
+			when 28 =>
+			when 29 =>
+			when 30 =>
+				LDAC<='0';
+			when 31 =>
+			when 32 =>
+			when 33 =>
+			when 34 =>
+			when 35 =>
+				cnt:=cnt+1;
+			when 36 =>
+				LDAC<='1';
+				if cnt>=maxd then restart:=1; else restart:=2; end if;
+			when others=>
+			end case;
+
+			if restart=1 then mcnt:=0; cnt:=0; restart:=0; 
+				elsif restart=2 then mcnt:=9; restart:=0; 
+				elsif swait='0' then mcnt:=mcnt+1; end if;
+		end if; --reset
+	end if;
+end process;
+
+end;
+
+----------------------------------------------------------------------------------------
+-- XY Display controller for Lion Computer 
+-- Theodoulos Liontakis (C) 2019  MCP4822
+
+Library ieee;
+USE ieee.std_logic_1164.all;
+USE ieee.std_logic_signed.all ;
+USE ieee.numeric_std.all ;
+
+entity XY_Display_MCP4822_i is
+	port
+	(
+		sclk: IN std_logic;
+		reset: IN std_logic;
+		addr: OUT natural range 0 to 1023;
+		Q: IN std_logic_vector(15 downto 0);
+		DACW: OUT std_logic;
+		DACA: OUT std_logic_vector(1 downto 0);
+		DACD: OUT std_logic_vector(7 downto 0);
+		CS,SCK,SDI: OUT std_logic;
+		LDAC: OUT std_logic:='1'
+	);
+end XY_Display_MCP4822_i;
+
+
+Architecture Behavior of XY_Display_MCP4822_i is
+
+Signal spi_rdy,spi_w: std_logic:='0';
+Signal mcnt :  natural range 0 to 2047:=0;
+Signal x,y,z: std_logic_vector(7 downto 0);
+Signal spi_in: std_logic_vector(15 downto 0):="0000000000000000";
+Shared variable caddr: natural range 0 to 1023:=0;
+Shared variable WR: std_logic:='1';
+Shared variable restart: natural range 0 to 3:=0;
+Shared variable swait: std_logic:='0';
+
+Component SPI16_fast is
+	port
+	(
+		SCLK, MOSI: OUT std_logic ;
+		clk, reset, w : IN std_logic ;
+		ready : OUT std_logic;
+		data_in : IN std_logic_vector (15 downto 0)
+	);
+end Component;
+ 
+
+begin
+FSPI: spi16_fast
+	PORT MAP ( SCK,SDI,sclk,reset,spi_w,spi_rdy,spi_in);
+	
+addr<=caddr;
+
+process (sclk,reset)
+
+begin
+	if  rising_edge(sclk) then
+		if (reset='1') then
+			mcnt<=0;	caddr:=0; swait:='0'; cs<='1';
+			WR:='1'; x<="00000000"; y<="00000000";
+			restart:=0; LDAC<='1'; spi_w<='0';
+		else 
+			if mcnt<49 then 
+				if swait='0' then mcnt<=mcnt+1;  end if; 
+			else 	mcnt<=0; end if; 
+			case mcnt is
+			when 0 =>
+			when 1 =>
+				z<=Q(7 downto 0);
+				caddr:=caddr+1;
+			when 2 =>
+				DACA<="00"; DACD<=z; 
+			when 3 =>
+				y<=Q(7 downto 0); 
+				x<=Q(15 downto 8);
+			when 4 => 
+				cs<='0';
+			when 5 =>
+				caddr:=caddr+1;
+		   when 6 =>
+				spi_in<="11110"&x&"000";
+				spi_w<='1';
+			when 7 =>
+			when 8 =>
+			when 9 =>
+				spi_w<='0';
+			when 10 =>
+				swait:=spi_rdy;
+			when 11 =>
+			when 12 =>
+				cs<='1';
+			when 13 =>
+			when 14 =>
+			when 15 =>
+				spi_in<="00110"&y&"000";
+				cs<='0';
+			when 16 =>
+				spi_w<='1';
+				DACW<='0';
+			when 17 =>
+			when 18 =>
+			when 19 =>
+				DACW<='1';
+				spi_w<='0';
+			when 20 =>
+				swait:=spi_rdy;
+			when 21 =>
+			when 22 =>
+				cs<='1';
+			when 23 =>
+			when 24 =>
+			when 25 =>
+				LDAC<='0';
+			when 26 =>
+			when 27 =>
+			when 28 =>
+			when 29 =>
+			when 30 =>
+			when 31 =>
+				LDAC<='1';
+			when others=>
+			end case;
+		end if; --reset
+	end if;
+end process;
+
+end;
+
+----------------------------------------------------------------------------------------
+
+-- SPI interface
+-- Theodoulos Liontakis (C) 2016,2019
+
+Library ieee; 
+USE ieee.std_logic_1164.all;
+USE ieee.std_logic_unsigned.all ;
+USE ieee.numeric_std.all ;
+
+entity SPI16_fast is
+	port
+	(
+		SCLK, MOSI: OUT std_logic ;
+		clk, reset, w : IN std_logic ;
+		ready : OUT std_logic;
+		data_in : IN std_logic_vector (15 downto 0)
+	);
+end SPI16_fast;
+ 
+Architecture Behavior of SPI16_fast is
+
+constant divider:natural :=1; 
+Signal rcounter :natural range 0 to 127;
+Signal state :natural range 0 to 15:=15;
+
+begin
+
+	process (clk,reset,w)
+	begin
+		if (reset='1') then 
+			rcounter<=0; ready<='0';
+			SCLK<='0'; state<=15;
+		elsif  clk'EVENT  and clk = '1' then
+			if rcounter=divider or (w='1' and ready='0') then
+				rcounter<=0;
+				MOSI<=data_in(state);
+				if state=15 and SCLK='0' and w='1' then
+					ready<='1'; SCLK<='1';
+				elsif state=15 and SCLK='1' then
+					state<=14; SCLK<='0';
+				elsif state=14 and SCLK='0' then
+					SCLK<='1';
+				elsif state=14 and SCLK='1' then
+					state<=13; SCLK<='0';
+				elsif state=13 and SCLK='0' then
+					SCLK<='1';
+				elsif state=13 and SCLK='1' then
+					state<=12; SCLK<='0';
+				elsif state=12 and SCLK='0' then
+					SCLK<='1';
+				elsif state=12 and SCLK='1' then
+					state<=11; SCLK<='0';
+				elsif state=11 and SCLK='0' then
+					SCLK<='1';
+				elsif state=11 and SCLK='1' then
+					state<=10; SCLK<='0';
+				elsif state=10 and SCLK='0' then
+					SCLK<='1';
+				elsif state=10 and SCLK='1' then
+					state<=9;	SCLK<='0';
+				elsif state=9 and SCLK='0' then
+					SCLK<='1';
+				elsif state=9 and SCLK='1' then
+					state<=8; SCLK<='0';
+				elsif state=8 and SCLK='0' then
+					SCLK<='1';
+				elsif state=8 and SCLK='1' then
+					state<=7; SCLK<='0';
+				elsif state=7 and SCLK='0' then
+					SCLK<='1';
+				elsif state=7 and SCLK='1' then
+					state<=6; SCLK<='0';
+				elsif state=6 and SCLK='0' then
+					SCLK<='1';
+				elsif state=6 and SCLK='1' then
+					state<=5; SCLK<='0';
+				elsif state=5 and SCLK='0' then
+					SCLK<='1';
+				elsif state=5 and SCLK='1' then
+					state<=4; SCLK<='0';
+				elsif state=4 and SCLK='0' then
+					SCLK<='1';
+				elsif state=4 and SCLK='1' then
+					state<=3; SCLK<='0';
+				elsif state=3 and SCLK='0' then
+					SCLK<='1';
+				elsif state=3 and SCLK='1' then
+					state<=2; SCLK<='0';
+				elsif state=2 and SCLK='0' then
+					SCLK<='1';
+				elsif state=2 and SCLK='1' then
+					state<=1; SCLK<='0';
+				elsif state=1 and SCLK='0' then
+					SCLK<='1';
+				elsif state=1 and SCLK='1' then
+					state<=0; SCLK<='0'; 
+				elsif state=0 and SCLK='0' then
+					SCLK<='1';
+				elsif state=0 and SCLK='1' then
+					state<=15; SCLK<='0'; ready<='0';
+				else	
+					SCLK<='0';
+					ready<='0';
+					state<=15;
+				end if;
+			else 
+				rcounter<=rcounter+1; 
+			end if;
+		end if;
+	end process;
+end behavior;
+
+-----------------------------------------------------------------------------
+-- XY Display controller for Lion Computer 
+-- Theodoulos Liontakis (C) 2019  MCP4822
+
+--Library ieee;
+--USE ieee.std_logic_1164.all;
+--USE ieee.std_logic_signed.all ;
+--USE ieee.numeric_std.all ;
+--
+--entity XY_Display_MCP4822_bak is
+--	port
+--	(
+--		sclk: IN std_logic;
+--		reset: IN std_logic;
+--		addr: OUT natural range 0 to 1023;
+--		Q: IN std_logic_vector(15 downto 0);
+--		DACW: OUT std_logic;
+--		DACA: OUT std_logic_vector(1 downto 0);
+--		DACD: OUT std_logic_vector(7 downto 0);
+--		CS,SCK,SDI: OUT std_logic;
+--		LDAC: OUT std_logic:='1'
+--	);
+--end XY_Display_MCP4822_bak;
+--
+--
+--Architecture Behavior of XY_Display_MCP4822_bak is
+--
+--Signal spi_rdy,spi_w: std_logic:='0';
+--Signal mcnt :  natural range 0 to 2047:=0;
+--Signal x,y,z: std_logic_vector(7 downto 0);
+--Signal spi_in: std_logic_vector(15 downto 0);
+--Shared variable caddr,step,cnt: natural range 0 to 255:=0;
+--Shared variable e,lx,ly,cx,cy,dx,dy,maxd,sx,sy:integer range -2048 to 2047;
+--Shared variable WR,WR2: std_logic:='1';
+--Shared variable restart: natural range 0 to 3:=0;
+--Shared variable swait: std_logic:='0';
+--
+--Component SPI16_fast is
+--	port
+--	(
+--		SCLK, MOSI: OUT std_logic ;
+--		clk, reset, w : IN std_logic ;
+--		ready : OUT std_logic;
+--		data_in : IN std_logic_vector (15 downto 0)
+--	);
+--end Component;
+-- 
+--
+--begin
+--FSPI: spi16_fast
+--	PORT MAP ( SCK,SDI,sclk,reset,spi_w,spi_rdy,spi_in);
+--addr<=caddr;
+--DACW<=WR;
+--
+--process (sclk,reset)
+--
+--begin
+--	if  rising_edge(sclk) then
+--		if (reset='1') then
+--			mcnt<=0; 
+--			caddr:=0; swait:='0'; cs<='1';
+--			WR:='1'; x<="00000000"; y<="00000000";
+--			cnt:=1; restart:=0; LDAC<='0';
+--		else 
+--			case mcnt is
+--			when 0 =>
+--				lx:=to_integer(unsigned(x)); 
+--				ly:=to_integer(unsigned(y));
+--				 cnt:=1;
+--			when 1 =>	
+--				z<=Q(7 downto 0);
+--				step:=0;
+--			when 2 =>
+--				caddr:=caddr+1;  
+--			when 3 =>
+--				DACA<="00"; DACD<=z;
+--			when 4 =>
+--				y<=Q(7 downto 0); 
+--				x<=Q(15 downto 8);
+--			when 5 =>
+--				caddr:=caddr+1;
+--				cx:=to_integer(unsigned(x)); cy:=to_integer(unsigned(y)); 
+--				WR:='0';
+--			when 6 =>
+--				if cx>lx then dx:=cx-lx; else dx:=lx-cx;  end if;
+--				if cy>ly then dy:=cy-ly; else dy:=ly-cy;  end if;
+--			when 7 =>
+--				if cx>lx then sx:=1; elsif lx>cx then sx:=-1; else sx:=0; end if;
+--				if cy>ly then sy:=1; elsif ly>cy then sy:=-1; else sy:=0; end if;
+--			when 8 =>
+--				 WR:='1';
+--				if dx>=dy then maxd:=dx; e:=2*dy-dx; else maxd:=dy; e:=2*dx-dy; end if;
+--				if maxd>1 then restart:=2; elsif maxd=0 then restart:=1; end if; 
+--			when 9 =>
+--				cs<='0';
+--			when 10 =>
+--				spi_in<="10110"&x&"000";
+--		   when 11 =>
+--				spi_w<='1';
+--			when 12 =>
+--			when 13 =>
+--			when 14 =>
+--				spi_w<='0';
+--			when 15 =>
+--				swait:=spi_rdy;
+--			when 16 =>
+--				cs<='1';
+--				spi_in<="00110"&y&"000";
+--			when 17 =>
+--				cs<='0';
+--			when 18 =>
+--				spi_w<='1';
+--			when 19 =>
+--			when 20 =>
+--			when 21 =>
+--				spi_w<='0';
+--			when 22 =>
+--				swait:=spi_rdy;
+--			when 23 =>
+--				cs<='1';
+--			when 24 =>
+--			when 25 =>
+--			when 26 =>
+--				LDAC<='0';
+--			when 27 =>
+--         when 28 =>
+--			when 29 =>
+--			when 30 =>
+--			when 31 =>
+--				LDAC<='1';
+--				restart:=1;
+--			when others=>
+--				case step is
+--			   when 0 =>
+--					if e>=0 then 
+--						if dy>dx then 
+--							lx:=lx+sx;
+--							e:=e-2*dy;
+--						else 
+--							ly:=ly+sy;
+--							e:=e-2*dx;
+--						end if;
+--					else step:=step+1; end if;
+--				when 1 =>
+--					if dy>dx then
+--						ly:=ly+sy;
+--						e:=e+2*dx;
+--					else
+--						lx:=lx+sx;
+--						e:=e+2*dy;
+--					end if;
+--					step:=step+1;
+--					cs<='0';
+--				when 2 =>
+--					step:=step+1;
+--					spi_in<="10110"&std_logic_vector(to_unsigned(lx,8))&"000";
+--				when 3 =>
+--					step:=step+1;
+--					spi_w<='1';
+--				when 4 =>
+--					step:=step+1;
+--				when 5 =>
+--					step:=step+1;
+--				when 6 =>
+--					step:=step+1;
+--					spi_w<='0';
+--				when 7 =>
+--					step:=step+1;
+--				when 8 =>
+--					if spi_rdy='0' then step:=step+1; end if;
+--				when 9 =>
+--					cs<='1';
+--					step:=step+1;
+--				when 10 =>
+--					step:=step+1;
+--					spi_in<="00110"&std_logic_vector(to_unsigned(ly,8))&"000";
+--					cs<='0';
+--				when 11 =>
+--					step:=step+1;
+--				when 12 =>
+--					step:=step+1;
+--					spi_w<='1';
+--				when 13 =>
+--					step:=step+1;
+--				when 14 =>
+--					step:=step+1; 
+--				when 15 =>
+--					step:=step+1;
+--				when 16 =>
+--					spi_w<='0'; 
+--					step:=step+1;
+--				when 17 =>
+--					step:=step+1;
+--				when 18 =>
+--					if spi_rdy='0' then step:=step+1; end if;
+--				when 19 =>
+--					step:=step+1;
+--					cs<='1';
+--				when 20 =>
+--					step:=step+1;
+--				when 21 =>
+--					step:=step+1;
+--					LDAC<='0';
+--				when 22 =>
+--					step:=step+1;
+--				when 23 =>
+--					step:=step+1;
+--				when 24 =>
+--					step:=step+1;
+--				when 25 =>
+--					step:=step+1;
+--				when 26 =>
+--					cnt:=cnt+1;
+--					step:=step+1;
+--				when 27 =>
+--					step:=0;	
+--					LDAC<='1';
+--					if cnt>maxd then restart:=1; end if;
+--				when others=>
+--				end case;
+--			end case;
+--			if restart=1 then mcnt<=0; cnt:=1; restart:=0; elsif restart=2 then mcnt<=34; cnt:=1; restart:=0; 
+--				else if swait='0' then mcnt<=mcnt+1; end if; end if;
+--		end if; --reset
+--	end if;
+--end process;
+--
+--end;

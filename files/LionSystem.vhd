@@ -32,8 +32,9 @@ entity LionSystem is
 		XY_DECODE,XY_MUX: OUT std_logic;
 		DACA: OUT std_logic_vector(1 downto 0);
 		DACD: OUT std_logic_vector(7 downto 0);
-		I2CC: OUT std_logic:='1';
-		I2CD1,I2CD2,I2CD3: INOUT std_logic :='1'
+--		I2CC: OUT std_logic:='1';
+--		I2CD1,I2CD2,I2CD3: INOUT std_logic :='1'
+		SCLK2,MOSI2,SPICS2,LDAC: OUT std_logic
 	);
 end LionSystem;
 
@@ -187,29 +188,44 @@ COMPONENT PS2KEYB is
 	);
 end COMPONENT;
 
-COMPONENT XY_Display_TLC_i is
-	port
-	(
-		sclk: IN std_logic;
-		reset: IN std_logic;
-		addr: OUT natural range 0 to 1023;
-		Q: IN std_logic_vector(15 downto 0);
-		DACW,MUX: OUT std_logic;
-		DACA: OUT std_logic_vector(1 downto 0);
-		DACD: OUT std_logic_vector(7 downto 0)
-	);
-end COMPONENT;
+--COMPONENT XY_Display_TLC_i is
+--	port
+--	(
+--		sclk: IN std_logic;
+--		reset: IN std_logic;
+--		addr: OUT natural range 0 to 1023;
+--		Q: IN std_logic_vector(15 downto 0);
+--		DACW,MUX: OUT std_logic;
+--		DACA: OUT std_logic_vector(1 downto 0);
+--		DACD: OUT std_logic_vector(7 downto 0)
+--	);
+--end COMPONENT;
 
-COMPONENT XY_Display_TLC is
+--COMPONENT XY_Display_TLC is
+--	port
+--	(
+--		sclk: IN std_logic;
+--		reset: IN std_logic;
+--		addr: OUT natural range 0 to 1023;
+--		Q: IN std_logic_vector(15 downto 0);
+--		DACW,MUX: OUT std_logic;
+--		DACA: OUT std_logic_vector(1 downto 0);
+--		DACD: OUT std_logic_vector(7 downto 0)
+--	);
+--end COMPONENT;
+
+COMPONENT XY_Display_MCP4822 is
 	port
 	(
 		sclk: IN std_logic;
 		reset: IN std_logic;
 		addr: OUT natural range 0 to 1023;
 		Q: IN std_logic_vector(15 downto 0);
-		DACW,MUX: OUT std_logic;
+		DACW: OUT std_logic;
 		DACA: OUT std_logic_vector(1 downto 0);
-		DACD: OUT std_logic_vector(7 downto 0)
+		DACD: OUT std_logic_vector(7 downto 0);
+		CS,SCK,SDI: OUT std_logic;
+		LDAC: OUT std_logic:='1'
 	);
 end COMPONENT;
 
@@ -288,7 +304,7 @@ SPRTG3: VideoSp
 	GENERIC MAP (DATA_LINE  => 1)
 	PORT MAP ( clock1, clock0,SR3,SG3,SB3,SBRI3,SPDET3,vint,spb,sdb,spad5,spvq3);
 Serial: UART
-	PORT MAP ( Tx,Rx,clock1,rst,sr,sw,sdready,sready,sdi,sdo );
+	PORT MAP ( Tx,Rx,clock0,rst,sr,sw,sdready,sready,sdi,sdo );
 SoundC1: SoundI
 	PORT MAP (AUDIOA,rst,clock1,Waud,aq,Vol1,count,play);
 SoundC2: SoundI
@@ -303,8 +319,10 @@ CPLL:LPLL2
 	PORT MAP (iClock,Clock0,Clock1);
 PS2:PS2KEYB
 	PORT MAP (KDATA,KCLK,clock1,rst,kr,kready,kdo);
-XYC:XY_Display_TLC
-	PORT MAP (clock1,rst,xyadr,xyq1,XY_decode,XY_MUX,DACA,DACD);
+--XYC:XY_Display_TLC
+--	PORT MAP (clock1,rst,xyadr,xyq1,XY_decode,XY_MUX,DACA,DACD);
+XYC:XY_Display_MCP4822
+	PORT MAP (clock1,rst,xyadr,xyq1,XY_decode,DACA,DACD,SPICS2,SCLK2,MOSI2,LDAC);
 --XYC:XY_Display_MCP
 --	PORT MAP (clock1,rst,xyadr,xyq1,I2CC,I2CD1,I2CD2,I2CD3);
 rst2<=not reset when rising_edge(clock0);

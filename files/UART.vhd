@@ -38,6 +38,7 @@ signal rd:boolean :=true;
 signal rptr1, rptr2: natural range 0 to rblen := 0; 
 signal tptr1, tptr2: natural range 0 to tblen := 0; 
 signal rstate,tstate: natural range 0 to 15 :=0 ;
+signal rx0,rx1:std_logic:='1';
 
 begin
 
@@ -49,14 +50,14 @@ begin
 		if (reset='1') then 
 			rptr1<=0; rptr2<=0; data_ready<='0'; ready<='1'; rcounter<=1; rstate<=0; tstate<=0;
 			tcounter<=1; tptr1<=0; tptr2<=0; dr<=false; rd<=true; wa:=false; ra:=false; 
-			Tx<='1';  --rFIFO<=(OTHERS=>"00000000");
+			Tx<='1';  rx0<='1'; rx1<='1'; --rFIFO<=(OTHERS=>"00000000"); 
 		elsif  clk'EVENT  and clk = '1' then
 			rcounter<=rcounter+1; 
 			tcounter<=tcounter+1;
-		
-			if rcounter=divider or (rstate=0 and Rx='0') then	
-				if rstate=0 and Rx='0' then
-					rcounter<=divider/4;	
+			rx1<=Rx; rx0<=rx1;
+			if rcounter=divider or (rstate=0 and rx1='0' and rx0='0' and Rx='0') then	
+				if rstate=0 and Rx='0' and rx1='0' and rx0='0' then
+					rcounter<=divider/2;	
 					rstate<=1; 
 				elsif rstate=1 then
 					rstate<=rstate+1;
@@ -178,8 +179,12 @@ Signal rcounter:natural range 0 to 4095:=1;
 signal dr: boolean:=false;
 signal rptr1, rptr2: natural range 0 to rblen := 0; 
 signal rstate: natural range 0 to 15 :=0 ;
+Signal rx1,Rx2: std_logic;
 
 begin
+
+rx1<=Rx when clk'EVENT  and clk = '1';
+Rx2<=rx1 when clk'EVENT  and clk = '1';
 
 	process (clk,reset)
 	
@@ -192,15 +197,15 @@ begin
 		elsif  clk'EVENT  and clk = '1' then
 			rcounter<=rcounter+1;
 			
-			if rcounter=divider or (rstate=0 and Rx='0') then	
-				if rstate=0 and Rx='0' then
+			if rcounter=divider or (rstate=0 and Rx2='0') then	
+				if rstate=0 and Rx2='0' then
 					rcounter<=divider/4;	
 					rstate<=1; 
 				elsif rstate=1 then
 					rstate<=rstate+1;
 					rcounter<=1;
 				elsif rstate>0 and rstate<10 then
-					inb(rstate)<=Rx;
+					inb(rstate)<=Rx2;
 					rcounter<=1;
 					rstate<=rstate+1;
 				elsif rstate=10 then
