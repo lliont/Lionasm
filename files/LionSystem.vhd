@@ -34,7 +34,7 @@ entity LionSystem is
 		DACD: OUT std_logic_vector(7 downto 0);
 --		I2CC: OUT std_logic:='1';
 --		I2CD1,I2CD2,I2CD3: INOUT std_logic :='1'
-		SCLK2,MOSI2,SPICS2,LDAC: OUT std_logic
+		SCLK2,MOSI2,SPICS2,SPICS3,LDAC: OUT std_logic
 	);
 end LionSystem;
 
@@ -221,10 +221,7 @@ COMPONENT XY_Display_MCP4822 is
 		reset: IN std_logic;
 		addr: OUT natural range 0 to 1023;
 		Q: IN std_logic_vector(15 downto 0);
-		DACW: OUT std_logic;
-		DACA: OUT std_logic_vector(1 downto 0);
-		DACD: OUT std_logic_vector(7 downto 0);
-		CS,SCK,SDI: OUT std_logic;
+		CS,CS2,SCK,SDI: OUT std_logic;
 		LDAC: OUT std_logic:='1'
 	);
 end COMPONENT;
@@ -322,7 +319,7 @@ PS2:PS2KEYB
 --XYC:XY_Display_TLC
 --	PORT MAP (clock1,rst,xyadr,xyq1,XY_decode,XY_MUX,DACA,DACD);
 XYC:XY_Display_MCP4822
-	PORT MAP (clock1,rst,xyadr,xyq1,XY_decode,DACA,DACD,SPICS2,SCLK2,MOSI2,LDAC);
+	PORT MAP (clock1,rst,xyadr,xyq1,SPICS2,SPICS3,SCLK2,MOSI2,LDAC);
 --XYC:XY_Display_MCP
 --	PORT MAP (clock1,rst,xyadr,xyq1,I2CC,I2CD1,I2CD2,I2CD3);
 rst2<=not reset when rising_edge(clock0);
