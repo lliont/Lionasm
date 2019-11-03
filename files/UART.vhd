@@ -21,7 +21,7 @@ end UART;
 
 Architecture Behavior of UART is
 
-constant rblen:natural:=32;
+constant rblen:natural:=16;
 constant tblen:natural:=8;
 constant divider:natural :=2603; -- 19200       650  25MHz/38400   1302 ; -- 50MHz to 34800
 type FIFO_t is array (0 to tblen-1) of std_logic_vector(9 downto 2);
@@ -30,7 +30,7 @@ Signal tFIFO: FIFO_t;
 	attribute ramstyle : string;
    attribute ramstyle of tFIFO : signal is "no_rw_check";
 Signal rFIFO: FIFO_r;
-   attribute ramstyle of rFIFO : signal is "no_rw_check";
+	attribute ramstyle of rFIFO : signal is "logic";
 Signal inb,outb: std_logic_vector(9 downto 2);
 Signal rcounter,tcounter :natural range 0 to 4095:=1;
 signal dr: boolean:=false;

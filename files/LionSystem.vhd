@@ -34,7 +34,7 @@ entity LionSystem is
 		DACD: OUT std_logic_vector(7 downto 0);
 --		I2CC: OUT std_logic:='1';
 --		I2CD1,I2CD2,I2CD3: INOUT std_logic :='1'
-		SCLK2,MOSI2,SPICS2,SPICS3,LDAC: OUT std_logic
+		SCLK2,MOSI2,MOSI3,SPICS2,SPICS3,LDAC: OUT std_logic
 	);
 end LionSystem;
 
@@ -219,9 +219,9 @@ COMPONENT XY_Display_MCP4822 is
 	(
 		sclk: IN std_logic;
 		reset: IN std_logic;
-		addr: OUT natural range 0 to 1023;
+		addr: OUT natural range 0 to 2047;
 		Q: IN std_logic_vector(15 downto 0);
-		CS,CS2,SCK,SDI: OUT std_logic;
+		CS,CS2,SCK,SDI,SDI2: OUT std_logic;
 		LDAC: OUT std_logic:='1'
 	);
 end COMPONENT;
@@ -286,7 +286,7 @@ SPRAM3: dual_port_ram_dual_clock
 	PORT MAP ( clock0,clock1, spad5, to_integer(unsigned(AD(11 downto 1))), Do, spw3, spvq3, SPQ3 );
 XYRAM: dual_port_ram_dual_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 11)
-	PORT MAP ( clock0,clock1, xyadr, to_integer(unsigned(AD(10 downto 1))), Do, xyw, xyq1, xyq2 );
+	PORT MAP ( clock0,clock1, xyadr, to_integer(unsigned(AD(11 downto 1))), Do, xyw, xyq1, xyq2 );
 VIDEO0: videoRGB80
 	PORT MAP ( clock1,clock0,Vmod,R0,G0,B0,BRI0,VSYN0,HSYN0,vint0,vad0,vq);
 VIDEO1: videoRGB1
@@ -319,7 +319,7 @@ PS2:PS2KEYB
 --XYC:XY_Display_TLC
 --	PORT MAP (clock1,rst,xyadr,xyq1,XY_decode,XY_MUX,DACA,DACD);
 XYC:XY_Display_MCP4822
-	PORT MAP (clock1,rst,xyadr,xyq1,SPICS2,SPICS3,SCLK2,MOSI2,LDAC);
+	PORT MAP (clock1,rst,xyadr,xyq1,SPICS2,SPICS3,SCLK2,MOSI2,MOSI3,LDAC);
 --XYC:XY_Display_MCP
 --	PORT MAP (clock1,rst,xyadr,xyq1,I2CC,I2CD1,I2CD2,I2CD3);
 rst2<=not reset when rising_edge(clock0);
@@ -564,7 +564,7 @@ constant rblen:natural:=16;
 type FIFO_r is array (0 to rblen-1) of std_logic_vector(9 downto 2);
 Signal rFIFO: FIFO_r;
 	attribute ramstyle : string;
-   attribute ramstyle of rFIFO : signal is "no_rw_check";
+	attribute ramstyle of rFIFO : signal is "logic";
 Signal inb: std_logic_vector(9 downto 1);
 Signal lastkey: std_logic_vector(7 downto 0);
 --Signal delay:natural range 0 to 65535:=0;
