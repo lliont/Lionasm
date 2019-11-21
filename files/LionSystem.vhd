@@ -34,7 +34,7 @@ entity LionSystem is
 		DACD: OUT std_logic_vector(7 downto 0);
 --		I2CC: OUT std_logic:='1';
 --		I2CD1,I2CD2,I2CD3: INOUT std_logic :='1'
-		SCLK2,MOSI2,MOSI3,SPICS2,SPICS3,LDAC: OUT std_logic
+		SCLK2,MOSI2,MOSI3,MOSI4,SPICS2,LDAC: OUT std_logic
 	);
 end LionSystem;
 
@@ -221,8 +221,9 @@ COMPONENT XY_Display_MCP4822 is
 		reset: IN std_logic;
 		addr: OUT natural range 0 to 2047;
 		Q: IN std_logic_vector(15 downto 0);
-		CS,CS2,SCK,SDI,SDI2: OUT std_logic;
-		LDAC: OUT std_logic:='1'
+		CS,SCK,SDI,SDI2,SDI3: OUT std_logic;
+		LDAC: OUT std_logic:='1';
+		MODE: IN std_logic:='0'
 	);
 end COMPONENT;
 
@@ -263,7 +264,7 @@ Signal sdi,sdo,sdo2,kdo : std_logic_vector (7 downto 0);
 Signal Vol1,Vol2,Vol3,Voln : std_logic_vector (7 downto 0):="11111111";
 SIGNAL Spi_in,Spi_out: STD_LOGIC_VECTOR (7 downto 0);
 Signal Spi_w, spi_rdy, play,play2,play3, spb, sdb : std_logic;
-Signal PB0, PG0, PR0 :std_Logic:='0';
+Signal PB0, PG0, PR0, XYmode :std_Logic:='0';
 
 shared variable Di1:std_logic_vector(15 downto 0);
 
@@ -319,7 +320,7 @@ PS2:PS2KEYB
 --XYC:XY_Display_TLC
 --	PORT MAP (clock1,rst,xyadr,xyq1,XY_decode,XY_MUX,DACA,DACD);
 XYC:XY_Display_MCP4822
-	PORT MAP (clock1,rst,xyadr,xyq1,SPICS2,SPICS3,SCLK2,MOSI2,MOSI3,LDAC);
+	PORT MAP (clock1,rst,xyadr,xyq1,SPICS2,SCLK2,MOSI2,MOSI3,MOSI4,LDAC,XYmode);
 --XYC:XY_Display_MCP
 --	PORT MAP (clock1,rst,xyadr,xyq1,I2CC,I2CD1,I2CD2,I2CD3);
 rst2<=not reset when rising_edge(clock0);
@@ -413,7 +414,8 @@ Waud3<='0' when AD=12 and IO='1' and AS='0' and RW='0' and rising_edge(clock1) e
 lfsr_bw<=Do when AD=13 and IO='1' and AS='0' and RW='0' and rising_edge(clock1);
 PR0<=Do(0) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   
 PG0<=Do(1) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   
-PB0<=Do(2) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  
+PB0<=Do(2) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1); 
+XYmode<=Do(0) when  AD=31 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  
 
 -- Read decoder
 process (clock1,RW,AS,IO)
