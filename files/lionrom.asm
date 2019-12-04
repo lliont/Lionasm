@@ -1737,7 +1737,7 @@ SERIN:	IN		A0,6  ;Read serial byte if availiable
 ;----------------------------------------
 SEROUT:	IN		A0,6  ;Wite serial byte if ready
 		BTST		A0,0  ; A0(0)=0 if not ready
-		JZ		INTEXIT
+		JZ		SEROUT
 		OUT		0,A1
 		OUT		2,1
 		OUT		2,0

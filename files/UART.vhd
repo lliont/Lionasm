@@ -88,7 +88,7 @@ begin
 			
 			if tcounter=divider then
 				
-				if tstate=0 and tptr1/=tptr2 then
+				if tstate=0 and ( tptr1/=tptr2 or rd=false) then
 					tcounter<=1;
 					Tx<='0';
 					outb<=tFIFO(tptr1);
@@ -101,7 +101,7 @@ begin
 					Tx<='1';
 					tcounter<=1;
 					tstate<=0;
-					if tptr1<tblen then tptr1<=tptr1+1; else tptr1<=0; end if;
+					if tptr1<tblen-1 then tptr1<=tptr1+1; else tptr1<=0; end if;
 					ready<='1'; rd<=true;
 				else
 					tcounter<=1;
@@ -129,20 +129,14 @@ begin
 			
 			if w='1' and rd=true and wa=false then
 				wa:=true;
-				if tptr2<tblen then
-					if tptr2+1 /= tptr1 then 
-						tptr2<=tptr2+1;
-					else
-						ready<='0'; rd<=false;
-					end if;
-				else
-					if tptr1/=0 then
-						tptr2<=0;
-					else
-						ready<='0'; rd<=false;
-					end if;
-				end if;
 				tFIFO(tptr2)<=data_in;
+				if tptr2<tblen-1 then
+					if tptr2+1=tptr1 then  ready<='0'; rd<=false; end if;
+					tptr2<=tptr2+1;
+				else
+					tptr2<=0;
+					if tptr1=0 then ready<='0'; rd<=false;	end if;
+				end if;
 			else
 				if w='0' then wa:=false; end if;
 			end if;
