@@ -91,6 +91,8 @@ namespace Lion_assembler
         private frmLionAsm LionAsmForm;
         private string[] sourceLinesArr = null;
         string delims = "\t\r\n, `"; //string delims2 = "\t\r\n,";
+        string arith = "+-*/()0123456789";
+        string opers = "+-*/()";
         string t;
         string validchar = "ABCDEFGHIJKLMNOPQRSTVUWXYZ0123456789.():_-$#+-*/><=?\\%@'";
         string validchar2 = "ABCDEFGHIJKLMNOPQRSTVUWXYZ0123456789.():_-$#+-*/><=?\\%@' ";
@@ -487,7 +489,7 @@ namespace Lion_assembler
             {
                 return OperandType.RegisterAIndirect;
             }
-            if (((s[0] >= '0' && s[0] <= '9') || s[0] == '-' || s[0] == '\'') && is_num(s))
+            if (((s[0] >= '0' && s[0] <= '9') || s[0] == '-' || s[0] == '\'' || s[0] == '=' || s[0] == '@') && is_num(s))
             {
                 return OperandType.MemoryDirect;
             }
@@ -505,7 +507,7 @@ namespace Lion_assembler
             }
             if (s[0] == '(')
             {
-                if (((s[1] >= '0' && s[1] <= '9') || s[1] == '-') && int.TryParse(s.Substring(1, s.Length - 2), out i))
+                if (((s[1] >= '0' && s[1] <= '9') || s[1] == '-' || s[1] == '=' || s[1] == '@') && is_num(s.Substring(1, s.Length - 2)))
                 {
                     return OperandType.MemoryIndirect;
                 }
@@ -3394,6 +3396,7 @@ namespace Lion_assembler
 
         private int conv_int(string s)
         {
+            s.Replace(" ", "");
             int i = 0;
             if (((s[0] >= '0' && s[0] <= '9') || s[0] == '-')) //&& int.TryParse(s, out i)
             {
@@ -3431,7 +3434,38 @@ namespace Lion_assembler
                 }
                 return i;
             }
-            return i;
+            else
+            {
+                string ss = String.Empty;
+                int sp = 0; string t = String.Empty;
+                if (s[sp] == '=') sp += 1;
+                if (s[sp] == '@') { sp += 1; ss = address.ToString(); }
+                while (sp < s.Length)
+                    {
+                        t = string.Empty;
+                        while ((sp < s.Length) && (arith.IndexOf(s[sp]) != -1))
+                        {
+                            ss += s[sp];
+                            sp = sp + 1;
+                        };
+                        while ((sp < s.Length) && (opers.IndexOf(s[sp]) == -1))
+                        {
+                            t += s[sp];
+                            sp = sp + 1;
+                        };
+                        if (t != String.Empty)
+                        {
+                            if (lblList.ContainsKey(t)) { ss += lblList[t]; }
+                            else
+                            if (constList.ContainsKey(t)) { ss += constList[t]; }
+                            else
+                            if (varList.ContainsKey(t)) { ss += varList[t]; }
+                            else ss += t;
+                        }
+                    }
+                    i = (int)new DataTable().Compute(ss, null);
+             }
+             return i;
         }
 
         private bool Operation(InstructionLine il)
@@ -3844,7 +3878,7 @@ namespace Lion_assembler
         {
             int i;
             // int result = (int)new DataTable().Compute("1 + 2 * 7", null);
-
+            s.Replace(" ","");
             if (s[0] == '$')
             {
                 try { i = Convert.ToInt32(s.Substring(1), 16); }
@@ -3872,9 +3906,35 @@ namespace Lion_assembler
             else
             {
                 //if (!int.TryParse(s, out i)) { error = -2; return false; }
+                string ss=String.Empty;
                 try
                 {
-                    i = (int)new DataTable().Compute(s, null);
+                    int sp = 0;
+                    if (s[sp] == '=') sp += 1;
+                    if (s[sp] == '@') { sp += 1; ss = address.ToString(); }
+                    while (sp < s.Length)
+                    {
+                        t = string.Empty;
+                        while ((sp < s.Length) && (arith.IndexOf(s[sp]) != -1))
+                        {
+                            ss += s[sp];
+                            sp = sp + 1;
+                        };
+                        while ((sp < s.Length) && (opers.IndexOf(s[sp]) == -1))
+                        {
+                            t += s[sp];
+                            sp = sp + 1;
+                        };
+                        if (t != String.Empty) {
+                            if (lblList.ContainsKey(t)) { ss += lblList[t]; }
+                            else
+                            if (constList.ContainsKey(t)) { ss += constList[t]; }
+                            else
+                            if (varList.ContainsKey(t)) { ss += varList[t]; }
+                            else ss += t;
+                        }
+                    }
+                    i = (int)new DataTable().Compute(ss, null);
                     t = i.ToString();
                 }
                 catch
@@ -4522,12 +4582,13 @@ namespace Lion_assembler
                         }
                         if (il.word1 != string.Empty)
                         {
-                            if (il.address > 8191) ad = il.address - 8192; else ad = il.address;
+                            //if (il.address > 8191) ad = il.address - 8192; else
+                            ad = il.address;
                             ad2 = il.address - bad;
                             temps += "tmp(" + Convert.ToString(ad / 2) + "):=\"" + il.word1 + "\"; ";
                             if (il.word2 != string.Empty) temps += "tmp(" + Convert.ToString(1 + ad / 2) + "):=\"" + il.word2 + "\";";
                             if (il.word3 != string.Empty) temps += " tmp(" + Convert.ToString(2 + ad / 2) + "):=\"" + il.word3 + "\";";
-                            temps += " --" + il.opcode + " \r\n";
+                            temps += " --" + il.opcode + " "+il.op1 +","+il.op2+" \r\n";
                             try
                             {
                                 bw.Seek(ad2, 0);
@@ -4554,7 +4615,8 @@ namespace Lion_assembler
                         }
                         if (il.type == InstructionType.DataWord || il.type == InstructionType.DataByte)
                         {
-                            if (il.address > 8191) ad = il.address - 8192; else ad = il.address;
+                            // if (il.address > 8191) ad = il.address - 8192; else
+                            ad = il.address;
                             ad2 = il.address - bad;
                             int rr = 0;
                             foreach (int ii in il.values)

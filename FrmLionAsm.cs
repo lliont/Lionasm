@@ -222,21 +222,6 @@ namespace Lion_assembler
             Flickerfreertf._Paint = true;
         }
 
-        public void goto_line_o(int l)
-        {
-            int pos = 0, line = 0;
-            while (pos < fftxtSource.Text.Length && line != l)
-            {
-                if (fftxtSource.Text[pos] == '\n') line++;
-                pos++;
-            }
-            if (pos < fftxtSource.Text.Length && line == l)
-            {
-                fftxtSource.SelectionStart = pos;
-                fftxtSource.SelectionLength = 1;
-            }
-        }
-
         public void goto_line(int st)
         {
             int l, i, le;

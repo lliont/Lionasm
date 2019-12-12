@@ -226,13 +226,13 @@
             this.VHDL.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.VHDL.CausesValidation = false;
-            this.VHDL.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(161)));
+            this.VHDL.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.VHDL.Location = new System.Drawing.Point(696, 33);
             this.VHDL.MaxLength = 0;
             this.VHDL.Multiline = true;
             this.VHDL.Name = "VHDL";
             this.VHDL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.VHDL.Size = new System.Drawing.Size(480, 724);
+            this.VHDL.Size = new System.Drawing.Size(480, 693);
             this.VHDL.TabIndex = 4;
             this.VHDL.WordWrap = false;
             this.VHDL.TextChanged += new System.EventHandler(this.VHDL_TextChanged);
