@@ -4,6 +4,8 @@ using System.Windows.Forms;
 using System.Drawing.Printing;
 using System.IO;
 using Lion_assembler;
+using System.Threading.Tasks;
+
 
 namespace Lion_assembler
 {
@@ -31,10 +33,11 @@ namespace Lion_assembler
             char ch;
             Color c;
             string ctok = string.Empty;
+            string st = fftxtSource.Text.ToUpper();
             while (l < pos2)
             {
                 //if ("ABCDEFGHIJKLMNOPQRSTVUWXYZ01234567890_.".IndexOf(fftxtSource.Text.ToUpper()[l]) != -1)
-                ch = fftxtSource.Text.ToUpper()[l];
+                ch = st[l];
                 if (ch == '.' || ch == '.' || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9'))
                 {
                     ctok = ctok + ch;
@@ -43,12 +46,12 @@ namespace Lion_assembler
                 else
                 {
                     //ctok = ctok.ToUpper();
-                    if (fftxtSource.Text[l] == ';')
+                    if (st[l] == ';')
                     {
                         int ss = l;
                         fftxtSource.SelectionStart = ss;
                         l++;
-                        while (l < pos2 && fftxtSource.Text[l] != '\n') l++;
+                        while (l < pos2 && st[l] != '\n') l++;
                         fftxtSource.SelectionLength = l - ss;
                         fftxtSource.SelectionColor = Color.Green;
                     } else
@@ -67,22 +70,22 @@ namespace Lion_assembler
                         //}
                         ctok = string.Empty;
                     } else
-                    if (fftxtSource.Text[l] == '\'')
+                    if (st[l] == '\'')
                     {
                         int ss = l;
                         fftxtSource.SelectionStart = ss;
                         l++;
-                        while (l < pos2 && fftxtSource.Text[l] != '\'' && fftxtSource.Text[l] != '\n') l++;
+                        while (l < pos2 && st[l] != '\'' && st[l] != '\n') l++;
                         fftxtSource.SelectionLength = l - ss+1;
                         fftxtSource.SelectionColor = Color.DarkRed;
                     }
                     else
-                        if (fftxtSource.Text[l] == '\"')
+                        if (st[l] == '\"')
                         {
                             int ss = l;
                             fftxtSource.SelectionStart = ss;
                             l++;
-                            while (l < pos2 && fftxtSource.Text[l] != '\"' && fftxtSource.Text[l] != '\n') l++;
+                            while (l < pos2 && st[l] != '\"' && st[l] != '\n') l++;
                             fftxtSource.SelectionLength = l - ss+1;
                             fftxtSource.SelectionColor = Color.DarkRed;
                         }
@@ -115,20 +118,20 @@ namespace Lion_assembler
             Flickerfreertf._Paint = false;
             int CurrentSelectionStart = fftxtSource.SelectionStart;
             int CurrentSelectionLength = fftxtSource.SelectionLength;
-
+            string sot = fftxtSource.Text.ToUpper();
             // find start of line
             int pos = CurrentSelectionStart;
 
-            while ((pos > 0) && (fftxtSource.Text[pos - 1] != '\n'))
+            while ((pos > 0) && (sot[pos - 1] != '\n'))
                 pos--;
             ;
             // find end of line
             int pos2 = CurrentSelectionStart;
-            while ((pos2 < fftxtSource.Text.Length) && (fftxtSource.Text[pos2] != '\n')) pos2++;
+            while ((pos2 < sot.Length) && (sot[pos2] != '\n')) pos2++;
             fftxtSource.SelectionStart = pos;
             fftxtSource.SelectionLength = pos2 - pos;
-            string st = fftxtSource.Text.Substring(pos, pos2 - pos).TrimStart();
-            if (pos < fftxtSource.Text.Length && st.StartsWith(";"))
+            string st = sot.Substring(pos, pos2 - pos).TrimStart();
+            if (pos < sot.Length && st.StartsWith(";"))
             {
                 fftxtSource.SelectionColor = Color.Green;
                 Flickerfreertf._Paint = true;
@@ -145,7 +148,7 @@ namespace Lion_assembler
             while (l < pos2)
             {
                 //if ("ABCDEFGHIJKLMNOPQRSTVUWXYZ01234567890_.".IndexOf(fftxtSource.Text.ToUpper()[l]) != -1)
-                ch = fftxtSource.Text.ToUpper()[l];
+                ch = sot[l];
                 if (ch == '.' || ch == '.' || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9'))
                 {
                     ctok = ctok + ch;
@@ -154,12 +157,12 @@ namespace Lion_assembler
                 else
                 {
                     //ctok = ctok.ToUpper();
-                    if (fftxtSource.Text[l] == ';')
+                    if (sot[l] == ';')
                     {
                         int ss = l;
                         fftxtSource.SelectionStart = ss;
                         l++;
-                        while (l < pos2 && fftxtSource.Text[l] != '\n') l++;
+                        while (l < pos2 && sot[l] != '\n') l++;
                         fftxtSource.SelectionLength = l - ss;
                         fftxtSource.SelectionColor = Color.Green;
                     }
@@ -180,22 +183,22 @@ namespace Lion_assembler
                             ctok = string.Empty;
                         }
                         else
-                            if (fftxtSource.Text[l] == '\'')
+                            if (sot[l] == '\'')
                             {
                                 int ss = l;
                                 fftxtSource.SelectionStart = ss;
                                 l++;
-                                while (l < pos2 && fftxtSource.Text[l] != '\'' && fftxtSource.Text[l] != '\n') l++;
+                                while (l < pos2 && sot[l] != '\'' && sot[l] != '\n') l++;
                                 fftxtSource.SelectionLength = l - ss+1;
                                 fftxtSource.SelectionColor = Color.DarkRed;
                             }
                             else
-                                if (fftxtSource.Text[l] == '\"')
+                                if (sot[l] == '\"')
                                 {
                                     int ss = l;
                                     fftxtSource.SelectionStart = ss;
                                     l++;
-                                    while (l < pos2 && fftxtSource.Text[l] != '\"' && fftxtSource.Text[l] != '\n') l++;
+                                    while (l < pos2 && sot[l] != '\"' && sot[l] != '\n') l++;
                                     fftxtSource.SelectionLength = l - ss+1;
                                     fftxtSource.SelectionColor = Color.DarkRed;
                                 }
@@ -357,19 +360,19 @@ namespace Lion_assembler
                     fftxtSource.Text = bufs;
                     if (frmLionAsm.ActiveForm.Text != null) frmLionAsm.ActiveForm.Text = "Lion Assembler - " + fname;
                     // oldtext[0] = fftxtSource.Text;
-                    //try
-                    //{
-                    //    fftxtSource.SuspendLayout();
-                    //}
-                    //catch { }
-                    //MakeColorSyntaxForAll();
-                    //try
-                    //{
-                    //    fftxtSource.ResumeLayout();
-                    //}
-                    //catch
-                    //{
-                    //}
+                    try
+                    {
+                        fftxtSource.SuspendLayout();
+                    }
+                    catch { }
+                    MakeColorSyntaxForAll();
+                    try
+                    {
+                        fftxtSource.ResumeLayout();
+                    }
+                    catch
+                    {
+                    }
                     changed = false;
                     Cursor.Current = Cursors.Default;
                 }
@@ -611,7 +614,9 @@ namespace Lion_assembler
                 fftxtSource.SuspendLayout();
             }
             catch { }
+
             MakeColorSyntaxForAll();
+           
             try
             {
                 fftxtSource.ResumeLayout();

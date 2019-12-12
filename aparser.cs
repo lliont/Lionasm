@@ -4418,6 +4418,7 @@ namespace Lion_assembler
             if (error < 0)
             {
                 LionAsmForm.errorbox.Text += "Error " + errList[-error] + " at line: " + Convert.ToString(l) + " \r\n";
+                LionAsmForm.MarkLine(l-1, Color.Coral);
                 return false;
             }
             LionAsmForm.errorbox.Text += "*** Pass1 - end \r\n";
@@ -4459,7 +4460,7 @@ namespace Lion_assembler
 
                     //create the mif file
                     StreamWriter sw = new StreamWriter(Path.GetFileNameWithoutExtension(LionAsmForm.fname) + pgs + ".mif", false, System.Text.Encoding.GetEncoding(1253));
-                    sw.WriteLine("WIDTH=16;\nDEPTH=4096;\nADDRESS_RADIX=UNS;\nDATA_RADIX=BIN;\n\nCONTENT BEGIN\n\n");
+                    sw.WriteLine("WIDTH=16;\nDEPTH=32767;\nADDRESS_RADIX=UNS;\nDATA_RADIX=BIN;\n\nCONTENT BEGIN\n\n");
                     int bad = 65535;
                     foreach (InstructionLine il1 in pageListArr)
                     {
@@ -4489,6 +4490,7 @@ namespace Lion_assembler
                             else
                             {
                                 LionAsmForm.errorbox.Text += "Unknown identifier " + s + " at line: " + (il.lno + 1).ToString() + " \r\n";
+                                LionAsmForm.MarkLine(il.lno, Color.Coral);
                                 return false;
                             };
                         }
@@ -4514,6 +4516,7 @@ namespace Lion_assembler
                             else
                             {
                                 LionAsmForm.errorbox.Text += "Unknown identifier " + s + " at line: " + (il.lno + 1).ToString() + " \r\n";
+                                LionAsmForm.MarkLine(il.lno, Color.Coral);
                                 return false;
                             };
                         }
