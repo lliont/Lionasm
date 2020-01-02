@@ -94,7 +94,7 @@ namespace Lion_assembler
         string arith = "+-*/()0123456789";
         string opers = "+-*/()";
         string t;
-        string validchar = "ABCDEFGHIJKLMNOPQRSTVUWXYZ0123456789.():_-$#+-*/><=?\\%@'";
+        string validchar =  "ABCDEFGHIJKLMNOPQRSTVUWXYZ0123456789.():_-$#+-*/><=?\\%@'";
         string validchar2 = "ABCDEFGHIJKLMNOPQRSTVUWXYZ0123456789.():_-$#+-*/><=?\\%@' ";
         int p = 0, l = 0, error = 0;
         ushort address = 32;

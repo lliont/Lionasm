@@ -298,6 +298,7 @@ namespace Lion_assembler
                         bufs = temp.Substring(0, temp.Length - 2);
                     }
                     fftxtSource.Text = bufs;
+
                     changed = true;
                 }
             }
@@ -306,7 +307,19 @@ namespace Lion_assembler
         private void Lionasm_Load(object sender, EventArgs e)
         {
             par = new aparser(this);
-            if (!changed) MakeColorSyntaxForAll();
+            try
+            {
+                fftxtSource.SuspendLayout();
+            }
+            catch { }
+            MakeColorSyntaxForAll();
+            try
+            {
+                fftxtSource.ResumeLayout();
+            }
+            catch
+            {
+            }
             changed = false;
             comboBox1.Text = "COM3";
         }
@@ -331,6 +344,7 @@ namespace Lion_assembler
                     Directory.SetCurrentDirectory(Path.GetDirectoryName(fname));
                     fftxtSource.Text = string.Empty;
                     bufs = string.Empty;
+                    changed = false;
                     string temp = string.Empty;
                     Cursor.Current = Cursors.WaitCursor;
                     using (StreamReader sr = new StreamReader(fname, System.Text.Encoding.GetEncoding(1253)))
@@ -358,7 +372,7 @@ namespace Lion_assembler
                     catch
                     {
                     }
-                    changed = false;
+                    
                     Cursor.Current = Cursors.Default;
                 }
             }

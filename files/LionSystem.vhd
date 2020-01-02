@@ -32,8 +32,6 @@ entity LionSystem is
 		XY_DECODE,XY_MUX: OUT std_logic;
 		DACA: OUT std_logic_vector(1 downto 0);
 		DACD: OUT std_logic_vector(7 downto 0);
---		I2CC: OUT std_logic:='1';
---		I2CD1,I2CD2,I2CD3: INOUT std_logic :='1'
 		SCLK2,MOSI2,MOSI3,MOSI4,SPICS2,LDAC: OUT std_logic
 	);
 end LionSystem;

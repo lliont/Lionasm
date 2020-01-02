@@ -122,7 +122,7 @@ INT4T8	DA		MULT     ; Multiplcation A1*A2 res in A2A1, a0<>0 overflow
 INT4T9	DA		DIV      ; 16bit  Div A2 by A1 res in A1,A0
 INT4T10	DA		KEYB     ; converts to ascii the codes from serial keyboard
 INT4T11	DA		SPI_INIT ; initialize spi sd card
-INT4T12	DA		SPISEND  ; spi send/rec byt in A1 mode A2 1=CS low 3=CS h res a0
+INT4T12	DA		SPIS  ; spi send/rec byt in A1 mode A2 1=CS low 3=CS h res a0
 INT4T13	DA		READSEC  ; read in buffer at A2, n in A1
 INT4T14	DA		WRITESEC ; WRITE BUFFER at A2 TO A1 BLOCK
 INT4T15	DA		VSCROLL  ; 
@@ -1464,7 +1464,7 @@ WRS9: MOV	A1,$FF
 	JNZ	WRIF
 
 	MOVI	A2,3
-	MOV 	A1,$FF  ; send dummy with cs high
+	MOV 	A1,$FF  ; send dummy 
 	JSR	SPIS
 
 	MOV	A0,$0100  ; ALL OK
@@ -1542,7 +1542,7 @@ RDI6:	MOV	A1,$FF
 	JXAB	A3,RDI6
 
 	MOVI	A2,3
-	MOV 	A1,$FF  ; send dummy with cs high
+	MOV 	A1,$FF  ; send dummy 
 	JSR	SPIS
 
 	MOV	A0,$0100  ; ALL OK
@@ -1554,118 +1554,201 @@ RDIF: POP	A4
 	POPX
 	RET
 
-;-----------------------------------------
-SPISEND:
+
+;----------------------------------------------
+SPIS:
 	PUSH	A1
 	PUSH	A2
-	JSR	SPIS
-	POP	A2
-	POP	A1
-	RETI
-;------------------------------------------------
-SPIS:
 	OUT	18,A1
+	BSET  A2,0
 	OUT	19,A2
 	BCLR	A2,0
 	OUT	19,A2
-	BSET	A2,0
 SPIC: IN	A1,17
-	OR.B	A1,A1
+	BTST  A1,0
 	JNZ	SPIC
 	IN	A0,16
+	POP	A2
+	POP	A1
 	RET
-	
-;--------------- * INIT * ----------------
+;--------------- * SD CARD INIT * ----------------
 SPI_INIT:
 	PUSHX
 	PUSH 	A1
 	PUSH	A2
 	PUSH	A3
+	PUSH	A4
 
 	MOVI	A3,0
 
-SPIN:	CMP	A3,100   
+SPIN:	MOV	A0,40
+	CMP	A3,20
 	JA	SPIF  ; MANY RETRIES FAIL
-	SETX	9
+	OUT	19,2
+	SETX	8
 	MOVI	A2,3
 SPI0: MOV	A1,255	
 	JSR	SPIS
-	JMPX	SPI0    ; SEND 80 CLK PULSES WITH CS HIGH
+	JMPX	SPI0    ; SEND >80 CLK PULSES WITH CS HIGH
 	
+	OUT   19,0
+	JSR 	DELAY
 	MOVI	A2,1
-	;OUT	19,0    ; cs=0
-
-
-	MOV 	A1,$40  ; INIT SPI MODE WITH CS LOW
+	MOV	A1,255	
+	JSR	SPIS
+	
+	MOV 	A1,$40  ; RESET IN SPI MODE   
 	JSR	SPIS
 	MOVI 	A1,$0
 	JSR	SPIS
-	MOVI 	A1,$0
 	JSR	SPIS
-	MOVI 	A1,$0
 	JSR	SPIS
-	MOVI 	A1,$0
 	JSR	SPIS
 	MOV 	A1,$95
 	JSR	SPIS	
 
-	SETX	7	         ;READ 8 RESPONCES
+
+	SETX	7	         ;READ RESPONCES 8 
 SPI3:	MOV	A1,$FF
 	JSR	SPIS
 	CMPI.B A0,1
-	JNZ	SPNF
-	MOV	A2,5
-SPNF:	JMPX	SPI3
+	JZ	SPNF
+	JSR	DELAY
+	JMPX	SPI3
 	
 	INC 	A3	
-	CMPI	A2,5
-	JNZ	SPIN
-
-	MOV	A3,0
-
-SPNT:	CMP	A3,50
-	JA	SPIF
-
-	MOVI	A2,3
-	MOV 	A1,$FF  ; send dummy with cs high
+	JMP	SPIN
+SPNF:
+	MOV	A1,$FF
 	JSR	SPIS
-	MOVI	A2,1
+; ----- CMD 8 --------------
 
+	OUT	19,2
+	JSR	DELAY
+	OUT	19,0
+	MOV	A4,$0000	
+
+	MOV 	A1,$48  ; spi cmd 8
+	JSR	SPIS
+	MOV 	A1,$00
+	JSR	SPIS
+	JSR	SPIS
+	MOVI 	A1,$01
+	JSR	SPIS
+	MOV 	A1,$AA
+	JSR	SPIS
+	MOV 	A1,$87 ; $86
+	JSR	SPIS 
+
+	SETX  7         ; READ 8 ANSWERS
+SP8:  MOV	 A1,$FF
+	JSR	 SPIS
+	CMPI.B A0,1
+	JBE	 SP8X
+	JMPX  SP8
+	JMP	SP8END
+
+SP8X:	;MOV	A4,$0040
+	SETX	3         ; read 4 more
+SP82: MOV	 A1,$FF
+	JSR	 SPIS
+	JMPX	 SP82
+SP8END:
+;------------- CMD 55 + ACMD 41 ------------
+	MOV	A1,$FF
+	JSR	SPIS
+	MOV	A3,0
+SPN55:
+	OUT	19,2
+	JSR	DELAY
+	OUT	19,0
+	CMP	A3,40
+	JA	TRYCMD1
+	INC	A3
+
+	MOV 	A1,$77  ; spi cmd 55
+	JSR	SPIS
+	MOVI 	A1,$00
+	JSR	SPIS
+	JSR	SPIS
+	JSR	SPIS
+	JSR	SPIS
+	MOV 	A1,$01 
+	JSR	SPIS 
+
+	SETX   7         ; READ 8 ANSWERS
+SP55: MOV	 A1,$FF
+	JSR	 SPIS
+	CMPI.B A0,1
+	JBE	 SP55X
+      JMPX   SP55
+	JMP    SPN55	
+SP55X:
+	MOV	A1,$FF
+	JSR	SPIS
+
+	MOV 	A1,$69  ; INITIALIZE spi cmd 41
+	JSR	SPIS
+	MOV.B	A1,A4  ; $00 or $40
+	JSR	SPIS
+	MOVI 	A1,$00
+	JSR	SPIS
+	JSR	SPIS
+	JSR	SPIS
+	MOVI	A1,$01
+	JSR	SPIS 
+
+	 SETX	7         ; READ 8 ANSWERS
+SP413: MOV	A1,$FF
+	 JSR	SPIS
+	 CMPI.B A0,0
+	 JZ	SKIPCMD1
+       JMPX SP413
+	 JMP	SPN55
+
+;---------------------------
+; Command 1 init
+
+TRYCMD1:
+	MOV	A1,$FF
+	JSR	SPIS
+	
+	MOV	A3,0
+SPNT:	MOVI	A0,1
+	OUT	19,2
+	JSR	DELAY
+	OUT	19,0
+	CMP	A3,50
+	JA	SPIF
 	MOV 	A1,$41  ; INITIALIZE spi
 	JSR	SPIS
 	MOVI 	A1,$0
 	JSR	SPIS
-	MOVI 	A1,$0
 	JSR	SPIS
-	MOVI 	A1,$0
 	JSR	SPIS
-	MOVI 	A1,$0
 	JSR	SPIS
-	MOV 	A1,$FF 
+	MOV 	A1,01 
 	JSR	SPIS 
 
 	SETX	7         ; READ 8 ANSWERS
 SPI2:	MOV	A1,$FF
 	JSR	SPIS
-	OR.B	A0,A0
-	JNZ	SPNX
-	MOV	A2,5
-SPNX:	JMPX	SPI2
-
+	CMPI.B A0,0
+	JZ	SPNX
+	JMPX	SPI2
 	INC	A3
-	CMPI	A2,5
-	JNZ	SPNT
-
-	MOVI	A2,3
-	MOV 	A1,$FF  ; send dummy with cs high
+	JMP	SPNT
+SPNX:
+;--------------------------------------------------------
+SKIPCMD1:
+	MOV	A1,$FF
 	JSR	SPIS
-	MOVI	A2,1
 
+	JSR DELAY
 	MOV 	A1,$50  ; SET TRANSFER SIZE
 	JSR	SPIS
 	MOVI 	A1,$0
 	JSR	SPIS
-	MOVI 	A1,$0
 	JSR	SPIS
 	MOVI 	A1,$02
 	JSR	SPIS
@@ -1677,27 +1760,30 @@ SPNX:	JMPX	SPI2
 	SETX	7          ; READ ANSWER
 SPI4:	MOV	A1,$FF
 	JSR	SPIS
+	CMPI.B A0,0
+	JZ	SPSNX
 	JMPX	SPI4
-
-	MOVI	A2,3
-	MOV 	A1,$FF  ; send dummy with cs high
+	MOV	A0,16
+	JMP	SPIF
+	;OUT	19,2
+	;JSR	DELAY
+	;OUT	19,0
+SPSNX:
+	MOV	A1,$FF
 	JSR	SPIS
-	MOVI	A2,1
+	JSR  DELAY
 
 	MOV 	A1,$51  ; READ FIRST SECTOR
 	JSR	SPIS
 	MOVI 	A1,$0
 	JSR	SPIS
-	MOVI 	A1,$0
 	JSR	SPIS
-	MOVI 	A1,$0
 	JSR	SPIS
-	MOVI 	A1,$0
 	JSR	SPIS
 	MOV 	A1,$FF 
 	JSR	SPIS 
 
-	SETX	101          ; READ ANSWER until $FE is found
+	SETX	999          ; READ ANSWER until $FE is found
 SPI5:	MOV	A1,$FF
 	JSR	SPIS
 	CMP.B	A0,$FE
@@ -1711,16 +1797,17 @@ SDRD:	CMP.B	A0,$FE
 SPI6:	MOV	A1,$FF
 	JSR	SPIS 
 	MOV.B	(A3),A0
-	;INC	A3
 	JXAB	A3,SPI6
 
-	MOVI	A2,3
-	MOV 	A1,$FF  ; send dummy with cs high
+	MOV	A1,$FF
 	JSR	SPIS
-
 	MOV	A0,$0100  ; ALL OK
 
-SPIF:	POP	A3
+SPIF: ;MOVI	A2,3
+	;MOV 	A1,$FF  ; send dummy with cs high
+	;JSR	SPIS
+	POP	A4
+	POP	A3
 	POP	A2
 	POP	A1
 	POPX
