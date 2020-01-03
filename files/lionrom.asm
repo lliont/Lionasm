@@ -8,7 +8,7 @@ VSBLOCK     EQU		64770
 HSBLOCK     EQU		64780
 SCRLBUF     EQU         64790
 XDIM		EQU		640    ; XDIM Screen Horizontal Dim. 
-XDIM22	EQU		160     ; mode xdim /2 
+XDIM22	EQU		160     ; mode xdim /2
 YDIM		EQU		240    ; Screen Vertical Dimention
 YDIM2		EQU		200
 XCC		EQU	80   ; Horizontal Lines
@@ -122,7 +122,7 @@ INT4T8	DA		MULT     ; Multiplcation A1*A2 res in A2A1, a0<>0 overflow
 INT4T9	DA		DIV      ; 16bit  Div A2 by A1 res in A1,A0
 INT4T10	DA		KEYB     ; converts to ascii the codes from serial keyboard
 INT4T11	DA		SPI_INIT ; initialize spi sd card
-INT4T12	DA		SPIS  ; spi send/rec byt in A1 mode A2 1=CS low 3=CS h res a0
+INT4T12	DA		SPIS     ; spi send/rec byt in A1 mode A2 1=CS low 3=CS h res a0
 INT4T13	DA		READSEC  ; read in buffer at A2, n in A1
 INT4T14	DA		WRITESEC ; WRITE BUFFER at A2 TO A1 BLOCK
 INT4T15	DA		VSCROLL  ; 
@@ -144,6 +144,9 @@ INT5T12     DA		FCMP     ; float cmp  A1A2,A3A4 res A0
 INT5T13     DA		LDSCR    ; Load Screen A4 fname @A3 
 INT5T14     DA          LINEXY   ; plot a line a1,a2 to a3,a4
 INT5T15	DA		HSCROLL  ;
+INT5T16	DA		FINDF    ;  A4 pointer to filename, A0 return cluster relative to (FSTCLST)
+                                  
+
 
 ;Hardware interrupt
 HINT:		INC		(COUNTER)
@@ -1050,10 +1053,6 @@ SLD1:	MOV	A6,A4
 	INT 	4              ; Load sector
 	SETX  255
 	MOV	A2,SDCBUF1
-;SLD2:	MOV	A5,(A2)
-;	OUT	A3,A5
-;	ADDI	A3,2
-;	JXAW	A2,SLD2
 	MTOI	A3,A2
 	CMP	A3,64768
 	JA	SLDE
@@ -1132,8 +1131,18 @@ FLD1:	MOV	A6,A4
 	POP	A1
 	RET 
 
+FINDF:
+	PUSH	A1
+	PUSH	A2
+	PUSH	A5
+	JSR	FINDFN
+	POP	A5
+	POP	A2
+	POP	A1
+	RETI
+
 ;Find filename in root directory
-; A4 pointer to filename, A0 return cluster relative to (FSTCLST)
+; A4 pointer to filename, A0 return cluster relative to (FSTCLST) +2
 ; file name in header at A2, directory cluster at A5 
 ; changes A1,A2,A5! 
 FINDFN:     PUSHX

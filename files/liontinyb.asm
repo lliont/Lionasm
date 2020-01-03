@@ -21,7 +21,7 @@ FATROOT	EQU	$2406  ;DS	2    Root directory #sector
 FSTCLST	EQU	$2408  ;DS	2    First data #sector
 FSTFAT	EQU	$240a  ;DS	2    First Fat first #sector
 SDFLAG	EQU	$240c  ;DS	2    SD card initialized by rom=256
-COUNTER     EQU	$240e  ;DS	2    General use counter increased by int 0 
+COUNTER     EQU	$240e  ;DS	2    General use counter increased by int 3 
 FRAC1		EQU	$2410  ;DS	2    for fixed point multiplication-division
 FRAC2		EQU  	$2412  ;DS	2               >>
 RHINT0	EQU	$2414  ; Hardware interrupt 0
@@ -348,6 +348,9 @@ tab1:
 	TEXT	"DI"
 	DB	'R'+128
 	DA	DIR
+	TEXT	"C"
+	DB	'D'+128
+	DA	CD
 
 
 TAB2	TEXT	"PRIN"
@@ -1536,8 +1539,8 @@ TBF1:	CMP.B	(A2),0     ; empty
 	JZ	TBF5
 	CMP.B	(A2),$E5   ; deleted entry
 	JZ	TBF6
-	CMP.B	(A2),47
-	JBE	TBF6
+	CMP.B	(A2),46
+	JB	TBF6
 	PUSH	A2
 	SETX	7
 TBF2: MOV.B	A0,(A2)
@@ -1699,6 +1702,61 @@ DEL2:	MOVHL	A0,34
 	MOVI	A0,4
 	INT	5
 	MOV	A4,A3
+	JMP	FINISH
+
+;-----------------------
+
+CD: 	CMP	(SDFLAG),256
+	JNZ	QHOW
+	MOV	A4,DELNAME
+	SETX	5
+	NTOM  A4,$2020
+	MOVHL	A0,46
+	JSR	IGNBLNK
+	JNZ	CD3
+	MOV.B	(DELNAME),$2E  ; 46 '.'
+	CMP.B (A3),46
+	JNZ	CD4
+	MOV	(DELNAME),$2E2E
+	INC	A3
+	JMP	CD4
+CD3:	MOVHL	A0,34
+	JSR	IGNBLNK
+	JNZ	QWHAT
+	MOV	A4,DELNAME
+	SETX	10
+CD1: CMP.B	(A3),34  ; '"'
+	JZ	CD2
+	CMP.B	(A3),13
+	JZ	CD2
+	CMP.B	(A3),46  ; '.'
+	JNZ	CDN
+	SETX	3
+	MOV	A4,=(DELNAME+8)
+	JMP	CSKP
+CDN:	MOV.B	(A4),(A3)
+	INC	A4
+CSKP:	JXAB	A3,CD1
+	INC	A3
+CD2:	MOVHL	A0,34
+	JSR	IGNBLNK
+	JNZ	QWHAT
+CD4:	MOV	A4,DELNAME
+	MOV	A0,16
+	INT	5
+	CMP   (DELNAME),$2E2E
+	JZ	CD5
+	CMPI	A0,0
+	JZ	QHOW
+CD6:	ADD   A0,(FSTCLST)
+	SUBI	A0,2
+	MOV	(FATROOT),A0
+	JMP	FINISH
+CD5:  CMPI	A0,0
+	JNZ	CD6
+	MOV	A0,(FSTCLST)
+	SUB	A0,32
+	MOV	(FATROOT),A0
 	JMP	FINISH
 
 ;-------------------------------

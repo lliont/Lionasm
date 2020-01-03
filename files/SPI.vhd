@@ -33,9 +33,9 @@ begin
 			SCLK<='0'; MOSI<='0'; state<=7;
 		elsif  clk'EVENT  and clk = '1' then
 			rcounter<=rcounter+1; 
+			MOSI<=data_in(state);
 			if rcounter=divider or (w='1' and ready='0') then
 				rcounter<=0;
-				MOSI<=data_in(state);
 				if state=7 and SCLK='0' and w='1' then
 					ready<='1'; 
 					SCLK<='1';
