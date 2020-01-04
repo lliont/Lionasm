@@ -2050,8 +2050,7 @@ CLRSCR1:	PUSHX
 		RETI
 
 ;----------------------------------------
-PLOT:		
-		SDP	0
+PLOT:		SDP	0
 		IN	A0,24
 		CMPI	A0,1  ;(VMODE),1
 		JZ	PLOT1
@@ -2114,9 +2113,84 @@ P1L5:		OR.B		A1,A3    ; mode 1  set
 		POP		A1
 		RETI
 
-;--------------------------------------
+;-------------------------------------- 
+; plot a line a1,a2 to a3,a4
+
 LINEXY:
-		RETI
+	STI
+	SDP	0
+	PUSHX
+	PUSH 	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A4
+	PUSH	A5
+	PUSH	A6
+	PUSH	A7
+	MOVI  A5,1
+	SUB   A3,A1 ; A3=dx
+	JNZ   LXY11
+	MOVI	A5,0
+	JMP   LXY1
+LXY11: JNC	LXY1 
+	MOV	A5,-1
+	NEG	A3
+LXY1: MOVI	A6,1 
+	SUB	A4,A2 ; A4=dy
+	JNZ	LXY22	
+	MOVI	A6,0	
+	JMP	LXY2
+LXY22: JNC	LXY2
+	NEG	A4
+	MOV	A6,-1
+LXY2: SETX  A3 
+	MOV	A7,A4
+	SLA	A7,1
+	SUB	A7,A3  ; E=2*dy-dx 
+	CMP	A3,A4
+	JNC	LXY3
+	MOV	A7,A3
+	SLA	A7,1
+	SUB	A7,A4  ; E=2*dx-dy 
+	SETX	A4
+LXY3: SLL	A4,1  ;2*dy
+	SLL	A3,1  ;2*dx
+LXY4: PUSH  A4
+	MOVI	A4,1
+	MOV	A0,2
+	INT	4     ; plot a point
+	POP	A4
+	MOV	A0,A3
+	OR	A0,A4
+	JZ    LXY0   ; if both 0 skip interation
+LXY7:	CMP	A7,0
+	JL	LXY0
+	CMP	A3,A4  ; 2dx,2dy	
+	JNC   LXY5   ;
+	SUB	A7,A4  ; dy>dx
+	ADD   A1,A5
+	JMP	LXY6
+LXY5: SUB   A7,A3  ; dx>=dy
+	ADD	A2,A6
+LXY6: JMP	LXY7
+LXY0: CMP	A3,A4
+	JNC   LXY8
+	ADD	A7,A3
+	ADD   A2,A6
+	JMP	LXY9
+LXY8: ADD   A7,A4
+	ADD	A1,A5
+LXY9:
+	JMPX  LXY4	
+	POP	A7
+	POP	A6
+	POP	A5
+	POP	A4	
+	POP	A3
+	POP	A2
+	POP	A1
+	POPX
+	RETI
 ;--------------------------------------------------------------
 ; Multiplcation A1*A2 res in A2A1,
 
@@ -2617,7 +2691,7 @@ FATROOT	DS	2
 FSTCLST	DS	2
 FSTFAT	DS	2
 SDFLAG	DS	2
-COUNTER     DS	2 ; Counter for general use increased by VSYNC INT 0 
+COUNTER     DS	2 ; Counter for general use increased by VSYNC INT 3 
 FRAC1		DS	2 ; for fixed point multiplication - division
 FRAC2		DS	2 ;
 RHINT0	DS	4 ; RAM redirection of interrupts
