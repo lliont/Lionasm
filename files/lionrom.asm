@@ -41,6 +41,7 @@ BOOTC:	SDP		0
 		MOV		(RHINT2),$8400
 		MOV.B		(SHIFT),0
 		MOV.B		(CAPSL),0
+		MOV.B		(PLOTM),1
 		MOV		A1,65300
 		SETSP		A1
 		MOV.B		(VMODE),0
@@ -145,7 +146,7 @@ INT5T13     DA		LDSCR    ; Load Screen A4 fname @A3
 INT5T14     DA          LINEXY   ; plot a line a1,a2 to a3,a4
 INT5T15	DA		HSCROLL  ;
 INT5T16	DA		FINDF    ;  A4 pointer to filename, A0 return cluster relative to (FSTCLST)
-                                  
+INT5T17	DA		CIRC     ; Circle A1,A2,A3                                   
 
 
 ;Hardware interrupt
@@ -736,6 +737,17 @@ FADD_E:
   POP A5
   RETI
 
+;------- save fat cluster A1 to fat copy cluster from sdcbuf2  
+SFATC:
+	PUSH A0
+	PUSH A1
+	JSR	DELAY
+	ADD	A1,(SECPFAT)   ; add second fat offset
+	MOVI	A0,14
+	INT	4      ; Save FAT copy
+	POP A1
+	POP A0
+	RET
 
 ;---------INT5 A0=5 Save -----------------------------
 ; A4 filename, a6 address, a7 size
@@ -769,12 +781,13 @@ FRFT4:
 	MOVI	A3,0
 	JMP	FRFT5	
 FRFT2: 
-	MOV	(A2),$F0F0 
+	MOV	(A2),$FFF0 
 	MOVI	A0,14
 	MOV	A1,(FSTFAT)
 	ADD	A1,A4
 	MOV	A2,SDCBUF2
 	INT	4    ; Save FAT
+	JSR   SFATC ; Save fat copy
 FRFT5: 
 	MOV	A0,A3
 	POP	A4
@@ -826,7 +839,8 @@ NORELD:
 	ADD	A1,A4
 	MOVI	A0,14
 	INT	4
-
+	JSR	SFATC    ; save to fat copy
+      JSR	DELAY
 	POP	A3
 	JMP	SVD1
 SVD2:	
@@ -845,6 +859,7 @@ SVD2:
 	ADD	A1,A4
 	MOVI	A0,14
 	INT	4         ;write $FFFF and exit
+	JSR	SFATC    ; save to fat copy
 	MOV	A0,256
 SVDE:
 	RET
@@ -867,7 +882,7 @@ FILESAV:
 	JMP	FSVE
 FSV7:	MOVI	A5,0
 
-FSV4:	MOV	A1,(FATROOT)
+FSV4:	MOV	A1,(DIRROOT)
 	ADD	A1,A5
 	MOVI	A0,13
 	MOV	A2,SDCBUF1
@@ -901,7 +916,7 @@ FSV5:	MOV	(A2),(A4)
 	SWAP	A0
 	PUSH	A0
 	MOVI	A0,14
-	MOV	A1,(FATROOT)
+	MOV	A1,(DIRROOT)
 	ADD	A1,A5
 	MOV	A2,SDCBUF1
 	INT	4         ; save header
@@ -914,6 +929,11 @@ FSV3:
 	CMP	A3,512
 	JNZ	FSV1  ; search same sector
 	INC	A5
+
+	MOV	A1,(DIRROOT)
+	CMP	(FATROOT),A1 ;  *** to be implemented ***
+	JNZ   FSVE
+
 	CMP	A5,32  ;if not last root dir sector 
 	JNZ	FSV4   ;load next sector and continue search
 FSVE:	
@@ -942,7 +962,7 @@ FILEDEL:
 	MOV.B	(A2),$E5  ; Delete file entry
 	MOV	A4,A0
 	MOVI	A0,14
-	MOV	A1,(FATROOT)
+	MOV	A1,(DIRROOT)
 	ADD	A1,A5
 	MOV	A2,SDCBUF1
 	INT	4          ; save file header
@@ -953,7 +973,7 @@ FDL1:
 	ADD	A1,A5
 	MOVI	A0,13
 	MOV	A2,SDCBUF2
-	INT	4              ; Load FAT
+	INT	4         ; Load FAT cluster
 	AND	A4,$00FF  ; mod 256	
 	SLL	A4,1  
 	MOV	A5,SDCBUF2
@@ -962,9 +982,11 @@ FDL1:
 	MOV	(A5),0  ; free cluster
 	MOVI	A0,14
 	INT	4        ; write fat back
+	JSR	DELAY
+	JSR	SFATC  ; write fat copy
 	SWAP	A4
-	CMP	A4,$FFFF
-	JZ	FDELX
+	CMP	A4,$FFF7 ; EOF
+	JA	FDELX
 	CMPI	A4,0
 	JNZ	FDL1
 FDELX:
@@ -1007,15 +1029,22 @@ VMOUNT:
 	SWAP	A0
 	ADD	A1,A0
 	MOV	(FSTFAT),A1  ; save first fat cluster num
-	ADD	A2,8
-	MOV	A0,(A2)   ; secors per fat
+	ADDI	A2,5
+	MOV.B	A0,(A2)      ; Total num of sectors<65536
+	ADDI	A2,1
+	MOVHH A0,(A2)
+	MOV	(SECNUM),A0
+	ADDI	A2,2
+	MOV	A0,(A2)   ; sectors per fat
 	SWAP	A0
+	MOV	(SECPFAT), A0
 	SLL	A0,1        ; 2 fats
 	ADD	A1,A0	    ; Root Folder
+	MOV	(DIRROOT),A1
 	MOV	(FATROOT),A1
 	ADD	A1,32     ; 32 bytes * 512 entries =32 sectors
 	MOV	(FSTCLST),A1
-	MOV	A0,(FATROOT)
+	MOV	A0,(DIRROOT)
 VMEX:	POP	A2
 	POP	A1
 	RETI
@@ -1107,7 +1136,7 @@ FLD1:	MOV	A6,A4
 	ADD	A1,A6
 	MOVI	A0,13
 	MOV	A2,SDCBUF2
-	INT	4              ; Load FAT
+	INT	4              ; Load specific cluster FAT
 	MOVI	A0,13          ;
 	MOV	A1,(FSTCLST)
 	ADD	A1,A4
@@ -1142,14 +1171,14 @@ FINDF:
 	RETI
 
 ;Find filename in root directory
-; A4 pointer to filename, A0 return cluster relative to (FSTCLST) +2
+; A4 pointer to filename, A0 return cluster relative to (FSTCLST) (sub 2 to search in fat)
 ; file name in header at A2, directory cluster at A5 
 ; changes A1,A2,A5! 
 FINDFN:     PUSHX
 		PUSH	A3
 		PUSH	A4
 		MOVI	A5,0
-TFF4:		MOV	A1,(FATROOT)
+TFF4:		MOV	A1,(DIRROOT)
 		ADD	A1,A5
 		MOVI	A0,13
 		MOV	A2,SDCBUF1
@@ -1183,6 +1212,11 @@ TFF3:		POP	A4
 		CMP	A3,512
 		JNZ	TFF1  ; search same sector
 		INC	A5
+
+		MOV	A1,(DIRROOT) ; if not root search only first 
+		CMP	(FATROOT),A1 ;  *** to be implemented ***
+		JNZ   TFF6
+
 		CMP	A5,32  ;if not last root dir sector 
 		JNZ	TFF4   ;load next sector and continue search
 TFF6:		MOVI	A0,0
@@ -2055,7 +2089,10 @@ PLOT:		SDP	0
 		CMPI	A0,1  ;(VMODE),1
 		JZ	PLOT1
 		PUSH		A1
-		PUSH		A2        ; PLOT at A1,A2 mode in A4
+		PUSH		A2        ; PLOT at A1,A2 mode in (PLOTM)
+		PUSH		A4
+		MOVI		A4,0
+		MOV.B		A4,(PLOTM)
 		MOV		A0,A2
 		NOT		A0
 		AND		A0,7
@@ -2079,6 +2116,7 @@ PL3:		CMPI		A4,2
 		JMP		PL4
 PL5:		BSET		A1,A0    ; mode 1  set
 PL4:		OUT		A2,A1
+		POP		A4
 		POP		A2
 		POP		A1
 		RETI
@@ -2086,6 +2124,9 @@ PL4:		OUT		A2,A1
 PLOT1:	PUSH		A1
 		PUSH		A2        ; PLOT at A1,A2 mode in A4
 		PUSH		A3
+		PUSH		A4
+		MOVI		A4,0
+		MOV.B		A4,(PLOTM)
 		MULU		A2,XDIM22
 		MOV		A0,A1		
 		SRL		A1,1
@@ -2108,6 +2149,7 @@ P1L3:		CMPI		A4,2   ; mode 2
 		; what to do here ?
 P1L5:		OR.B		A1,A3    ; mode 1  set
 		OUT.B		A2,A1
+		POP		A4
 		POP		A3
 		POP		A2
 		POP		A1
@@ -2118,7 +2160,6 @@ P1L5:		OR.B		A1,A3    ; mode 1  set
 
 LINEXY:
 	STI
-	SDP	0
 	PUSHX
 	PUSH 	A1
 	PUSH	A2
@@ -2143,23 +2184,22 @@ LXY1: MOVI	A6,1
 LXY22: JNC	LXY2
 	NEG	A4
 	MOV	A6,-1
-LXY2: SETX  A3 
+LXY2: CMP	A3,A4
+	JC	LXY33
+	SETX  A3 
 	MOV	A7,A4
 	SLA	A7,1
 	SUB	A7,A3  ; E=2*dy-dx 
-	CMP	A3,A4
-	JNC	LXY3
+	JMP	LXY3
+LXY33: 
 	MOV	A7,A3
 	SLA	A7,1
 	SUB	A7,A4  ; E=2*dx-dy 
 	SETX	A4
 LXY3: SLL	A4,1  ;2*dy
 	SLL	A3,1  ;2*dx
-LXY4: PUSH  A4
-	MOVI	A4,1
-	MOV	A0,2
+LXY4: MOVI	A0,2
 	INT	4     ; plot a point
-	POP	A4
 	MOV	A0,A3
 	OR	A0,A4
 	JZ    LXY0   ; if both 0 skip interation
@@ -2180,8 +2220,7 @@ LXY0: CMP	A3,A4
 	JMP	LXY9
 LXY8: ADD   A7,A4
 	ADD	A1,A5
-LXY9:
-	JMPX  LXY4	
+LXY9:	JMPX  LXY4	
 	POP	A7
 	POP	A6
 	POP	A5
@@ -2191,6 +2230,75 @@ LXY9:
 	POP	A1
 	POPX
 	RETI
+
+;------- CIRCLE ---------------------------
+
+CIRPLT:
+	MOV	A1,A5
+	ADD	A1,(CIRCX)
+	MOV	A2,A6
+	ADD	A2,(CIRCY)	
+	MOVI	A0,2
+	INT	4         ; 1 octant
+ 	MOV	A1,A5
+	NEG	A1
+	ADD	A1,(CIRCX)	
+	MOVI	A0,2
+	INT	4         ; 2 octant
+	MOV	A2,A6
+	NEG	A2
+	ADD	A2,(CIRCY)	
+	MOVI	A0,2
+	INT	4         ; 3 octant
+	MOV	A1,A5
+	ADD	A1,(CIRCX)	
+	MOVI	A0,2
+	INT	4         ; 4 octant
+	RET
+
+CIRC:	STI
+	SDP	0
+	PUSH 	A1
+	PUSH	A2
+	PUSH	A3
+	PUSH	A5
+	PUSH	A6
+	PUSH	A7
+	MOV	(CIRCX),A1  
+	MOV	(CIRCY),A2  
+	MOV	A5,A3  ; A3=r A5=x
+	MOVI	A6,0	 ; A6=y
+	JSR	CIRPLT
+	XCHG	A5,A6
+	JSR	CIRPLT
+	XCHG	A5,A6
+	MOVI	A7,1   ; A7=P
+	SUB	A7,A3  ; P=1-r
+CIR1:	CMP	A5,A6
+	JLE	CIRX   ; while x>y
+	INC	A6
+	MOV	A0,A6
+	SLA	A0,1 ; A0=2*y
+	INC	A0
+	CMPI	A7,0
+	JL	CIR2
+	DEC	A5
+	SUB	A7,A5
+	SUB	A7,A5
+CIR2:	ADD	A7,A0
+	JSR	CIRPLT
+	XCHG	A5,A6
+	JSR	CIRPLT
+	XCHG	A5,A6
+	JMP	CIR1
+CIRX:	POP	A7
+	POP	A6
+	POP	A5	
+	POP	A3
+	POP	A2
+	POP	A1
+	RETI
+
 ;--------------------------------------------------------------
 ; Multiplcation A1*A2 res in A2A1,
 
@@ -2577,7 +2685,7 @@ CC38_39     DB    12,94,242,186,236,94,18,0, 32,224,192,0,0,0,0,0 ; & '
 CC40_41	DB	0,56,124,198,130,0,0,0, 0,130,198,124,56,0,0,0  ; ( )
 CC42_43	DB	16,84,124,56,56,124,84,16, 16,16,124,124,16,16,0,0 ; * +
 CC44_45	DB	0,1,7,6,0,0,0,0, 16,16,16,16,16,16,0,0; , -
-CC46_47	DB	0,0,6,6,0,0,0,0, 6,12,24,48,96,192,128,0 ; . /
+CC46_47	DB	0,0,0,6,6,0,0,0, 6,12,24,48,96,192,128,0 ; . /
 CC48_49	DB	124,254,142,154,178,254,124,0, 2,66,254,254,2,2,0,0 ; 0 1
 CC50_51	DB	70,206,154,146,246,102,0,0, 68,198,146,146,254,108,0,0 ; 2 3
 CC52_53	DB	24,56,104,202,254,254,10,0, 228,230,162,162,190,156,0,0 ; 4 5
@@ -2686,11 +2794,11 @@ MEMNOTOK	TEXT		"Memory Error"
 
 SDCBUF1	DS	514
 SDCBUF2	DS	514
-FATBOOT	DS	2
-FATROOT	DS	2
-FSTCLST	DS	2
-FSTFAT	DS	2
-SDFLAG	DS	2
+FATBOOT	DS	2 ; boot sector 
+DIRROOT	DS	2 ; current root dir
+FSTCLST	DS	2 ; first data cluster
+FSTFAT	DS	2 ; first fat cluster
+SDFLAG	DS	2 ; 256 if sd mounted ok
 COUNTER     DS	2 ; Counter for general use increased by VSYNC INT 3 
 FRAC1		DS	2 ; for fixed point multiplication - division
 FRAC2		DS	2 ;
@@ -2706,6 +2814,12 @@ VMODE		DS	1
 SCOL		DS    1
 SHIFT       DS    1
 CAPSL       DS    1
-RESRVB      DS    16
+CIRCX		DS	2
+CIRCY		DS	2
+PLOTM		DS	2  ; Plot mode 1=normal 0=clear
+SECNUM	DS	2 ; Total num of sectors in sd
+SECPFAT	DS	2 ; Sectors per Fat
+FATROOT	DS	2 ; fat root dir
+RESRVB      DS    4 ; reserved
 START:	
 
