@@ -17,7 +17,7 @@
 SDCBUF1	EQU	$2000  ;DS	514  Buffer 1 
 SDCBUF2	EQU	$2202  ;DS	514  Buffer 2
 FATBOOT	EQU	$2404  ;DS	2    Fat boot #sector 
-FATROOT	EQU	$2406  ;DS	2    Root directory #sector 
+DIRROOT	EQU	$2406  ;DS	2    Root directory #sector 
 FSTCLST	EQU	$2408  ;DS	2    First data #sector
 FSTFAT	EQU	$240a  ;DS	2    First Fat first #sector
 SDFLAG	EQU	$240c  ;DS	2    SD card initialized by rom=256
@@ -41,11 +41,10 @@ CAPSL       EQU	$2437
 CIRCX		EQU	$2438
 CIRCY		EQU	$243A
 PLOTM		EQU	$243C
-ROOTDIR	EQU	$243D
 SECNUM      EQU   $243E
 SECPFAT     EQU   $2440
-FROOTDIR    EQU   $2442
-RESRVB      EQU	$243E
+FATROOT     EQU   $2442
+RESRVB      EQU	$244E
 
 ORG     	$2448  ;Ram
 
@@ -62,7 +61,7 @@ START:	CLI
 		JZ	VM1
 		MOV	(DEFY),29
 		MOV	(DEFX),79
-		MOV   (PLOTM),1
+		MOV.B   (PLOTM),1
 		SETX  1589     ; set colors 
 		MOV	A1,61152 
 COLINIT:	OUT	A1,$F1F1
@@ -1520,7 +1519,7 @@ DIR:
 	MOVI	A0,13
 	JSR	CHROUT
 	MOVI	A5,0
-TBF4:	MOV	A1,(FATROOT)
+TBF4:	MOV	A1,(DIRROOT)
 	ADD	A1,A5
 	MOVI	A0,13
 	MOV	A2,SDCBUF1
@@ -1759,13 +1758,13 @@ CD4:	MOV	A4,DELNAME
 	JZ	QHOW
 CD6:	ADD   A0,(FSTCLST)
 	SUBI	A0,2
-	MOV	(FATROOT),A0
+	MOV	(DIRROOT),A0
 	JMP	FINISH
 CD5:  CMPI	A0,0
 	JNZ	CD6
 	MOV	A0,(FSTCLST)
 	SUB	A0,32
-	MOV	(FATROOT),A0
+	MOV	(DIRROOT),A0
 	JMP	FINISH
 
 ;-------------------------------

@@ -49,7 +49,8 @@ Component LionCPU16 is
 		IO,HOLDA,A16o,A17o,A18o : OUT std_logic;
 		I  : IN std_logic_vector(1 downto 0);
 		IACK: OUT std_logic;
-		IA : OUT std_logic_vector(1 downto 0)
+		IA : OUT std_logic_vector(1 downto 0);
+		BACS: OUT std_logic
 	);
 end Component;
 
@@ -149,6 +150,18 @@ COMPONENT single_port_ram is
 	);
 end COMPONENT;
 
+
+COMPONENT byte_enabled_simple_dual_port_ram is
+	port (
+		clk     : in  std_logic;
+		addr    : in  integer range 0 to 65535 ;
+		data    : in  std_logic_vector(15 downto 0);
+		we      : in  std_logic;
+		q       : out std_logic_vector(15 downto 0);
+		be      : in  std_logic_vector (1 downto 0)
+		);
+end COMPONENT;
+
 COMPONENT SPI is
 	port
 	(
@@ -185,32 +198,6 @@ COMPONENT PS2KEYB is
 		data_out :OUT std_logic_vector (7 downto 0)
 	);
 end COMPONENT;
-
---COMPONENT XY_Display_TLC_i is
---	port
---	(
---		sclk: IN std_logic;
---		reset: IN std_logic;
---		addr: OUT natural range 0 to 1023;
---		Q: IN std_logic_vector(15 downto 0);
---		DACW,MUX: OUT std_logic;
---		DACA: OUT std_logic_vector(1 downto 0);
---		DACD: OUT std_logic_vector(7 downto 0)
---	);
---end COMPONENT;
-
---COMPONENT XY_Display_TLC is
---	port
---	(
---		sclk: IN std_logic;
---		reset: IN std_logic;
---		addr: OUT natural range 0 to 1023;
---		Q: IN std_logic_vector(15 downto 0);
---		DACW,MUX: OUT std_logic;
---		DACA: OUT std_logic_vector(1 downto 0);
---		DACD: OUT std_logic_vector(7 downto 0)
---	);
---end COMPONENT;
 
 COMPONENT XY_Display_MCP4822 is
 	port
@@ -262,15 +249,16 @@ Signal sdi,sdo,sdo2,kdo : std_logic_vector (7 downto 0);
 Signal Vol1,Vol2,Vol3,Voln : std_logic_vector (7 downto 0):="11111111";
 SIGNAL Spi_in,Spi_out: STD_LOGIC_VECTOR (7 downto 0);
 Signal Spi_w, spi_rdy, play,play2,play3, spb, sdb : std_logic;
-Signal PB0, PG0, PR0, XYmode :std_Logic:='0';
+Signal PB0, PG0, PR0, XYmode, BACS :std_Logic:='0';
+Signal BSEL: std_logic_vector (1 downto 0);
 
 shared variable Di1:std_logic_vector(15 downto 0);
 
 begin
-CPU: LionCPU16 
-	PORT MAP ( Di,Do,AD,RW,AS,DS,RD,rst,clock0,Int_in,Hold,IO,Holda,A16,A17,A18,Ii,Iack,IA ) ; 
-IRAM: single_port_ram
-	PORT MAP ( clock1, to_integer(unsigned(A16&AD(15 downto 1))), Do, RW or IO or DS, QA ) ;
+CPU: LionCPU16
+	PORT MAP ( Di,Do,AD,RW,AS,DS,RD,rst,clock0,Int_in,Hold,IO,Holda,A16,A17,A18,Ii,Iack,IA,BACS ) ; 
+IRAM: byte_enabled_simple_dual_port_ram
+	PORT MAP ( clock1, to_integer(unsigned(A16&AD(15 downto 1))), Do, RW or IO or DS, QA, BSEL ) ;
 VRAM: dual_port_ram_dual_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 14)
 	PORT MAP ( clock0, clock1, ad1, to_integer(unsigned(AD(14 downto 1))), Do, w1, vq, q16 );
@@ -336,6 +324,8 @@ RWo<=RW when HOLDA='0' else 'Z';
 D<= Do when RW='0' and DS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 ADo<= AD when AS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 --IACK<=IAC;
+
+BSEL<= "01" when BACS='1' and AD(0)='1' else "10" when BACS='1' and AD(0)='0' else "11";
 
 
 nen1<='1' when (ne1='1') and (play='1') and (aq(12 downto 0)/="0000000000000") else '0';
@@ -416,9 +406,9 @@ PB0<=Do(2) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_ed
 XYmode<=Do(0) when  AD=31 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  
 
 -- Read decoder
-process (clock1,RW,AS,IO)
+process (clock0,RW,AS,IO)
 begin
-	if rising_edge(clock1) and RW='1' and AS='0' AND IO='1'  then
+	if rising_edge(clock0) and RW='1' and AS='0' AND IO='1'  then
 		if AD(15)='1' then Di1:=q16; --video
 		elsif AD(14 downto 12)="100" then Di1:=SPQ1;
 	   elsif AD(14 downto 12)="101" then Di1:=SPQ2;
@@ -540,6 +530,62 @@ begin
 	end process;
 	
 end rtl;
+
+--------------------------------------------------------------------------------------------
+-- changed for Lion 
+-- Simple Dual-Port RAM with different read/write addresses and single read/write clock
+-- and with a control for writing single bytes into the memory word; byte enable
+
+library ieee;
+use ieee.std_logic_1164.all;
+library work;
+
+entity byte_enabled_simple_dual_port_ram is
+  
+	port (
+		clk     : in  std_logic;
+		addr    : in  integer range 0 to 65535 ;
+		data    : in  std_logic_vector(15 downto 0);
+		we      : in  std_logic;
+		q       : out std_logic_vector(15 downto 0);
+		be      : in  std_logic_vector (1 downto 0)
+		);
+end byte_enabled_simple_dual_port_ram;
+
+architecture rtl of byte_enabled_simple_dual_port_ram is
+	--  build up 2D array to hold the memory
+	type word_t is array (0 to 1) of std_logic_vector(7 downto 0);
+	type ram_t is array (65535 downto 0) of word_t;
+	-- declare the RAM
+	signal ram : ram_t;
+	attribute ram_init_file : string;
+	attribute ram_init_file of ram : signal is "C:\intelFPGA_lite\LionSys_EP5_A2\Lionasm\bin\Debug\lionrom.mif";
+	attribute ramstyle : string;
+   attribute ramstyle of ram : signal is "no_rw_check";
+	signal q_local : word_t;
+
+begin  -- rtl
+        
+	process(clk)
+	begin
+		if(rising_edge(clk)) then 
+			if(we = '0') and (addr>4095) then
+				if (be = "11") then
+					ram(addr)(0) <= data(15 downto 8);
+					ram(addr)(1) <= data(7 downto 0);
+				elsif  be = "10" then 
+					ram(addr)(0) <= data(7 downto 0);
+				elsif  be = "01" then 
+					ram(addr)(1) <= data(7 downto 0);
+				end if;
+			end if;
+			q <= ram(addr)(0)&ram(addr)(1);
+		end if;
+	end process;  
+end rtl;
+
+
+
 
 -------------------------------------------------------
 Library ieee;
