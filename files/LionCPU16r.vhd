@@ -149,7 +149,7 @@ end init_next_ins;
 begin
 IF rising_edge(clock) THEN
 	IF Reset = '1' THEN
-		PC<="0000000000010000"; SR<="0000000001000000";  HOLDA<='0'; FF<=InitialState; TT<=0;
+		PC<="0000000000010000"; SR<="0000000000100000";  HOLDA<='0'; FF<=InitialState; TT<=0;
 		AS<='1';  DS<='1'; RW<='1'; ST<="1111111111111110"; IO<='0'; rest3:=false;
 		A16:='0'; A17:='0'; A18:='0'; rest2:=false; IA<="00"; IACK<='0'; icnt:=0; BACS<='0';
 	ELSIF HOLD='0' AND (rest2=true)  then
@@ -467,7 +467,7 @@ IF rising_edge(clock) THEN
 				else	PC<=Y1; end if;
 				rest2:=true;
 			when "0100110" =>              -- SRSET SRCLR n
-				SR(to_integer(unsigned(Y1(3 downto 0))))<=IR(8); 
+				SR(to_integer(unsigned(IR(5 downto 2))))<=IR(8); 
 				rest3:=true;
 			when "0100111" =>              -- JZ & JNZ (Reg,NUM,[reg],[n])
 				If SR(ZR)=bwb then
@@ -928,8 +928,13 @@ IF rising_edge(clock) THEN
 				when others =>
 					if (IDX/=ZERO16) then 
 						IDX<=IDX-1;
-						X1:=X1+2;
-						Y1:=Y1+2;
+						if SR(JXAD)='0' then
+							X1:=X1+2;
+							Y1:=Y1+2;
+						else 
+							X1:=X1-2;
+							Y1:=Y1-2;
+						end if;
 						rest:=true;
 					else
 						rest3:=true;
@@ -946,7 +951,11 @@ IF rising_edge(clock) THEN
 					AS<='0'; DS<='0'; RW<='1';
 					if (IDX/=ZERO16) then 
 						IDX<=IDX-1;
-						X1:=X1+2;
+						if SR(JXAD)='0' then
+							X1:=X1+2;
+						else 
+							X1:=X1-2;
+						end if;
 						rest:=true;
 					else
 						rest3:=true;
@@ -962,8 +971,72 @@ IF rising_edge(clock) THEN
 				when others =>
 					if (IDX/=ZERO16) then 
 						IDX<=IDX-1;
-						X1:=X1+2;
-						Y1:=Y1+2;
+						if SR(JXAD)='0' then
+							X1:=X1+2;
+							Y1:=Y1+2;
+						else 
+							X1:=X1-2;
+							Y1:=Y1-2;
+						end if;
+						rest:=true;
+					else
+						rest3:=true;
+					end if;
+				end case;
+			when "1101001" =>              -- ITOI.B ITOM.B An1,An2 
+				case TT is
+				when 0 =>
+					IO<='1'; AD:=Y1; AS<='0'; RW<='1'; DS<='1'; mem_trans<=true; set_data;
+				when 1 =>
+				when 2 =>
+					if Y1(0)='0' then	tmp(7 downto 0):=Di(15 downto 8);
+									 else	tmp(7 downto 0):=Di(7 downto 0); end if;
+					AD:=X1; RW<='1'; IO<=bwb; AS<='0'; DS<='0';
+				when 3 =>
+				when 4 =>
+					if X1(0)='0' then	Do:=tmp(7 downto 0)&Di(7 downto 0);
+									 else	Do:=Di(15 downto 8)&tmp(7 downto 0); end if;
+					AD:=X1; RW<='0'; IO<=bwb; AS<='0'; DS<='0';
+				when others =>
+					if (IDX/=ZERO16) then 
+						IDX<=IDX-1;
+						if SR(JXAD)='0' then
+							X1:=X1+1;
+							Y1:=Y1+1;
+						else 
+							X1:=X1-1;
+							Y1:=Y1-1;
+						end if;
+						rest:=true;
+					else
+						rest3:=true;
+					end if;
+				end case;
+				
+			when "1101010" =>              -- MTOI.B An1,An2 | MTOM.B An1,An2
+				case TT is
+				when 0 =>
+					IO<='0'; AD:=Y1; AS<='0'; RW<='1'; DS<='1'; mem_trans<=true; set_data;
+				when 1 =>
+				when 2 =>
+					if Y1(0)='0' then	tmp(7 downto 0):=Di(15 downto 8);
+									 else	tmp(7 downto 0):=Di(7 downto 0); end if;
+					AD:=X1; RW<='1'; IO<=bwb; AS<='0'; DS<='0';
+				when 3 =>
+				when 4 =>
+					if X1(0)='0' then	Do:=tmp(7 downto 0)&Di(7 downto 0);
+									 else	Do:=Di(15 downto 8)&tmp(7 downto 0); end if;
+					AD:=X1; RW<='0'; IO<=bwb; AS<='0'; DS<='0';
+				when others =>
+					if (IDX/=ZERO16) then 
+						IDX<=IDX-1;
+						if SR(JXAD)='0' then
+							X1:=X1+1;
+							Y1:=Y1+1;
+						else 
+							X1:=X1-1;
+							Y1:=Y1-1;
+						end if;
 						rest:=true;
 					else
 						rest3:=true;

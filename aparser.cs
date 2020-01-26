@@ -227,8 +227,12 @@ namespace Lion_assembler
             colorList.Add("SSP", Color.Blue);
             colorList.Add("MTOM", Color.Blue);
             colorList.Add("MTOI", Color.Blue);
+            colorList.Add("MTOM.B", Color.Blue);
+            colorList.Add("MTOI.B", Color.Blue);
             colorList.Add("ITOM", Color.Blue);
             colorList.Add("ITOI", Color.Blue);
+            colorList.Add("ITOM.B", Color.Blue);
+            colorList.Add("ITOI.B", Color.Blue);
             colorList.Add("NTOM", Color.Blue);
             colorList.Add("NTOI", Color.Blue);
             colorList.Add("END", Color.DarkMagenta);
@@ -373,8 +377,12 @@ namespace Lion_assembler
             instList.Add("MTOM", 2);
             instList.Add("ITOI", 2);
             instList.Add("ITOM", 2);
+            instList.Add("ITOI.B", 2);
+            instList.Add("ITOM.B", 2);
             instList.Add("NTOI", 2);
             instList.Add("NTOM", 2);
+            instList.Add("MTOI.B", 2);
+            instList.Add("MTOM.B", 2);
         }
 
         public void fill_dlist()
@@ -3653,7 +3661,7 @@ namespace Lion_assembler
                 case "SRSET":
                     return inter(il, "0100110",'1');
                 case "SRCLR":
-                    return inter(il, "0100110");
+                    return inter(il, "0100110",'0');
                 case "MULU.B":
                     return gen1(il, "0001010", '1');
                 case "MULU":
@@ -3702,10 +3710,18 @@ namespace Lion_assembler
                     return gen4(il, "0111111", '1');
                 case "MTOM":
                     return gen4(il, "0111111", '0');
+                case "MTOI.B":
+                    return gen4(il, "1101010", '1');
+                case "MTOM.B":
+                    return gen4(il, "1101010", '0');
                 case "ITOI":
                     return gen4(il, "1101000", '1');
+                case "ITOI.B":
+                    return gen4(il, "1101001", '1');
                 case "ITOM":
                     return gen4(il, "1101000", '0');
+                case "ITOM.B":
+                    return gen4(il, "1101001", '0');
                 case "NTOI":
                     return gen1(il, "0101010", '1');
                 case "NTOM":

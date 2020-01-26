@@ -154,11 +154,15 @@ HINT:		INC		(COUNTER)
 INTEXIT:	RETI        ; trace interrupt
 		
 INTR4:	STI
+		SDP		0
+		SRCLR		4
 		SLL		A0,1
 		ADD		A0,INT4T0
 		JMP		(A0)
 
 INTR5:	STI
+		SDP		0
+		SRCLR		4
 		SLL		A0,1
 		ADD		A0,INT5T0
 		JMP		(A0)
@@ -169,7 +173,6 @@ INTR5:	STI
 ;---------------------------------------------------
 
 HSCROLL:	
-		SDP	0
 		IN	A0,24
 		CMPI	A0,1    
 		JZ	HSCROLL1
@@ -192,19 +195,18 @@ HSCROLL1:	PUSHX
 		ADD	A1,A2
 		IN	A3,64786  ; length pix/2
 		ADD   A1,A3
+		SUBI	A1,1
 		ADD	A1,VBASE1
-		DEC	A1
-		PUSH	A1  
+		PUSH	A1 
 		MOV	A4,SCRLBUF
 		IN	A2,64782  ; lines
-		IN	A3,64788  ; pixels*2 to scroll
-		DEC	A3
+		IN	A3,64788  ; pixels (*2) to scroll
+		SUBI	A3,1
 HSCRL1:	SETX 	A3
 		MOV	A0,A1
 HSCRL2:	IN.B	A5,A0
 		OUT.B	A4,A5
 		DEC	A0
-		;INC	A4
 		JXAB 	A4,HSCRL2
 		INC	A4
 		ADD	A1,160
@@ -216,35 +218,30 @@ HSCRL2:	IN.B	A5,A0
 		IN	A3,64786  ; pixels
 		IN	A0,64788  ; pixels*2 to scroll
 		SUB	A3,A0
-		DEC	A3
-HSCRL3:	SETX 	A3
-		IN	A0,64788  ; pixels*2 to scroll
+		SUBI	A3,1
 		MOV	A4,A1
 		SUB	A4,A0
-		MOV	A0,A1
-HSCRL4:	IN.B	A5,A4
-		SUBI	A4,1
-		OUT.B	A0,A5
-		SUBI	A0,1
-		JMPX	HSCRL4
+HSCRL3:	SETX 	A3
+		SRSET 4 
+		ITOI.B A1,A4
+		SRCLR 4 
 		ADD	A1,160
+		ADD	A4,160
 		DEC   A2
 		JNZ	HSCRL3
 		POP	A1
 		IN	A3,64786  ; pixels
 		SUB	A1,A3
-		;INC	A1
 		IN	A3,64788  ; pixels*2 to scroll
 		ADD	A1,A3
 		MOV	A4,SCRLBUF
 		IN	A2,64782  ; lines
-		DEC	A3
+		SUBI	A3,1
 HSCRL5:	SETX 	A3
 		MOV	A0,A1
 HSCRL6:	IN.B	A5,A4
 		OUT.B	A0,A5
 		DEC	A0
-		;INC	A4
 		JXAB	A4,HSCRL6
 		INC	A4
 		ADD	A1,160
@@ -267,11 +264,8 @@ HS1NG:	IN	A1,64788 ; pixels to scroll
 		IN	A3,64788  ; pixels*2 to scroll
 		DEC	A3
 HSCRL7:	SETX 	A3
-		MOV	A0,A1
-HSCRL8:	IN.B	A5,A0
-		OUT.B	A4,A5
-		INC	A0
-		JXAB 	A4,HSCRL8
+		;MOV	A0,A1
+		ITOI.B A4,A1
 		INC	A4
 		ADD	A1,160
 		DEC   A2
@@ -287,12 +281,8 @@ HSCRL9:	SETX 	A3
 		IN	A0,64788  ; pixels*2 to scroll
 		MOV	A4,A1
 		ADD	A4,A0
-		MOV	A0,A1
-HSCRL10:	IN.B	A5,A4
-		ADDI	A4,1
-		OUT.B	A0,A5
-		ADDI	A0,1
-		JMPX	HSCRL10
+		;MOV	A0,A1
+		ITOI.B A1,A4
 		ADD	A1,160
 		DEC   A2
 		JNZ	HSCRL9
@@ -300,17 +290,14 @@ HSCRL10:	IN.B	A5,A4
 		IN	A3,64786  ; pixels
 		ADD	A1,A3
 		IN	A3,64788  ; pixels*2 to scroll
-		DEC	A1
+		;DEC	A1 ****
 		SUB	A1,A3
 		MOV	A4,SCRLBUF
 		IN	A2,64782  ; lines
 		DEC	A3
 HSCRL11:	SETX 	A3
-		MOV	A0,A1
-HSCRL12:	IN.B	A5,A4
-		OUT.B	A0,A5
-		ADDI	A0,1
-		JXAB	A4,HSCRL12
+		;MOV	A0,A1
+		ITOI.B A1,A4
 		INC	A4
 		ADD	A1,160
 		DEC   A2
@@ -330,7 +317,6 @@ HS1EX:	POP	A5
 ; Block at 64770
 ;----------------------------------------------
 VSCROLL:	
-		SDP		0
 		IN		A0,24
 		CMPI		A0,1 
 		JZ		VSCROLL1
@@ -355,12 +341,12 @@ VSCROLL1:	PUSHX
 		PUSH	A1  
 		IN	A2,64778  ; lines to scroll
 		IN	A3,64776  ; length pix/2
-		SRL	A3,1
+		;SRL	A3,1 
 		DEC	A3
 		MOV	A4,SCRLBUF
-		IN	A5,64776
+		IN	A5,64776 ; length pix/2
 VSCRL1:	SETX	A3
-		ITOI  A4,A1
+		ITOI.B  A4,A1
 		ADD   A4,A5
 		ADD	A1,160
 		DEC	A2
@@ -373,7 +359,7 @@ VSCRL1:	SETX	A3
 		IN	A5,64778  ; lines to scroll
 		SUB	A2,A5
 VSCRL2:	SETX	A3
-		ITOI	A1,A4
+		ITOI.B A1,A4
 		ADD	A1,160
 		ADD	A4,160
 		DEC	A2
@@ -382,7 +368,7 @@ VSCRL2:	SETX	A3
 		MOV	A2,A5
 		IN	A5,64776
 VSCRL3:	SETX  A3
-		ITOI  A1,A4
+		ITOI.B  A1,A4
 		ADD	A1,160
 		ADD   A4,A5
 		DEC	A2
@@ -394,6 +380,7 @@ VS1NG:	NEG   A1
 		IN  	A1,VSBLOCK ; LINE
 		IN	A2,64772  ; length in lines
 		ADD	A1,A2
+		DEC	A1
 		MULU  A1,160
 		ADD	A1,VBASE1
 		IN	A2,64774  ;p1
@@ -402,12 +389,12 @@ VS1NG:	NEG   A1
 		PUSH	A1  
 		IN	A2,64778  ; lines to scroll
 		IN	A3,64776  ; length pix/2
-		SRL	A3,1
+		;SRL	A3,1
 		SUBI	A3,1
 		MOV	A4,SCRLBUF
 		IN	A5,64776
 VSCRL4:	SETX	A3
-		ITOI  A4,A1
+		ITOI.B  A4,A1
 		ADD   A4,A5
 		SUB	A1,160
 		DEC	A2
@@ -416,12 +403,12 @@ VSCRL4:	SETX	A3
 		IN    A4,64778  ; lines to scroll
 		MULU	A4,160
 		SUB	A4,A1
-		NEG   A4
+		NEG	A4
 		IN	A2,64772  ; length in lines
 		IN	A5,64778  ; lines to scroll
 		SUB	A2,A5
 VSCRL5:	SETX	A3
-		ITOI	A1,A4
+		ITOI.B A1,A4
 		SUB	A1,160
 		SUB	A4,160
 		DEC	A2
@@ -430,7 +417,7 @@ VSCRL5:	SETX	A3
 		MOV	A2,A5
 		IN	A5,64776
 VSCRL6:	SETX  A3
-		ITOI  A1,A4
+		ITOI.B  A1,A4
 		SUB	A1,160
 		ADD   A4,A5
 		DEC	A2
@@ -874,7 +861,6 @@ FILESAV:
 	PUSH	A5	
 	PUSH	A6
 	PUSH	A7
-	SDP	0
 	JSR	FINDFN
 	CMPI	A0,0
 	JZ	FSV7
@@ -955,7 +941,6 @@ FILEDEL:
 	PUSH	A3
 	PUSH	A4
 	PUSH	A5	
-	SDP	0
 	JSR	FINDFN
 	CMPI	A0,0
 	JZ	FDELX
@@ -1004,7 +989,6 @@ FDELX:
 VMOUNT:
 	PUSH	A1
 	PUSH	A2
-	SDP	0
 	MOVI	A0,13
 	MOVI	A1,0
 	MOV	A2,SDCBUF1
@@ -1051,8 +1035,7 @@ VMEX:	POP	A2
 
 ;-------------------------------------------------
 ; INT 5,A0=13 Load screen
-LDSCR:	SDP	0
-		JSR	FINDFN    
+LDSCR:	JSR	FINDFN    
 		MOV	A4,A0
 		CMPI	A0,0
 		JZ	INTEXIT
@@ -1107,7 +1090,6 @@ SLDE:	POP	A6
 ;---------------------------------------------------
 ; INT 5,A0=3 Load file
 FILELD:	PUSH	A5
-		SDP	0
 		JSR	FINDFN    
 		MOV	A4,A0
 		CMPI	A0,0
@@ -1263,7 +1245,6 @@ FDIV:
 		PUSH		A4
 		PUSH		A7
 		PUSHX
-		SDP		0
 		MOV		A0,A2
 		XOR		A0,A1
 		PUSH		A0
@@ -1361,7 +1342,6 @@ FMULT:
 		PUSH		A4
 		PUSH		A5
 		PUSH		A6
-		SDP		0
 		MOV		A0,A2
 		XOR		A0,A1
 		PUSH		A0
@@ -1879,7 +1859,6 @@ PUTC:
 		PUSHX   
 		PUSH		A4
 		PUSH		A1
-		SDP		0
 		IN		A0,24
 		CMPI		A0,1 ;(VMODE),1
 		JZ		PUTC1             
@@ -2021,7 +2000,6 @@ STREXIT:	RETI
 ;----------------------------------------
 
 SCROLL:	
-		SDP		0
 		IN		A0,24
 		CMPI		A0,1 ;(VMODE),1
 		JZ		SCROLL1
@@ -2058,7 +2036,6 @@ SCROLL1:	PUSHX
 ;----------------------------------------
 
 CLRSCR:	
-		SDP	0
 		IN	A0,24
 		CMPI	A0,1 ;(VMODE),1
 		JZ	CLRSCR1
@@ -2084,8 +2061,7 @@ CLRSCR1:	PUSHX
 		RETI
 
 ;----------------------------------------
-PLOT:		SDP	0
-		IN	A0,24
+PLOT:		IN	A0,24
 		CMPI	A0,1  ;(VMODE),1
 		JZ	PLOT1
 		PUSH		A1
@@ -2257,7 +2233,6 @@ CIRPLT:
 	RET
 
 CIRC:	STI
-	SDP	0
 	PUSH 	A1
 	PUSH	A2
 	PUSH	A3
@@ -2593,7 +2568,7 @@ _MLEXIT:
   RETI
 
 ; -------------------------------------
-SKEYBIN:	SDP	0
+SKEYBIN:	
 		IN	A0,6  ;Read serial byte if availiable
 		BTST	A0,2  ;Result in A1, A0(2)=0 if not avail
 		JZ	INTEXIT
@@ -2618,7 +2593,7 @@ SKEXT:	MOVI	A0,0
 		RETI
 ;---------------------------------------
 KEYB:		
-		SDP	0
+		
 		PUSHX
 		CMP	A1,$5A 
 		JNZ	NOTCR
