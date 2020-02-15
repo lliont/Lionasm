@@ -20,7 +20,7 @@ end SPI;
 
 Architecture Behavior of SPI is
 
-constant divider:natural :=63; --  124=200Khz
+constant divider:natural :=82; --  124=200Khz
 Signal inb,outb: std_logic_vector(7 downto 0);
 Signal rcounter :natural range 0 to 127;
 Signal state :natural range 0 to 7:=7;

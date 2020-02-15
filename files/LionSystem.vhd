@@ -248,9 +248,10 @@ Signal sr,sw,sdready,sready,kr,kready,ser2,sdready2, noise: std_Logic;
 Signal sdi,sdo,sdo2,kdo : std_logic_vector (7 downto 0);
 Signal Vol1,Vol2,Vol3,Voln : std_logic_vector (7 downto 0):="11111111";
 SIGNAL Spi_in,Spi_out: STD_LOGIC_VECTOR (7 downto 0);
-Signal Spi_w, spi_rdy, play,play2,play3, spb, sdb : std_logic;
+Signal Spi_w, spi_rdy, play,play2,play3 : std_logic;
 Signal PB0, PG0, PR0, XYmode, BACS :std_Logic:='0';
 Signal BSEL: std_logic_vector (1 downto 0);
+Signal spb, sdb: std_logic_vector (7 downto 0):="00000000";
 
 shared variable Di1:std_logic_vector(15 downto 0);
 
@@ -280,13 +281,13 @@ VIDEO1: videoRGB1
 	PORT MAP ( clock1,clock0,Vmod,R1,G1,B1,BRI1,VSYN1,HSYN1,vint1,vad1,vq);
 SPRTG1: VideoSp
 	GENERIC MAP (DATA_LINE  => 3)
-	PORT MAP ( clock1, clock0,SR1,SG1,SB1,SBRI1,SPDET1,vint,spb,sdb,spad1,spvq1);
+	PORT MAP ( clock1, clock0,SR1,SG1,SB1,SBRI1,SPDET1,vint,spb(0),sdb(0),spad1,spvq1);
 SPRTG2: VideoSp
 	GENERIC MAP (DATA_LINE  => 2)
-	PORT MAP ( clock1, clock0,SR2,SG2,SB2,SBRI2,SPDET2,vint,spb,sdb,spad3,spvq2);
+	PORT MAP ( clock1, clock0,SR2,SG2,SB2,SBRI2,SPDET2,vint,spb(1),sdb(1),spad3,spvq2);
 SPRTG3: VideoSp
 	GENERIC MAP (DATA_LINE  => 1)
-	PORT MAP ( clock1, clock0,SR3,SG3,SB3,SBRI3,SPDET3,vint,spb,sdb,spad5,spvq3);
+	PORT MAP ( clock1, clock0,SR3,SG3,SB3,SBRI3,SPDET3,vint,spb(2),sdb(2),spad5,spvq3);
 Serial: UART
 	PORT MAP ( Tx,Rx,clock0,rst,sr,sw,sdready,sready,sdi,sdo );
 SoundC1: SoundI
@@ -382,8 +383,8 @@ sw<=Do(0) when AD=2 and IO='1' and AS='0' and DS='0' and RW='0' and rising_edge(
 spi_w<=Do(0) when AD=19 and IO='1' and AS='0' and DS='0' and RW='0' and rising_edge(clock1);
 SPICS<=Do(1) when AD=19 and IO='1' and AS='0' and DS='0' and RW='0' and rising_edge(clock1);
 spi_in<=Do(7 downto 0) when AD=18 and IO='1' and AS='0' and DS='0' and RW='0' and rising_edge(clock1);
-spb<=Do(1) when AD=20 and IO='1' and AS='0' and DS='0' and RW='0' and rising_edge(clock1);
-sdb<=Do(0) when AD=20 and IO='1' and AS='0' and DS='0' and RW='0' and rising_edge(clock1);
+spb(2 downto 0)<=Do(2 downto 0) when AD=20 and IO='1' and AS='0' and DS='0' and RW='0' and rising_edge(clock1);
+sdb(2 downto 0)<=Do(5 downto 3) when AD=20 and IO='1' and AS='0' and DS='0' and RW='0' and rising_edge(clock1);
 
  --Sound IO decoding 
 aq<=Do when AD=8 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   -- port 8

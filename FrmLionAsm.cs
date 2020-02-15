@@ -653,7 +653,7 @@ namespace Lion_assembler
             }
             serialPort1.Write("GCODE BTOP+2,"+BinSize.Text);
             bt[0] = 13;  serialPort1.Write(bt, 0, 1);
-            for (int j = 0; j < 16; j++)  for (int i = 0; i < 300000; i++) { int k = i * 3; }
+            for (int j = 0; j < 16; j++)  for (int i = 0; i < 200000; i++) { int k = i * 3; }
             while (true)
             {
                 try
@@ -663,7 +663,7 @@ namespace Lion_assembler
                 catch (IOException ex)
                 { break; }
                 serialPort1.Write(bt,0,1);
-                for (int i = 0; i < 500000; i++) { int k = i * 3; }
+                for (int i = 0; i < 100000; i++) { int k = i * i; }
             }
             br.Close();
             serialPort1.Close();
@@ -689,7 +689,7 @@ namespace Lion_assembler
                 return;
             }
             serialPort1.Write("RCODE BTOP+2");
-            for (int i = 0; i < 500000; i++) { int k = i * 3; }
+            for (int i = 0; i < 400000; i++) { int k = i * 3; }
             bt[0] = 13; serialPort1.Write(bt, 0, 1);
             serialPort1.Close();
         }

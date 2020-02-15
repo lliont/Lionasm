@@ -23,7 +23,7 @@ Architecture Behavior of UART is
 
 constant rblen:natural:=16;
 constant tblen:natural:=8;
-constant divider:natural :=2603; -- 19200       650  25MHz/38400   1302 ; -- 50MHz to 34800
+constant divider:natural :=2603/2; -- 19200*2       650  25MHz/38400   1302 ; -- 50MHz to 34800
 type FIFO_t is array (0 to tblen-1) of std_logic_vector(9 downto 2);
 type FIFO_r is array (0 to rblen-1) of std_logic_vector(9 downto 2);
 Signal tFIFO: FIFO_t;

@@ -583,7 +583,7 @@ IF rising_edge(clock) THEN
 				case TT is
 				when 0 =>
 					AD:=stmp;	AS<='0'; set_stack;
-				when 1 =>
+				--when 1 =>
 					ST<=stmp;
 				when others =>
 					if bwb='0' then IDX<=Di; else SR<=Di; end if;
@@ -594,7 +594,7 @@ IF rising_edge(clock) THEN
 				case TT is
 				when 0 =>
 					  AD:=stmp; AS<='0'; set_stack;
-				when 1 =>
+				--when 1 =>
 						ST<=stmp;
 				when others =>
 					tmp:=Di;
@@ -607,16 +607,16 @@ IF rising_edge(clock) THEN
 					AD:=ST; Do:=PC; RW<='0'; Wen:='0'; set_stack;
 					AS<='0'; DS<='0';  icnt:=icnt+1;
 				when 1 => 
-				when 2 =>
+				--when 2 =>
 					AS<='1';  DS<='1'; RW<='1';
-				when 3 =>
+				when 2 =>
 					AD:=mtmp; Do:=SR;
 					AS<='0'; DS<='0';  RW<='0'; SR(INT_DIS)<='1'; 
-				when 4 =>
+				--when 4 =>
 					ST<=mtmp-2;  
-				when 5 =>
+				when 3 =>
 					RW<='1'; AS<='1'; DS<='1';  
-				when 6 =>
+				when 4 =>
 					AD:="00000000000"&IR(5 downto 2)&"0"; 
 					AS<='0'; 
 				--when 7 =>
@@ -631,10 +631,10 @@ IF rising_edge(clock) THEN
 					AD:=stmp; AS<='0';   set_stack;
 				when 1 =>
 					--ST<=stmp;
-				when 2 =>
+				--when 2 =>
 					 ST<=stmp+2;   AS<='1';
 					if bwb='0' then SR<=Di; else SR(15 downto 13)<=Di(15 downto 13); end if;
-				when 3 =>
+				when 2 =>
 					AD:=ST;	AS<='0';  
 				--when 4 =>
 				when others =>	

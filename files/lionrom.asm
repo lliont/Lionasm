@@ -875,6 +875,7 @@ FSV4:	MOV	A1,(DIRROOT)
 	INT	4              ; Load Root Folder 1st sector
 	MOVI	A0,0
 	MOVI	A3,0
+	JSR	DELAY
 FSV1:	
 	CMP.B (A2),0
 	JZ	FSV2
@@ -906,6 +907,7 @@ FSV5:	MOV	(A2),(A4)
 	ADD	A1,A5
 	MOV	A2,SDCBUF1
 	INT	4         ; save header
+	JSR	DELAY
 	POP	A0
 	JSR	SVDATA
 	JMP	FSVE
@@ -951,6 +953,7 @@ FILEDEL:
 	ADD	A1,A5
 	MOV	A2,SDCBUF1
 	INT	4          ; save file header
+	JSR	DELAY
 FDL1:	
 	MOV	A5,A4
 	SRL	A5,8   ; DIVIDE BY 256

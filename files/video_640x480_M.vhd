@@ -84,7 +84,6 @@ begin
 			if (lines>=l1 and lines<l2 and pixel>=p1 and pixel<p2) then
 				if Q(m78)='1' then BRI0<=FG(3); R<=FG(2); G<=FG(1); B<=FG(0);
 				else BRI0<=BG(3); R<=BG(2); G<=BG(1); B<=BG(0); end if;
---					end case;
 			else  
 				B<='0'; R<='0'; G<='0'; BRI0<='0';
 			end if;
@@ -176,7 +175,6 @@ variable pix: natural range 0 to 1023;
 begin
 	if  rising_edge(sclk) and EN='1' then
 		if  vidc then 
-		-- sprites  ---------------------
 			if (lines>=l1 and lines<l2 and pixel>=p1 and pixel<p2) then
 					BRI<=BRGB(3); R<=BRGB(2); G<=BRGB(1); B<=BRGB(0); 
 			else  -- vsync  0.01 us = 1 pixels
