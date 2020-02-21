@@ -532,7 +532,7 @@ begin
 				count <= (others=>'0'); cnt:=0;
 		  elsif (rising_edge(clk)) then
 				cnt:=cnt+1;
-				if cnt=to_integer(unsigned(bw&"11")) then
+				if cnt=to_integer(unsigned(bw&"111")) then
 					count <= ( count(18) & count(17)& count(16) & count(15)&
 								count(14) & count(13) & count(12) & count(11)&
 								count(10) & count(9) & count(8) & count(7)&
