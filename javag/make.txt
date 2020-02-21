@@ -1,8 +1,8 @@
 
 To make the astro4.bin needed to run Astro in Lion  :
 
-javac astro4s.class
-java_grinder astro4s.class astro4s.asm Lionsys
-jgoptimizer astro4s.asm astro4.asm
+javac astro4S.class
+java_grinder astro4S.class astro4S.asm Lionsys
+jgoptimizer astro4S.asm astro4.asm
 
 Then open astro4.asm with lionasm and compile 
