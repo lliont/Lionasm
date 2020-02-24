@@ -630,13 +630,13 @@ static int arc[] = {
 			}
 			while ( (key!='q') && (key!='Q') && ships>0) {
 				key=Lionsys.inkey(); char k =(char) key;
-				if (k=='s' ) { if (shipx<250) shipx+=2; }
+				if (k=='s' ) { if (shipx<260) shipx+=2; }
 				if (k=='a' ) { if (shipx>30) shipx-=2; }
 				if (k==' ') {  if (bulcnt==0 && shipdie==0) {bulcnt=92; bulx=shipx; buly=shipy-9; } }
 				ti=(Lionsys.timer()-t);  
 				if (Lionsys.abs(ti)>8)  //***************1
 				{ 
-					if ((Lionsys.joy1() & 16) !=0)  { if (shipx<250) shipx+=1; }
+					if ((Lionsys.joy1() & 16) !=0)  { if (shipx<260) shipx+=1; }
 					if ((Lionsys.joy1() & 8) !=0) { if (shipx>30) shipx-=1; }
 					if ((Lionsys.joy1() & 1) !=0)  if (bulcnt==0 && shipdie==0) { bulcnt=92; bulx=shipx; buly=shipy-9; }
 					//if (shipdie==0) 
@@ -773,7 +773,7 @@ static int arc[] = {
 								dy=2;
 								if (escort[i]!=-1) spdx[i]=spdx[escort[i]]; else
 								if (spy[i]==160) { spdx[i]+=(shipx-spx[i])/16; 
-									if (spdx[i]>9) spdx[i]=9; if (spdx[i]<-9) spdx[i]=-9;
+									if (spdx[i]>8) spdx[i]=8; if (spdx[i]<-8) spdx[i]=-8;
 								}
 							} else { 
 								if (i==0) for (j=2; j<5;j++)  escort[j]=-1;
