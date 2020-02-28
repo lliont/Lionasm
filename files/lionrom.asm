@@ -129,8 +129,8 @@ INT4T14	DA		WRITESEC ; WRITE BUFFER at A2 TO A1 BLOCK
 INT4T15	DA		VSCROLL  ; 
 
 ;  INT5 FUNCTION TABLE  function in a0
-INT5T0	DA		FMULT	   ; Fixed point multiply A1*A2
-INT5T1	DA		FDIV	   ; Fixed point divide A2.(FRAC2)/A1.(FRAC1)
+INT5T0	DA		INTEXIT   ; Ex fixed point multiply A1*A2
+INT5T1	DA		INTEXIT   ; Ex fixed point divide A2.(FRAC2)/A1.(FRAC1)
 INT5T2	DA		FILELD   ; Load file A4 points to filename, at A3
 INT5T3	DA		VMOUNT   ; Load First Volume, return A0=fat root 1st cluster
 INT5T4	DA		FILEDEL  ; Delete file A4 points to filename
@@ -732,6 +732,7 @@ SFATC:
 	ADD	A1,(SECPFAT)   ; add second fat offset
 	MOVI	A0,14
 	INT	4      ; Save FAT copy
+	JSR	DELAY
 	POP A1
 	POP A0
 	RET
@@ -768,7 +769,7 @@ FRFT4:
 	MOVI	A3,0
 	JMP	FRFT5	
 FRFT2: 
-	MOV	(A2),$FFF0 
+	MOV	(A2),$FFF0
 	MOVI	A0,14
 	MOV	A1,(FSTFAT)
 	ADD	A1,A4
@@ -784,17 +785,19 @@ FRFT5:
 	RET
 
 ;---------------------------
-SVDATA:
+
+SVDATA: 
 	MOV	A3,A0
-SVD1:	MOV	A4,A3
+SVD1:	JSR	DELAY
+	MOV	A4,A3
 	SRL	A4,8    ; divide 256
 	MOV	A1,(FSTCLST)
-	ADD	A1,A3
+	ADD	A1,A3   ; to cluster
 	SUBI	A1,2
 	MOVI	A0,14
-	MOV	A2,A6
+	MOV	A2,A6   ; from pointer
 	INT	4
-	CMP	A7,512
+	CMP	A7,512  ; size
 	JBE	SVD2
 	ADD	A6,512
 	SUB	A7,512
@@ -805,6 +808,7 @@ SVD1:	MOV	A4,A3
 	CMPHL A0,A4    ; same fat offset
 	JZ	NORELD
 
+	JSR	DELAY
 	PUSH	A0
 	MOV	A1,(FSTFAT)
 	ADD	A1,A4
@@ -813,6 +817,7 @@ SVD1:	MOV	A4,A3
 	INT	4
 	POP	A0
 NORELD:
+	JSR	DELAY
 	AND	A3,$00FF
 	SLL	A3,1
 	ADD	A3,SDCBUF2   ;store next cluster
@@ -826,8 +831,8 @@ NORELD:
 	ADD	A1,A4
 	MOVI	A0,14
 	INT	4
-	JSR	SFATC    ; save to fat copy
       JSR	DELAY
+	JSR	SFATC    ; save to fat copy
 	POP	A3
 	JMP	SVD1
 SVD2:	
@@ -843,11 +848,12 @@ SVD2:
 	MOV	(A3),$FFFF
 	MOV	A2,SDCBUF2
 	MOV	A1,(FSTFAT)
+	JSR	DELAY
 	ADD	A1,A4
 	MOVI	A0,14
-	INT	4         ;write $FFFF and exit
-	JSR	SFATC    ; save to fat copy
-	MOV	A0,256
+	INT	4         ;write $FFFF 
+	JSR	SFATC    ; save to fat copy 
+	MOV	A0,256    ; and exit ok
 SVDE:
 	RET
 ;----------------------------
@@ -898,17 +904,16 @@ FSV5:	MOV	(A2),(A4)
 	JSR	FREEFAT     ; free
 	CMPI	A0,0
 	JZ	FSVE
+	PUSH	A0
 	SWAP	A0	
 	MOV	(A2),A0
-	SWAP	A0
-	PUSH	A0
 	MOVI	A0,14
 	MOV	A1,(DIRROOT)
 	ADD	A1,A5
 	MOV	A2,SDCBUF1
 	INT	4         ; save header
 	JSR	DELAY
-	POP	A0
+	POP	A0        ; CLUSTER NUM
 	JSR	SVDATA
 	JMP	FSVE
 FSV3:	
@@ -1237,172 +1242,6 @@ PHX2:		MOVI	A0,4
 		POP	A0
 		POPX
 		RET 
-
-
-;---------------------------------
-; INT5 A0=1  fixed point 16.16 
-; Div A2 by A1 res in A1 (FRAC1),   restoring division 9/5/2017
-
-FDIV:		
-		PUSH		A3
-		PUSH		A4
-		PUSH		A7
-		PUSHX
-		MOV		A0,A2
-		XOR		A0,A1
-		PUSH		A0
-		BTST		A1,15           ; check if neg and convert 
-		JZ		FDIV2
-		NOT		A1
-		MOV		A4,(FRAC1)
-		NEG		A4
-		ADC		A1,0
-		MOV		(FRAC1),A4
-FDIV2:	MOV		A4,(FRAC2)
-		BTST		A2,15          ; check if neg and convert 
-		JZ		FDIV3
-		NOT		A2
-		NEG		A4
-		ADC		A2,0          ; A2A4 = Q Divident
-FDIV3:	MOV		A3,(FRAC1)
-
-		SETX		15            ; shift dividend as left as possible
-FDC1:		BTST		A2,15
-		JNZ		FDC2
-		SLLL		A2,A4
-		JMPX		FDC1
-FDC2:		MOVX		A0
-		CMPI		A0,6
-		JBE		FDC3
-		SETX		9
-		BTST		A3,0
-		JNZ		FDC9
-FDC5:		SRLL		A1,A3
-		DEC		A0
-		JMPX		FDC5		
-FDC9:		SETX		A0
-FDC3:		PUSHX		
-
-		NOT		A1
-		NEG		A3
-		ADC		A1,0
-		MOV		A7,A1    ; store -M
-		MOV		(FRAC2),A3
-		MOVI		A1,0
-		MOVI		A3,0	   	; A1A3 = A
-		SETX		30
-FD_INTER:
-		SLLL		A1,A3           ; shift AQ left
-		SLLL		A2,A4
-		ADC		A3,0
-		PUSH		A1
-		PUSH		A3
-		ADD		A3,(FRAC2)   	;A=A-M
- 		ADC		A1,A7
-		JP		FD_COND1   
-		POP		A3
-		POP		A1
-		BCLR		A4,0
-		JMP		FD_COND2
-FD_COND1:	POP		A0
-		POP		A0	
-		BSET		A4,0       
-FD_COND2:	JMPX		FD_INTER
-		
-		POP		A0          ; shift left as needed
-		ADDI		A0,1
-		;SUBI		A0,1
-		JN		FDC6
-		SETX		A0
-FDLP:		SLLL		A2,A4
-		JMPX		FDLP
-		JMP		FDC7
-
-FDC6:		INC		A0
-		JZ		FDC7
-		SRLL		A2,A4        ; or shift right as needed
-FDC8:		JMP		FDC6
-
-FDC7:		MOV		A1,A2	     ; integer result in A1
-		POP		A0
-		BTST		A0,15
-		JZ		FDIVEND     ; correct sign
-		NOT		A1
-		NEG		A4
-		ADC		A1,0
-FDIVEND:	MOV		(FRAC1),A4  ; store fraction result 
-		POPX
-		POP		A7
-		POP		A4
-		POP		A3
-		RETI
-
-;-------------------------------------
-;  		INT 5 A0=0
-; fixed point multiply
-FMULT:	
-		PUSH		A3
-		PUSH		A4
-		PUSH		A5
-		PUSH		A6
-		MOV		A0,A2
-		XOR		A0,A1
-		PUSH		A0
-		BTST		A1,15    ; check if neg and convert 
-		JZ		FMUL2
-		NOT		A1
-		MOV		A4,(FRAC1)
-		NEG		A4
-		ADC		A1,0
-		MOV		(FRAC1),A4
-FMUL2:	BTST		A2,15   ; check if neg and convert 
-		JZ		FMUL3
-		NOT		A2
-		MOV		A4,(FRAC2)
-		NEG		A4
-		ADC		A2,0
-		MOV		(FRAC2),A4
-FMUL3:	MOV		A5,A1
-		MOV		A6,A2
-		MULU		A1,A2
-		MOV		A0,A2
-		MOV		A3,A1
-		MOV		A1,(FRAC1)
-		MOV		A2,(FRAC2)
-		MOV		A4,A1
-		OR		A4,A2
-		JZ		FMULZ ; skip more mults if fractions = zero
-		MULU		A1,A2
-		MOV		A4,A2 ; store result fraction
-		MOV		A1,(FRAC1)
-		MOV		A2,A6
-		MULU 		A1,A2
-		ADD		A4,A1
-		ADC		A3,A2
-		ADC		A0,0
-		MOV		A1,(FRAC2)
-		MOV		A2,A5
-		MULU 		A1,A2
-		ADD		A4,A1
-		ADC		A3,A2
-		ADC		A0,0	
-FMULZ:	MOV		A1,A3
-		POP		A2
-		BTST		A2, 15
-		MOV		A2,A0
-		JZ		FMULEND     ; Check result sign
-		NOT		A1
-		NOT		A2
-		NEG		A4
-		ADC		A1,0
-		ADC		A2,0
-FMULEND:	MOV		(FRAC1),A4
-		POP		A6
-		POP		A5
-		POP		A4
-		POP		A3
-		RETI
-
 
 ;--------------------------------------
 WRITESEC:

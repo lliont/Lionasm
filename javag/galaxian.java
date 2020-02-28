@@ -617,7 +617,7 @@ static int arc[] = {
 			init(level);
 			set_sprite(0,0,1,shipx,shipy);
 			Lionsys.print_str(0,44,slives); Lionsys.print_num(0,50,ships);
-			Lionsys.print_str(2,48,"L:"); Lionsys.print_num(2,50,level);
+			Lionsys.print_str(2,48,"L:"); Lionsys.print_num(2,50,level+1);
 			Lionsys.print_str(0,1,sscore);
 			Lionsys.print_num(0,7,score);
 			t=Lionsys.timer(); t2=t; t3=t;	t4=t;
@@ -676,9 +676,9 @@ static int arc[] = {
 					}
 					for (j=0; j<12; j++) {
 							if (bulsen[j]==1)
-							if (Lionsys.abs(bulsx[j]-shipx)<8 && (shipy-bulsy[j])<8) {
+							if (Lionsys.abs(bulsx[j]-shipx)<8 && (shipy-bulsy[j])<7) {
 								attackdl1=68; attdl2=120; 
-								shipdie=23;
+								shipdie=16;
 								for (i=0; i<12; i++) { bulsen[i]=0; }
 							}
 						}

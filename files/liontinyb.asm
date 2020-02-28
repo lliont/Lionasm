@@ -916,8 +916,9 @@ UDIVIDE:  ; INT 4/9 Div A2 by A1 res in A1,A0
 DIVIDE2:  ; INT 5/1 Div A2 by A1 res in A1,A0
 	MOV	A2,A1
 	MOV	A1,A3
-	MOVI	A0,1
-	INT	5
+	;MOVI	A0,1
+	;INT	5
+	JSR   FDIV
 	MOV	A2,A1
 	XCHG	A0,A1
 	RET
@@ -1262,8 +1263,9 @@ XP31:
 	MOV	(FRAC1),A4
 	MOV	A1,A3
 	MOV	A2,A0
-	MOVI	A0,0   ;
-	INT	5      ; Multiplcation A1*A2 res in A1
+	;MOVI	A0,0   ;
+	;INT	5      ; Multiplcation A1*A2 res in A1
+	JSR	FMULT
 	MOV	A4,(FRAC1)
 	MOV	A7,A4
 	CMPI	A0,0   ; check overflow
@@ -2137,8 +2139,9 @@ SQ2:	MOV	A2,A5
 	MOV	(FRAC1),A7
 	PUSH	A1
 	PUSH	A7
-	MOVI	A0,1
-	INT	5
+	;MOVI	A0,1
+	;INT	5
+	JSR	FDIV
 	MOV	A7,(FRAC1)
 	POP	A4
 	POP	A2
@@ -2192,8 +2195,9 @@ COSI:	PUSH	A3
 	MOV	(FRAC1),A7
 	MOVI	A2,1
 	PUSH	A1                 ; save parameter
-	MOVI	A0,0
-	INT	5                  ; X*1.27323954
+	;MOVI	A0,0
+	;INT	5                  ; X*1.27323954
+	JSR	FMULT
 	POP	A0	;get param
 	PUSH	A1    ; save res
 	PUSH	(FRAC1) ;A2
@@ -2202,14 +2206,16 @@ COSI:	PUSH	A3
 	MOV	(FRAC2),SINP22 ;A2
 	MOV	(FRAC1),A7
 	MOVI	A2,0       ;(SINP21)
-	MOVI	A0,0
-	INT	5          ; X*0.405284735
+	;MOVI	A0,0
+	;INT	5          ; X*0.405284735
+	JSR	FMULT
 	POP	A2
 	PUSH	A2           ;  again save 
 	MOV	A0,A7
 	MOV	(FRAC2),A0
-	MOVI	A0,0        ; X*X*0.405284735
-	INT   5       
+	;MOVI	A0,0        ; X*X*0.405284735
+	;INT   5
+	JSR	FMULT       
 	MOV	A2,(FRAC1)  ; result in A1A2
 	POP	A0 ; get param
 	POP	A4 ; first result
@@ -2797,6 +2803,170 @@ USRET1:
 ;INPIO:
 ;	IN	A1,$FFFF
 ;	RET
+
+; Div A2.(FRAC2)/A1.(FRAC1) res in A1.(FRAC1), restoring division 9/5/2017
+FDIV:		
+		PUSH		A3
+		PUSH		A4
+		PUSH		A7
+		PUSHX
+		MOV		A0,A2
+		XOR		A0,A1
+		PUSH		A0
+		BTST		A1,15           ; check if neg and convert 
+		JZ		FDIV2
+		NOT		A1
+		MOV		A4,(FRAC1)
+		NEG		A4
+		ADC		A1,0
+		MOV		(FRAC1),A4
+FDIV2:	MOV		A4,(FRAC2)
+		BTST		A2,15          ; check if neg and convert 
+		JZ		FDIV3
+		NOT		A2
+		NEG		A4
+		ADC		A2,0          ; A2A4 = Q Divident
+FDIV3:	MOV		A3,(FRAC1)
+
+		SETX		15            ; shift dividend as left as possible
+FDC1:		BTST		A2,15
+		JNZ		FDC2
+		SLLL		A2,A4
+		JMPX		FDC1
+FDC2:		MOVX		A0
+		CMPI		A0,6
+		JBE		FDC3
+		SETX		9
+		BTST		A3,0
+		JNZ		FDC9
+FDC5:		SRLL		A1,A3
+		DEC		A0
+		JMPX		FDC5		
+FDC9:		SETX		A0
+FDC3:		PUSHX		
+
+		NOT		A1
+		NEG		A3
+		ADC		A1,0
+		MOV		A7,A1    ; store -M
+		MOV		(FRAC2),A3
+		MOVI		A1,0
+		MOVI		A3,0	   	; A1A3 = A
+		SETX		30
+FD_INTER:
+		SLLL		A1,A3           ; shift AQ left
+		SLLL		A2,A4
+		ADC		A3,0
+		PUSH		A1
+		PUSH		A3
+		ADD		A3,(FRAC2)   	;A=A-M
+ 		ADC		A1,A7
+		JP		FD_COND1   
+		POP		A3
+		POP		A1
+		BCLR		A4,0
+		JMP		FD_COND2
+FD_COND1:	POP		A0
+		POP		A0	
+		BSET		A4,0       
+FD_COND2:	JMPX		FD_INTER
+		
+		POP		A0          ; shift left as needed
+		ADDI		A0,1
+		;SUBI		A0,1
+		JN		FDC6
+		SETX		A0
+FDLP:		SLLL		A2,A4
+		JMPX		FDLP
+		JMP		FDC7
+
+FDC6:		INC		A0
+		JZ		FDC7
+		SRLL		A2,A4        ; or shift right as needed
+FDC8:		JMP		FDC6
+
+FDC7:		MOV		A1,A2	     ; integer result in A1
+		POP		A0
+		BTST		A0,15
+		JZ		FDIVEND     ; correct sign
+		NOT		A1
+		NEG		A4
+		ADC		A1,0
+FDIVEND:	MOV		(FRAC1),A4  ; store fraction result 
+		POPX
+		POP		A7
+		POP		A4
+		POP		A3
+		RET
+
+;-------------------------------------
+;  		INT 5 A0=0
+; fixed point multiply  A1*A2
+FMULT:	
+		PUSH		A3
+		PUSH		A4
+		PUSH		A5
+		PUSH		A6
+		MOV		A0,A2
+		XOR		A0,A1
+		PUSH		A0
+		BTST		A1,15    ; check if neg and convert 
+		JZ		FMUL2
+		NOT		A1
+		MOV		A4,(FRAC1)
+		NEG		A4
+		ADC		A1,0
+		MOV		(FRAC1),A4
+FMUL2:	BTST		A2,15   ; check if neg and convert 
+		JZ		FMUL3
+		NOT		A2
+		MOV		A4,(FRAC2)
+		NEG		A4
+		ADC		A2,0
+		MOV		(FRAC2),A4
+FMUL3:	MOV		A5,A1
+		MOV		A6,A2
+		MULU		A1,A2
+		MOV		A0,A2
+		MOV		A3,A1
+		MOV		A1,(FRAC1)
+		MOV		A2,(FRAC2)
+		MOV		A4,A1
+		OR		A4,A2
+		JZ		FMULZ ; skip more mults if fractions = zero
+		MULU		A1,A2
+		MOV		A4,A2 ; store result fraction
+		MOV		A1,(FRAC1)
+		MOV		A2,A6
+		MULU 		A1,A2
+		ADD		A4,A1
+		ADC		A3,A2
+		ADC		A0,0
+		MOV		A1,(FRAC2)
+		MOV		A2,A5
+		MULU 		A1,A2
+		ADD		A4,A1
+		ADC		A3,A2
+		ADC		A0,0	
+FMULZ:	MOV		A1,A3
+		POP		A2
+		BTST		A2, 15
+		MOV		A2,A0
+		JZ		FMULEND     ; Check result sign
+		NOT		A1
+		NOT		A2
+		NEG		A4
+		ADC		A1,0
+		ADC		A2,0
+FMULEND:	MOV		(FRAC1),A4
+		POP		A6
+		POP		A5
+		POP		A4
+		POP		A3
+		RET
+
+
+
 ;-----------------------------------------------------
 ; DATA
 UINT		DW	0
