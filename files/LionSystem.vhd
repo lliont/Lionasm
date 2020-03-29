@@ -64,7 +64,7 @@ Component LPLL2 IS
 	);
 END Component;
 
-Component lfsr is
+Component lfsr_II is
   port (
     cout   :out std_logic;      -- Output
     clk    :in  std_logic;      -- Input rlock
@@ -134,6 +134,7 @@ Component SoundI is
 		reset, clk, wr : IN std_logic;
 		Q : IN std_logic_vector(15 downto 0);
 		Vol : IN std_logic_vector(7 downto 0);
+		harmonic : IN std_logic_vector(3 downto 0);
 		count: OUT std_logic_vector(31 downto 0);
 		play: OUT  std_logic
 	);
@@ -229,9 +230,10 @@ constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 
 Signal pdelay: natural range 0 to 2047 :=0;
 Signal R0,B0,G0,BRI0,R1,G1,B1,BRI1,SR2,SG2,SB2,SBRI2,SPDET2,SR3,SG3,SB3,SBRI3,SPDET3,SR1,SB1,SG1,SBRI1,SPDET1: std_logic:='0';
-Signal clock0,clock1:std_logic;
+Signal clock0,clock1,lfsr_clk:std_logic;
 Signal hsyn0,vsyn0,hsyn1,vsyn1,Vmod: std_logic:='0';
 Signal vq: std_logic_vector (15 downto 0);
+Signal harm1,harm2,harm3 : std_logic_vector(3 downto 0):="0000";
 Signal di,do,AD,qa,qro,aq,aq2,aq3,q16 : std_logic_vector(15 downto 0);
 Signal count,count2,count3 : std_logic_vector(31 downto 0);
 Signal lfsr_bw : std_logic_vector(15 downto 0):="0010000000000000";
@@ -291,15 +293,15 @@ SPRTG3: VideoSp
 Serial: UART
 	PORT MAP ( Tx,Rx,clock0,rst,sr,sw,sdready,sready,sdi,sdo );
 SoundC1: SoundI
-	PORT MAP (AUDIOA,rst,clock1,Waud,aq,Vol1,count,play);
+	PORT MAP (AUDIOA,rst,clock1,Waud,aq,Vol1,harm1,count,play);
 SoundC2: SoundI
-	PORT MAP (AUDIOB,rst,clock1,Waud2,aq2,Vol2,count2,play2);     
+	PORT MAP (AUDIOB,rst,clock1,Waud2,aq2,Vol2,harm2,count2,play2);     
 SoundC3: SoundI
-	PORT MAP (AUDIOC,rst,clock1,Waud3,aq3,Vol3,count3,play3); 
+	PORT MAP (AUDIOC,rst,clock1,Waud3,aq3,Vol3,harm3,count3,play3); 
 MSPI: SPI 
 	PORT MAP ( SCLK,MOSI,MISO,clock1,rst,spi_w,spi_rdy,spi_in,spi_out);
-NOIZ:lfsr
-	PORT MAP ( noise, clock1, rst, Voln, lfsr_bw);
+NOIZ:lfsr_II
+	PORT MAP ( noise, lfsr_clk, rst, Voln, lfsr_bw);
 CPLL:LPLL2
 	PORT MAP (iClock,Clock0,Clock1);
 PS2:PS2KEYB
@@ -333,10 +335,25 @@ nen1<='1' when (ne1='1') and (play='1') and (aq(12 downto 0)/="0000000000000") e
 nen2<='1' when (ne2='1') and (play2='1') and (aq2(12 downto 0)/="0000000000000") else '0';
 nen3<='1' when (ne3='1') and (play3='1') and (aq3(12 downto 0)/="0000000000000") else '0';
 NOISEO<=NOISE and (nen1 or nen2 or nen3);
+lfsr_clk<= (AUDIOA and nen1) or (AUDIOB and nen2) or (AUDIOC and nen3);
+
+--process (clock1)
+--begin
+--if rising_edge(clock1) then
+--if SPDET1='1' then R<=SR1; B<=SB1; G<=SG1; 
+--elsif SPDET2='1' then R<=SR2; B<=SB2; G<=SG2;
+--elsif SPDET3='1' then R<=SR3; B<=SB3; G<=SG3;
+--elsif Vmod='1' then R<=R1; B<=B1; G<=G1;
+--else R<=R0; B<=B0; G<=G0; end if;
+--end if;
+--end process;
 
 R<= SR1 when  SPDET1='1' else SR2 when  SPDET2='1' else SR3 when SPDET3='1' else R1 when Vmod='1' else R0;
 G<= SG1 when  SPDET1='1' else SG2 when  SPDET2='1' else SG3 when SPDET3='1' else G1 when Vmod='1' else G0;
 B<= SB1 when  SPDET1='1' else SB2 when  SPDET2='1' else SB3 when SPDET3='1' else B1 when Vmod='1' else B0;
+PR<= SR1 when  SPDET1='1' else SR2 when  SPDET2='1' else SR3 when SPDET3='1' else R1 when Vmod='1' else R0;
+PG<= SG1 when  SPDET1='1' else SG2 when  SPDET2='1' else SG3 when SPDET3='1' else G1 when Vmod='1' else G0;
+PB<= SB1 when  SPDET1='1' else SB2 when  SPDET2='1' else SB3 when SPDET3='1' else B1 when Vmod='1' else B0;
 BRI<= SBRI1 when SPDET1='1' else SBRI2 when SPDET2='1' else SBRI3 when SPDET3='1' else BRI1 when Vmod='1' else BRI0;
 
 ad1<=vad1 when Vmod='1'  else vad0;
@@ -346,10 +363,10 @@ HSYN2<=HSYN1 when Vmod='1' else HSYN0;
 VSYN2<=VSYN1 when Vmod='1' else VSYN0;
 VINT<=Vint1 when Vmod='1' else Vint0;
 
-pdelay<=0 when hsyn='0' and rising_edge(clock1) else pdelay+1 when  rising_edge(clock1);
-PB<=PB0 when pdelay>47*2 and vsyn='1' and hsyn='1' else '0';
-PG<=PG0 when pdelay>47*2 and vsyn='1' and hsyn='1' else '0';
-PR<=PR0 when pdelay>47*2 and vsyn='1' and hsyn='1' else '0';
+--pdelay<=0 when hsyn='0' and rising_edge(clock1) else pdelay+1 when  rising_edge(clock1);
+--PB<=PB0 when pdelay>47*2 and vsyn='1' and hsyn='1' else '0';
+--PG<=PG0 when pdelay>47*2 and vsyn='1' and hsyn='1' else '0';
+--PR<=PR0 when pdelay>47*2 and vsyn='1' and hsyn='1' else '0';
 
 RTC_DATA<='Z';
 RTC_CLK<='0';
@@ -401,10 +418,13 @@ Waud<='0' when AD=8  and IO='1' and AS='0'  and RW='0' and rising_edge(clock1) e
 Waud2<='0' when AD=10 and IO='1' and AS='0' and RW='0' and rising_edge(clock1) else '1' when rising_edge(clock1);
 Waud3<='0' when AD=12 and IO='1' and AS='0' and RW='0' and rising_edge(clock1) else '1' when rising_edge(clock1);
 lfsr_bw<=Do when AD=13 and IO='1' and AS='0' and RW='0' and rising_edge(clock1);
-PR0<=Do(0) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   
-PG0<=Do(1) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   
-PB0<=Do(2) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1); 
+--PR0<=Do(0) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   
+--PG0<=Do(1) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   
+--PB0<=Do(2) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1); 
 XYmode<=Do(0) when  AD=31 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  
+harm1<=Do(3 downto 0) when AD=31 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   -- port 25
+harm2<=Do(3 downto 0) when  AD=32 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  -- port 26
+harm3<=Do(3 downto 0) when  AD=33 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  -- port 27
 
 -- Read decoder
 process (clock0,RW,AS,IO)

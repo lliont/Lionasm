@@ -295,7 +295,7 @@ IF rising_edge(clock) THEN
 					Do:=Y1; 
 					if fetch then AD:=X; else AD:=X1; end if;
 					RW<='0';	IO<='1'; AS<='0'; DS<='0';   	
-				when 1 =>
+				--when 1 =>
 				when others =>
 					rest3:=true;
 					end case;

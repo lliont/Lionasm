@@ -20,7 +20,7 @@
 ## PROGRAM "Quartus Prime"
 ## VERSION "Version 18.1.1 Build 646 04/11/2019 SJ Lite Edition"
 
-## DATE    "Wed Jun 05 00:48:06 2019"
+## DATE    "Wed Sep 25 00:26:06 2019"
 
 ##
 ## DEVICE  "5CEFA2F23I7"
@@ -93,14 +93,6 @@ set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generat
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -rise_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -setup 0.080  
 set_clock_uncertainty -fall_from [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -fall_to [get_clocks {CPLL|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] -hold 0.060  
-set_clock_uncertainty -rise_from [get_clocks {iClock}] -rise_to [get_clocks {iClock}] -setup 0.080  
-set_clock_uncertainty -rise_from [get_clocks {iClock}] -rise_to [get_clocks {iClock}] -hold 0.060  
-set_clock_uncertainty -rise_from [get_clocks {iClock}] -fall_to [get_clocks {iClock}] -setup 0.080  
-set_clock_uncertainty -rise_from [get_clocks {iClock}] -fall_to [get_clocks {iClock}] -hold 0.060  
-set_clock_uncertainty -fall_from [get_clocks {iClock}] -rise_to [get_clocks {iClock}] -setup 0.080  
-set_clock_uncertainty -fall_from [get_clocks {iClock}] -rise_to [get_clocks {iClock}] -hold 0.060  
-set_clock_uncertainty -fall_from [get_clocks {iClock}] -fall_to [get_clocks {iClock}] -setup 0.080  
-set_clock_uncertainty -fall_from [get_clocks {iClock}] -fall_to [get_clocks {iClock}] -hold 0.060  
 
 
 #**************************************************************

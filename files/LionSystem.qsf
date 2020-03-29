@@ -226,7 +226,6 @@ set_global_assignment -name VHDL_FILE SPI.vhd
 set_global_assignment -name VHDL_FILE LPLL2.vhd
 set_global_assignment -name BDF_FILE 3_to_8.bdf
 set_global_assignment -name BDF_FILE regs.bdf
-set_global_assignment -name BDF_FILE ALU_LA2.bdf
 set_global_assignment -name BDF_FILE ALU_LA4.bdf
 set_global_assignment -name BDF_FILE 74251_l.bdf
 set_global_assignment -name VHDL_FILE LionSystem.vhd
