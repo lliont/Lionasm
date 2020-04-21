@@ -230,11 +230,12 @@ constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 
 Signal pdelay: natural range 0 to 2047 :=0;
 Signal R0,B0,G0,BRI0,R1,G1,B1,BRI1,SR2,SG2,SB2,SBRI2,SPDET2,SR3,SG3,SB3,SBRI3,SPDET3,SR1,SB1,SG1,SBRI1,SPDET1: std_logic:='0';
-Signal clock0,clock1,lfsr_clk:std_logic;
+Signal clock0,clock1,clock2,lfsr_clk:std_logic;
 Signal hsyn0,vsyn0,hsyn1,vsyn1,Vmod: std_logic:='0';
 Signal vq: std_logic_vector (15 downto 0);
 Signal harm1,harm2,harm3 : std_logic_vector(3 downto 0):="0000";
-Signal di,do,AD,qa,qro,aq,aq2,aq3,q16 : std_logic_vector(15 downto 0);
+Signal di,do,AD,qa,qro,aq,aq2,aq3,q16: std_logic_vector(15 downto 0);
+Signal ncnt : std_logic_vector(13 downto 0);
 Signal count,count2,count3 : std_logic_vector(31 downto 0);
 Signal lfsr_bw : std_logic_vector(15 downto 0):="0010000000000000";
 Signal WAud, WAud2,WAud3: std_logic:='1';
@@ -335,7 +336,11 @@ nen1<='1' when (ne1='1') and (play='1') and (aq(12 downto 0)/="0000000000000") e
 nen2<='1' when (ne2='1') and (play2='1') and (aq2(12 downto 0)/="0000000000000") else '0';
 nen3<='1' when (ne3='1') and (play3='1') and (aq3(12 downto 0)/="0000000000000") else '0';
 NOISEO<=NOISE and (nen1 or nen2 or nen3);
-lfsr_clk<= (AUDIOA and nen1) or (AUDIOB and nen2) or (AUDIOC and nen3);
+ncnt<=ncnt+1 when rising_edge(Clock0);
+Clock2<=ncnt(13);
+lfsr_clk<= AUDIOA when (nen1='1' and aq(12 downto 0)<=700) else AUDIOB when (nen2='1' and aq2(12 downto 0)<=700) 
+			  else AUDIOC when(nen3='1' and aq3(12 downto 0)<=700) else clock2
+			  when (nen1='1' and aq(12 downto 0)>700) or (nen2='1' and aq2(12 downto 0)>700) or (nen3='1' and aq3(12 downto 0)>700) else '0';
 
 --process (clock1)
 --begin
