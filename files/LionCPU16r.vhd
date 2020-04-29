@@ -155,7 +155,6 @@ IF rising_edge(clock) THEN
 	ELSIF HOLD='0' AND (rest2=true)  then
 		HOLDA<='1'; 
 	ELSIF RD='0' then
-		
 	ELSIF (INT='0') and (rest2=true or rest3=true)  and (SR(INT_DIS)='0') and (IACK='0') THEN   -- Interrupts
 		mtmp:=ST-2; FF<=ExecutionState; IA<=I; IACK<='1'; IR:="100000100000"&I&"00";
 		HOLDA<='0'; rest2:=false; Wen:='0'; setreg:=true;  
@@ -248,25 +247,9 @@ IF rising_edge(clock) THEN
 			when "0000010" =>              -- MOV MOV.B <Reg>,(Reg,NUM,[reg],[n])
 				AD:=X1;  set_data;
 				if fetch then Y1:=X;	end if;
-				if bwb then BACS<='1'; end if;
+				BACS<=bwb;
 				FF<=StoreState;
 				rest:=true;
---			when "0001100" =>           -- MOV.B <Reg>,(Reg,NUM,[reg],[n])
---				case TT is
---				when 0 =>
---					AD:=X1 ; AS<='0';  set_data;
-				--when 1 =>
---				when others =>
---					if AD(0)='1' then	
---						if  fetch then	Y1:=Di(15 downto 8) & X(7 downto 0);
---						else	Y1(15 downto 8):=Di(15 downto 8); end if;
---					else 
---						if  fetch then	Y1:= X(7 downto 0) & Di(7 downto 0);
---						else	Y1:= Y1(7 downto 0) & Di(7 downto 0);	end if;
---					end if;
---					if  fetch then	Y1:=X; end if; BACS<='1';
---					AS<='1';	rest:=true; FF<=StoreState;
-				--end case;
 			when "0000011" =>              --ADD & ADD.B Reg,(Reg,NUM,[reg],[n])
 				case TT is
 				when 0 =>
@@ -343,8 +326,6 @@ IF rising_edge(clock) THEN
 					rest3:=true;
 					set_reg(r2,M(31 downto 16),'0','0');
 				end case;
- 
-
 			when "0001101" =>               -- CMP & CMP.B (n),Reg
 				half:=bwb;
 				X1:=X; --if fetch then X1:= X; end if;
@@ -672,16 +653,7 @@ IF rising_edge(clock) THEN
 			when "1001001" =>              -- MOV MOV.B (n),Reg 
 					AD:=X; FF<=StoreState; set_data;
 					BACS<=bwb;
-					rest:=true;
---			when "1001010" =>              -- MOV.B (n),Reg	
---					AD:=X2 ;  set_data;
---					if X2(0)='1' then	
---						tmp:=X(15 downto 8)&Y1(7 downto 0);
---					else 
---						tmp:=Y1(7 downto 0) & X(15 downto 8);
---					end if;
---					Y1:=tmp;
---					rest:=true; FF<=StoreState;    
+					rest:=true; 
 			when "1001100" =>              -- MOVHL Reg,(Reg,NUM,[reg],[n])
 				if fetch2 then
 					if X2(0)='1'  then tmp:=X(7 downto 0)&X1(7 downto 0);
@@ -738,22 +710,21 @@ IF rising_edge(clock) THEN
 				case TT is
 				when 0 =>
 					if fetch then AD:=X; else AD:=X1; end if;
-					IO<='1'; RW<='1'; AS<='0'; 
-				when 1 =>
-				when 2 =>
-					if AD(0)='0' then
-						Do:=Y1(7 downto 0)&Di(7 downto 0);
-					else
-						Do:=Di(15 downto 8)&Y1(7 downto 0);
-					end if;
-					RW<='0'; DS<='0'; 
-				--when 3 =>
+					IO<='1'; AS<='0'; Do:=Y1;
+					RW<='0'; DS<='0'; BACS<='1';
 				when others =>
 					rest3:=true;
 				end case;
 			when "1011000" =>                     -- OUT.B Reg,n	
-					AD:=X1; Y1:=X; IO<='1'; AS<='0'; 
-					IR(15 downto 9):="1010111";  -- as OUT.B	
+				case TT is
+				when 0 =>			
+					AD:=X1;  IO<='1'; AS<='0'; --Y1:=X;
+					Do:=X; BACS<='1';
+					RW<='0'; DS<='0'; 
+				when others =>
+					rest3:=true;
+				end case;				
+					--IR(15 downto 9):="1010111";  -- as OUT.B	
 			when "1001011" =>    --SLLL Reg
 			      case TT is
 					when 0 =>
@@ -989,13 +960,9 @@ IF rising_edge(clock) THEN
 					IO<='1'; AD:=Y1; AS<='0'; RW<='1'; DS<='1'; mem_trans<=true; set_data;
 				when 1 =>
 				when 2 =>
-					if Y1(0)='0' then	tmp(7 downto 0):=Di(15 downto 8);
-									 else	tmp(7 downto 0):=Di(7 downto 0); end if;
-					AD:=X1; RW<='1'; IO<=bwb; AS<='0'; DS<='0';
-				when 3 =>
-				when 4 =>
-					if X1(0)='0' then	Do:=tmp(7 downto 0)&Di(7 downto 0);
-									 else	Do:=Di(15 downto 8)&tmp(7 downto 0); end if;
+					if Y1(0)='0' then	Do(7 downto 0):=Di(15 downto 8);
+									 else	Do(7 downto 0):=Di(7 downto 0); end if;
+					BACS<='1';
 					AD:=X1; RW<='0'; IO<=bwb; AS<='0'; DS<='0';
 				when others =>
 					if (IDX/=ZERO16) then 
@@ -1019,14 +986,9 @@ IF rising_edge(clock) THEN
 					IO<='0'; AD:=Y1; AS<='0'; RW<='1'; DS<='1'; mem_trans<=true; set_data;
 				when 1 =>
 				when 2 =>
-					if Y1(0)='0' then	tmp(7 downto 0):=Di(15 downto 8);
-									 else	tmp(7 downto 0):=Di(7 downto 0); end if;
-					AD:=X1; RW<='1'; IO<=bwb; AS<='0'; DS<='0';
-				when 3 =>
-				when 4 =>
-					if X1(0)='0' then	Do:=tmp(7 downto 0)&Di(7 downto 0);
-									 else	Do:=Di(15 downto 8)&tmp(7 downto 0); end if;
-					AD:=X1; RW<='0'; IO<=bwb; AS<='0'; DS<='0';
+					if Y1(0)='0' then	Do(7 downto 0):=Di(15 downto 8);
+									 else	Do(7 downto 0):=Di(7 downto 0); end if;
+					AD:=X1; RW<='0'; IO<=bwb; AS<='0'; DS<='0'; BACS<='1';
 				when others =>
 					if (IDX/=ZERO16) then 
 						IDX<=IDX-1;

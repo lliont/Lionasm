@@ -28,9 +28,10 @@ entity VideoRGB80 is
 	port
 	(
 		sclk, vclk, EN: IN std_logic;
-		R,G,B,BRI0,VSYN,HSYN, VSINT: OUT std_logic;
+		R,G,B,BRI0,VSYN,HSYN, VSINT, HSINT: OUT std_logic;
 		addr : OUT natural range 0 to 16383; 
-		Q : IN std_logic_vector(15 downto 0)
+		Q : IN std_logic_vector(15 downto 0);
+		hline: OUT std_logic_vector(15 downto 0)
 	);
 end VideoRGB80;
 
@@ -59,9 +60,11 @@ begin
 
 addr<=addr1;
 vidc<=not vidc when rising_edge(vclk);
-HSYN<='0' when (pixel<96) else '1'; 
-VSYN<='0' when lines<2 else '1';
-VSINT<='0' when (lines=0) and (pixel<8) else '1';
+HSYN<='0' when (pixel<6)  else '1'; 
+VSYN<='0' when lines<96 else '1';
+VSINT<='0' when (lines=0) and (pixel<6) else '1';
+HSINT<='0' when pixel<6 and lines>=l1 and lines<=l2 else '1';
+hline<=std_logic_vector(to_unsigned(lines,16));
 
 process (sclk,EN)
 variable m78: natural range 0 to 31;
@@ -137,9 +140,10 @@ entity VideoRGB1 is
 	port
 	(
 		sclk, vclk, EN: IN std_logic;
-		R,G,B,BRI,VSYN,HSYN, VSINT: OUT std_logic;
+		R,G,B,BRI,VSYN,HSYN, VSINT, HSINT: OUT std_logic;
 		addr : OUT natural range 0 to 16383;
-		Q : IN std_logic_vector(15 downto 0)
+		Q : IN std_logic_vector(15 downto 0);
+		hline: OUT std_logic_vector(15 downto 0)
 	);
 end VideoRGB1;
 
@@ -164,8 +168,10 @@ begin
 --addr<=addr1;
 vidc<=not vidc when rising_edge(vclk);
 VSYN<='0' when lines<2 else '1';	
-VSINT<='0' when (lines=0) and (pixel<8) else '1';	
-HSYN<='0' when (pixel<96) else '1'; 
+VSINT<='0' when (lines=0) and (pixel<6) else '1';	
+HSYN<='0' when pixel<96 else '1';
+HSINT<='0' when pixel<6 and lines>=l1 and lines<=l2 else '1';
+hline<=std_logic_vector(to_unsigned(lines,16));
 
 process (sclk,EN)
 
@@ -438,14 +444,14 @@ Signal c2,c4:std_logic_vector(12 downto 0);
 Signal c1:std_logic_vector(9 downto 0);
 Signal dur: natural range 0 to 512*1024-1;
 signal i: natural range 0 to 511;
-Signal Aud,Aud2:std_logic;
+Signal Aud,Aud2, temp, temp2:std_logic;
 begin
 
 process (clk,reset,wr)	
 variable f,f2:std_logic_vector(15 downto 0);
 	begin
 		if (reset='1') then
-		   Aud<='0'; Aud2<='0'; c3<=0;  i<=0; count<=(others=>'0'); play<='0'; dur<=0;
+		   Aud<='0'; Aud2<='0'; c3<=0;  i<=0;  play<='0'; dur<=0; --count<=(others=>'0');
 		elsif  Clk'EVENT AND Clk = '1' then
 			if wr='0' then 
 				f:=Q; 
@@ -491,24 +497,72 @@ variable f,f2:std_logic_vector(15 downto 0);
 				c1<="0000000000";
 				c3<=c3+1; c2<=c2+1; c4<=c4+1; 
 				if dur=0 then
-					Aud<='0';	Aud2<='0'; c2<=(others => '0'); c3<=0; c4<=(others => '0'); play<='0';
+					temp<='0';	temp2<='0'; c2<=(others => '0'); c3<=0; c4<=(others => '0'); play<='0'; 
 				else 
-					if c2=f(12 downto 0) then
-						if c2/="000000000000" then Aud<=not Aud; end if;
+
+				if c2=f(12 downto 0) then
+						if c2/="000000000000" then temp<=not temp; end if;
 						c2<=(others => '0');			
 					end if;
-					if c4=f2(12 downto 0)  then
-						if c4/="000000000000" and harmonic>0 then Aud2<=not Aud2; else Aud2<='0'; end if;
+					if vol > to_integer(unsigned(c2(7 downto 0))) then Aud<=temp;  else Aud<='0'; end if;
+				
+					if c4=f2(12 downto 0)  then 
+						if c4/="000000000000" and harmonic>0 then temp2<=not temp2;	end if;
 						c4<=(others => '0');			
 					end if;
-					--play<='1';
-				end if;
-				if i=399 then i<=0; count<=count+'1'; else i<=i+1; end if;
+					if vol > to_integer(unsigned(c4(7 downto 0))) then Aud2<=temp;  else Aud2<='0'; end if;
+					
+					end if;
+					--if i=399 then i<=0; count<=count+'1'; else i<=i+1; end if;
 			else
 			end if;
 		end if;
 	end process ;
 end;
+
+
+
+-------------------------------------------------------
+
+library ieee;
+   use ieee.std_logic_1164.all;
+	USE ieee.std_logic_unsigned.all ;
+	USE ieee.numeric_std.all ;
+
+entity lfsr_II is
+  port (
+    cout   :out std_logic;		-- Output of the counter
+    clk    :in  std_logic;    -- Input rlock
+    reset  :in  std_logic;     -- Input reset
+	 Vol    :in std_logic_vector(7 downto 0)
+	 --bw     :in std_logic_vector(15 downto 0) --band width
+  );
+end entity;
+
+architecture rtl of lfsr_II is
+    signal count: std_logic_vector (19 downto 0);
+    signal linear_feedback,temp: std_logic:='0';
+begin
+    linear_feedback <= not(count(19) xor count(2));
+
+	 process (clk, reset) 
+	 variable cnt: natural range 0 to 512*1024;
+	 begin
+		  if (reset = '1') then
+				count <= (others=>'0'); cnt:=0;
+		  elsif (rising_edge(clk)) then
+				count <= ( count(18) & count(17)& count(16) & count(15)&
+							count(14) & count(13) & count(12) & count(11)&
+							count(10) & count(9) & count(8) & count(7)&
+							count(6) & count(5) & count(4) & count(3) 
+						  & count(2) & count(1) & count(0) & linear_feedback);
+				if vol > to_integer(unsigned(count(7 downto 0))) then temp<=count(19); else temp<='0'; end if;
+		  end if;
+	 end process;
+	 cout <=temp; -- count(19) when vol > to_integer(unsigned(count(7 downto 0)));
+end architecture;
+
+-----------------------------------------------------------------------------
 
 -------------------------------------------------------
 -- Design Name : lfsr
@@ -559,48 +613,3 @@ begin
 	 end process;
 	 cout <=temp; -- count(19) when vol > to_integer(unsigned(count(7 downto 0)));
 end architecture;
-
------------------------------------------------------------------------------
-
--------------------------------------------------------
-
-library ieee;
-   use ieee.std_logic_1164.all;
-	USE ieee.std_logic_unsigned.all ;
-	USE ieee.numeric_std.all ;
-
-entity lfsr_II is
-  port (
-    cout   :out std_logic;		-- Output of the counter
-    clk    :in  std_logic;    -- Input rlock
-    reset  :in  std_logic;     -- Input reset
-	 Vol    :in std_logic_vector(7 downto 0);
-	 bw     :in std_logic_vector(15 downto 0) --band width
-  );
-end entity;
-
-architecture rtl of lfsr_II is
-    signal count: std_logic_vector (19 downto 0);
-    signal linear_feedback,temp: std_logic:='0';
-begin
-    linear_feedback <= not(count(19) xor count(2));
-
-	 process (clk, reset) 
-	 variable cnt: natural range 0 to 512*1024;
-	 begin
-		  if (reset = '1') then
-				count <= (others=>'0'); cnt:=0;
-		  elsif (rising_edge(clk)) then
-				count <= ( count(18) & count(17)& count(16) & count(15)&
-							count(14) & count(13) & count(12) & count(11)&
-							count(10) & count(9) & count(8) & count(7)&
-							count(6) & count(5) & count(4) & count(3) 
-						  & count(2) & count(1) & count(0) & linear_feedback);
-				if vol > to_integer(unsigned(count(7 downto 0))) then temp<=count(19); else temp<='0'; end if;
-		  end if;
-	 end process;
-	 cout <=temp; -- count(19) when vol > to_integer(unsigned(count(7 downto 0)));
-end architecture;
-
------------------------------------------------------------------------------
-

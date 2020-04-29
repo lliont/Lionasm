@@ -69,8 +69,8 @@ Component lfsr_II is
     cout   :out std_logic;      -- Output
     clk    :in  std_logic;      -- Input rlock
     reset  :in  std_logic;       -- Input reset
-	 Vol    :in std_logic_vector(7 downto 0);
-	 bw     :in std_logic_vector(15 downto 0) --band width
+	 Vol    :in std_logic_vector(7 downto 0)
+	 --bw     :in std_logic_vector(15 downto 0) --band width
   );
 end Component;
 
@@ -78,9 +78,10 @@ Component VideoRGB80 is
 	port
 	(
 		sclk, vclk, EN : IN std_logic;
-		R,G,B,BRI0,VSYN,HSYN,VSINT : OUT std_logic;
+		R,G,B,BRI0,VSYN,HSYN,VSINT, HSINT : OUT std_logic;
 		addr : OUT natural range 0 to 16383;
-		Q : IN std_logic_vector(15 downto 0)
+		Q : IN std_logic_vector(15 downto 0);
+		hline: OUT std_logic_vector(15 downto 0)
 	);
 end Component;
 
@@ -88,9 +89,10 @@ Component VideoRGB1 is
 	port
 	(
 		sclk,vclk, EN : IN std_logic;
-		R,G,B,BRI,VSYN,HSYN,VSINT : OUT std_logic;
+		R,G,B,BRI,VSYN,HSYN,VSINT, HSINT : OUT std_logic;
 		addr : OUT natural range 0 to 16383;
-		Q : IN std_logic_vector(15 downto 0)
+		Q : IN std_logic_vector(15 downto 0);
+		hline: OUT std_logic_vector(15 downto 0)
 	);
 end Component;
 
@@ -110,7 +112,8 @@ Component dual_port_ram_dual_clock is
 		data_b	: in std_logic_vector((DATA_WIDTH-1) downto 0);
 		we_b	   : in std_logic := '1';
 		q_a		: out std_logic_vector((DATA_WIDTH -1) downto 0);
-		q_b		: out std_logic_vector((DATA_WIDTH -1) downto 0)
+		q_b		: out std_logic_vector((DATA_WIDTH -1) downto 0);
+		be      : in  std_logic_vector (1 downto 0)
 	);
 end Component;
 
@@ -234,13 +237,13 @@ Signal clock0,clock1,clock2,lfsr_clk:std_logic;
 Signal hsyn0,vsyn0,hsyn1,vsyn1,Vmod: std_logic:='0';
 Signal vq: std_logic_vector (15 downto 0);
 Signal harm1,harm2,harm3 : std_logic_vector(3 downto 0):="0000";
-Signal di,do,AD,qa,qro,aq,aq2,aq3,q16: std_logic_vector(15 downto 0);
+Signal di,do,AD,qa,qro,aq,aq2,aq3,q16, hline,hline0,hline1: std_logic_vector(15 downto 0);
 Signal ncnt : std_logic_vector(13 downto 0);
 Signal count,count2,count3 : std_logic_vector(31 downto 0);
 Signal lfsr_bw : std_logic_vector(15 downto 0):="0010000000000000";
-Signal WAud, WAud2,WAud3: std_logic:='1';
+Signal WAud, WAud2,WAud3, PB0, PG0, PR0: std_logic:='1';
 Signal HOLDA, A16,A17,A18,IO,nen1,nen2,nen3,ne1,ne2,ne3: std_logic:='0';
-Signal rst, rst2, AS, DS, RW, Int_in, vint,vint0,vint1,xyd: std_logic:='1';
+Signal rst, rst2, AS, DS, RW, Int_in,vint,vint0,vint1,hint,hint0,hint1,xyd: std_logic:='1';
 Signal w1,spw1, spw2, spw3,xyw,xyen: std_logic:='0';
 Signal SPQ1,spvq1,SPQ2,spvq2,SPQ3,spvq3,xyq1,xyq2: std_logic_vector(15 downto 0);
 Signal Ii : std_logic_vector(1 downto 0);
@@ -252,7 +255,7 @@ Signal sdi,sdo,sdo2,kdo : std_logic_vector (7 downto 0);
 Signal Vol1,Vol2,Vol3,Voln : std_logic_vector (7 downto 0):="11111111";
 SIGNAL Spi_in,Spi_out: STD_LOGIC_VECTOR (7 downto 0);
 Signal Spi_w, spi_rdy, play,play2,play3 : std_logic;
-Signal PB0, PG0, PR0, XYmode, BACS :std_Logic:='0';
+Signal XYmode, BACS, HINT_EN :std_Logic:='0';
 Signal BSEL: std_logic_vector (1 downto 0);
 Signal spb, sdb: std_logic_vector (7 downto 0):="00000000";
 
@@ -265,23 +268,23 @@ IRAM: byte_enabled_simple_dual_port_ram
 	PORT MAP ( clock1, to_integer(unsigned(A16&AD(15 downto 1))), Do, RW or IO or DS, QA, BSEL ) ;
 VRAM: dual_port_ram_dual_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 14)
-	PORT MAP ( clock0, clock1, ad1, to_integer(unsigned(AD(14 downto 1))), Do, w1, vq, q16 );
+	PORT MAP ( clock0, clock1, ad1, to_integer(unsigned(AD(14 downto 1))), Do, w1, vq, q16,BSEL );
 SPRAM: dual_port_ram_dual_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 11)
-	PORT MAP ( clock0,clock1, spad1, to_integer(unsigned(AD(11 downto 1))), Do, spw1, spvq1, SPQ1 );
+	PORT MAP ( clock0,clock1, spad1, to_integer(unsigned(AD(11 downto 1))), Do, spw1, spvq1, SPQ1, BSEL  );
 SPRAM2: dual_port_ram_dual_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 11)
-	PORT MAP ( clock0,clock1, spad3, to_integer(unsigned(AD(11 downto 1))), Do,  spw2, spvq2, SPQ2 );
+	PORT MAP ( clock0,clock1, spad3, to_integer(unsigned(AD(11 downto 1))), Do,  spw2, spvq2, SPQ2, BSEL );
 SPRAM3: dual_port_ram_dual_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 11)
-	PORT MAP ( clock0,clock1, spad5, to_integer(unsigned(AD(11 downto 1))), Do, spw3, spvq3, SPQ3 );
+	PORT MAP ( clock0,clock1, spad5, to_integer(unsigned(AD(11 downto 1))), Do, spw3, spvq3, SPQ3, BSEL );
 XYRAM: dual_port_ram_dual_clock
 	GENERIC MAP (DATA_WIDTH  => 16,	ADDR_WIDTH => 11)
-	PORT MAP ( clock0,clock1, xyadr, to_integer(unsigned(AD(11 downto 1))), Do, xyw, xyq1, xyq2 );
+	PORT MAP ( clock0,clock1, xyadr, to_integer(unsigned(AD(11 downto 1))), Do, xyw, xyq1, xyq2, BSEL );
 VIDEO0: videoRGB80
-	PORT MAP ( clock1,clock0,Vmod,R0,G0,B0,BRI0,VSYN0,HSYN0,vint0,vad0,vq);
+	PORT MAP ( clock1,clock0,Vmod,R0,G0,B0,BRI0,VSYN0,HSYN0,vint0,hint0,vad0,vq, hline0);
 VIDEO1: videoRGB1
-	PORT MAP ( clock1,clock0,Vmod,R1,G1,B1,BRI1,VSYN1,HSYN1,vint1,vad1,vq);
+	PORT MAP ( clock1,clock0,Vmod,R1,G1,B1,BRI1,VSYN1,HSYN1,vint1,hint1,vad1,vq, hline1);
 SPRTG1: VideoSp
 	GENERIC MAP (DATA_LINE  => 3)
 	PORT MAP ( clock1, clock0,SR1,SG1,SB1,SBRI1,SPDET1,vint,spb(0),sdb(0),spad1,spvq1);
@@ -302,7 +305,7 @@ SoundC3: SoundI
 MSPI: SPI 
 	PORT MAP ( SCLK,MOSI,MISO,clock1,rst,spi_w,spi_rdy,spi_in,spi_out);
 NOIZ:lfsr_II
-	PORT MAP ( noise, lfsr_clk, rst, Voln, lfsr_bw);
+	PORT MAP ( noise, lfsr_clk, rst, Voln);
 CPLL:LPLL2
 	PORT MAP (iClock,Clock0,Clock1);
 PS2:PS2KEYB
@@ -340,18 +343,10 @@ ncnt<=ncnt+1 when rising_edge(Clock0);
 Clock2<=ncnt(13);
 lfsr_clk<= AUDIOA when (nen1='1' and aq(12 downto 0)<=700) else AUDIOB when (nen2='1' and aq2(12 downto 0)<=700) 
 			  else AUDIOC when(nen3='1' and aq3(12 downto 0)<=700) else clock2
-			  when (nen1='1' and aq(12 downto 0)>700) or (nen2='1' and aq2(12 downto 0)>700) or (nen3='1' and aq3(12 downto 0)>700) else '0';
+			  when (nen1='1' and aq(12 downto 0)>700) or (nen2='1' and aq2(12 downto 0)>700) or (nen3='1' and aq3(12 downto 0)>700) 
+			  else '0';
 
---process (clock1)
---begin
---if rising_edge(clock1) then
---if SPDET1='1' then R<=SR1; B<=SB1; G<=SG1; 
---elsif SPDET2='1' then R<=SR2; B<=SB2; G<=SG2;
---elsif SPDET3='1' then R<=SR3; B<=SB3; G<=SG3;
---elsif Vmod='1' then R<=R1; B<=B1; G<=G1;
---else R<=R0; B<=B0; G<=G0; end if;
---end if;
---end process;
+--counter<=counter+1 when rising_edge(clock2);
 
 R<= SR1 when  SPDET1='1' else SR2 when  SPDET2='1' else SR3 when SPDET3='1' else R1 when Vmod='1' else R0;
 G<= SG1 when  SPDET1='1' else SG2 when  SPDET2='1' else SG3 when SPDET3='1' else G1 when Vmod='1' else G0;
@@ -367,6 +362,8 @@ VSYN<=VSYN1 when Vmod='1' else VSYN0;
 HSYN2<=HSYN1 when Vmod='1' else HSYN0;
 VSYN2<=VSYN1 when Vmod='1' else VSYN0;
 VINT<=Vint1 when Vmod='1' else Vint0;
+hline<=hline1 when Vmod='1' else hline0;
+hint<=hint1 when Vmod='1' and HINT_EN='1' else hint0 when Vmod='0' and HINT_EN='1' else '1';
 
 --pdelay<=0 when hsyn='0' and rising_edge(clock1) else pdelay+1 when  rising_edge(clock1);
 --PB<=PB0 when pdelay>47*2 and vsyn='1' and hsyn='1' else '0';
@@ -387,11 +384,8 @@ xyw<='1'  when DS='0' and AS='0' and IO='1' and AD(15 downto 12)="0111" and RW='
 process (clock1,INT)
 begin
 if rising_edge(clock1) then
-	--if AD="0000000000011000" and IO='1' and AS='0' and DS='0' and RW='0' then Vmod<=Do(0); end if; 
-	--if Vmod='1' then ad1<=vad1; else ad1<=vad0; end if;
-	--if Vmod='1' then Vint<=Vint1; else Vint<=Vint0; end if;
-	if INT='0' then  II<=Iv; else II<="11"; end if;
-	Int_in<= INT and VINT;
+	if INT='0' then  II<=Iv; elsif HINT='0' then II<="10"; else II<="11"; end if;
+	Int_in<= INT and VINT and HINT;
 end if;
 end process;
 
@@ -422,11 +416,12 @@ ne3<=Do(2) when  AD=11 and IO='1' and RW='0' and AS='0' and DS='0' and rising_ed
 Waud<='0' when AD=8  and IO='1' and AS='0'  and RW='0' and rising_edge(clock1) else '1' when rising_edge(clock1);
 Waud2<='0' when AD=10 and IO='1' and AS='0' and RW='0' and rising_edge(clock1) else '1' when rising_edge(clock1);
 Waud3<='0' when AD=12 and IO='1' and AS='0' and RW='0' and rising_edge(clock1) else '1' when rising_edge(clock1);
-lfsr_bw<=Do when AD=13 and IO='1' and AS='0' and RW='0' and rising_edge(clock1);
+HINT_EN<=Do(0) when  AD=13 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);
+--lfsr_bw<=Do when AD=13 and IO='1' and AS='0' and RW='0' and rising_edge(clock1);
 --PR0<=Do(0) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   
 --PG0<=Do(1) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   
 --PB0<=Do(2) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1); 
-XYmode<=Do(0) when  AD=31 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  
+XYmode<=Do(0) when  AD=30 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  
 harm1<=Do(3 downto 0) when AD=31 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);   -- port 25
 harm2<=Do(3 downto 0) when  AD=32 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  -- port 26
 harm3<=Do(3 downto 0) when  AD=33 and IO='1' and RW='0' and AS='0' and DS='0' and rising_edge(clock1);  -- port 27
@@ -452,6 +447,7 @@ begin
 		if AD=21 then Di1:=count(31 downto 16); end if;
 		if AD=23 then Di1:="00000000000000"&Vsyn&hsyn; end if;  -- VSYNCH HSYNCH STATUS
 		if AD=24 then Di1:="000000000000000"&Vmod; end if;
+		if AD=23 then Di1:=hline; end if;
 	end if;
 end process;
 	
@@ -478,28 +474,48 @@ entity dual_port_ram_dual_clock is
 		data_b	: in std_logic_vector((DATA_WIDTH-1) downto 0);
 		we_b	: in std_logic := '1';
 		q_a		: out std_logic_vector((DATA_WIDTH -1) downto 0);
-		q_b		: out std_logic_vector((DATA_WIDTH -1) downto 0)
+		q_b		: out std_logic_vector((DATA_WIDTH -1) downto 0);
+		be      : in  std_logic_vector (1 downto 0)
 	);
 
 end dual_port_ram_dual_clock;
 
 architecture rtl of dual_port_ram_dual_clock is
 
-subtype word_t is std_logic_vector((DATA_WIDTH-1) downto 0);
+subtype word_t is std_logic_vector(7 downto 0);
 type memory_t is array(0 to 2**ADDR_WIDTH-1) of word_t;
     
-signal ram : memory_t;
+signal ram0,ram1 : memory_t;
 attribute ramstyle : string;
-attribute ramstyle of ram : signal is "no_rw_check";
+attribute ramstyle of ram0 : signal is "no_rw_check";
+attribute ramstyle of ram1 : signal is "no_rw_check";
 begin
 	process(clkb, we_b)
+	variable b:word_t;
 	begin
 		if(rising_edge(clkb)) then 
 			if we_b='1' then	
-				ram(addr_b)<= data_b; 
-				q_b<=data_b;
+				if (be = "11") then
+					b:=data_b(15 downto 8);
+				elsif  be = "10" then 
+					b:=data_b(7 downto 0);
+				end if;
+				if be(1)='1' then ram0(addr_b) <= b; end if;
 			else
-				q_b <= ram(addr_b);
+				q_b(15 downto 8) <= ram0(addr_b);
+			end if;
+		end if;
+	end process;
+	
+	process(clkb, we_b)
+	variable a:word_t;
+	begin
+		if(rising_edge(clkb)) then 
+			if we_b='1' then	
+				a:= data_b(7 downto 0);
+				if be(0)='1' then ram1(addr_b) <= a; end if;
+			else
+				q_b(7 downto 0) <=  ram1(addr_b);
 			end if;
 		end if;
 	end process;
@@ -507,54 +523,9 @@ begin
 	process(clka)
 	begin
 		if(rising_edge(clka)) then 
-			q_a <= ram(addr_a);
+			q_a<= ram0(addr_a)&ram1(addr_a);
 		end if;
 	end process;
-end rtl;
-----------------------------------------------------
-
-library ieee;
-use ieee.numeric_std.all;
-use ieee.std_logic_1164.all;
-
-entity single_port_ram is
-
-	port 
-	(
-		clk	: in std_logic;
-		addr	: in natural range 0 to 65535;
-		data	: in std_logic_vector(15 downto 0);
-		we		: in std_logic := '1';
-		q		: out std_logic_vector(15 downto 0)
-	);
-end entity;
-
-architecture rtl of single_port_ram is
-
-	-- Build a 2-D array type for the RAM
-	subtype word_t is std_logic_vector(15 downto 0);
-	type memory_t is array(0 to 65535) of word_t;
-
-	-- Declare the RAM signal.	
-	signal ram : memory_t; --:=init_ram;
-	attribute ram_init_file : string;
-	attribute ram_init_file of ram : signal is "C:\intelFPGA_lite\LionSys_EP5_A2\Lionasm\bin\Debug\lionrom.mif";
-	attribute ramstyle : string;
-   attribute ramstyle of ram : signal is "no_rw_check";
-
-begin
-
-	process(clk)
-	begin
-	if (Clk'EVENT AND Clk = '1') then
-			if (WE = '0') then
-				if addr>4095 then ram(addr) <= data; end if;
-			else 
-				q<=ram(addr);
-			end if;
-	end if;
-	end process;
-	
 end rtl;
 
 --------------------------------------------------------------------------------------------
@@ -585,7 +556,7 @@ architecture rtl of byte_enabled_simple_dual_port_ram is
 	-- declare the RAM
 	signal ram : ram_t;
 	attribute ram_init_file : string;
-	attribute ram_init_file of ram : signal is "C:\intelFPGA_lite\LionSys_EP5_A2\Lionasm\bin\Debug\lionrom.mif";
+	attribute ram_init_file of ram : signal is ".\Lionasm\bin\Debug\lionrom.mif";
 	attribute ramstyle : string;
    attribute ramstyle of ram : signal is "no_rw_check";
 	signal q_local : word_t;
