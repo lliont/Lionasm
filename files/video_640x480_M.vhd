@@ -501,19 +501,19 @@ variable f,f2:std_logic_vector(15 downto 0);
 				else 
 
 				if c2=f(12 downto 0) then
-						if c2/="000000000000" then temp<=not temp; end if;
-						c2<=(others => '0');			
-					end if;
-					if vol > to_integer(unsigned(c2(7 downto 0))) then Aud<=temp;  else Aud<='0'; end if;
+				if c2/="000000000000" then temp<=not temp; end if;
+					c2<=(others => '0');			
+				end if;
+				if vol > to_integer(unsigned(c2(7 downto 0))) then Aud<=temp;  else Aud<='0'; end if;
+			
+				if c4=f2(12 downto 0)  then 
+					if c4/="000000000000" and harmonic>0 then temp2<=not temp2;	end if;
+					c4<=(others => '0');			
+				end if;
+				if vol > to_integer(unsigned(c4(7 downto 0))) then Aud2<=temp;  else Aud2<='0'; end if;
 				
-					if c4=f2(12 downto 0)  then 
-						if c4/="000000000000" and harmonic>0 then temp2<=not temp2;	end if;
-						c4<=(others => '0');			
-					end if;
-					if vol > to_integer(unsigned(c4(7 downto 0))) then Aud2<=temp;  else Aud2<='0'; end if;
-					
-					end if;
-					--if i=399 then i<=0; count<=count+'1'; else i<=i+1; end if;
+				end if;
+				if i=399 then i<=0; count<=count+'1'; else i<=i+1; end if;
 			else
 			end if;
 		end if;
