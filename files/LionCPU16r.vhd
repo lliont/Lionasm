@@ -50,7 +50,8 @@ SIGNAL PC,X2,Ao,AoII: Std_logic_vector(15 downto 0);
 SIGNAL RPC:Std_logic_vector(15 downto 0):="0000000000010000";
 SIGNAL Z1: Std_logic_vector(15 downto 0):=ZERO16;
 SIGNAL SR: Std_logic_vector(15 downto 0):=ZERO16;
-SIGNAL ST: Std_logic_vector(15 downto 0):="1111111111111110";
+SIGNAL IST: Std_logic_vector(15 downto 0):="1111111111111110";
+SIGNAL ST: Std_logic_vector(15 downto 0):= "1111111110000000";
 SIGNAL FF: Std_logic_vector(2 downto 0):=InitialState;
 SIGNAL TT: natural range 0 to 15;
 SIGNAL carry, overflow, zero, neg: Std_logic;
@@ -169,7 +170,7 @@ IF rising_edge(clock) THEN
 		when InitialState =>      -- Fetch Instruction 
 			case TT is
 			when 0 =>
-				init_next_ins;  rhalf:='0'; Wen:='0';  rest3:=false;
+				init_next_ins; rhalf:='0'; Wen:='0'; rest3:=false;
 			when others => 
 				AS<='1'; rest:=true; rhalf:='0'; Wen:='0';  rest3:=false; BACS<='0';
 				IR:=Di; RR:=Di(4 downto 2); R:=Di(8 downto 6);
@@ -585,38 +586,41 @@ IF rising_edge(clock) THEN
 			when "1000001" =>              -- INT n  don't change opcode
 				case TT is
 				when 0 =>
-					AD:=ST; Do:=PC; RW<='0'; Wen:='0'; set_stack;
+				   A18:='0'; A17:='0'; A16:='0';
+					AD:=IST; Do:=PC; RW<='0'; Wen:='0'; 
 					AS<='0'; DS<='0';  icnt:=icnt+1;
 				when 1 => 
-				--when 2 =>
+					IST<=IST-2;
 					AS<='1';  DS<='1'; RW<='1';
 				when 2 =>
-					AD:=mtmp; Do:=SR;
-					AS<='0'; DS<='0';  RW<='0'; SR(INT_DIS)<='1'; 
-				--when 4 =>
-					ST<=mtmp-2;  
+					AD:=IST; Do:=SR;
+					AS<='0'; DS<='0';  RW<='0'; 
+					SR(INT_DIS)<='1'; 
 				when 3 =>
+					IST<=IST-2;
 					RW<='1'; AS<='1'; DS<='1';  
 				when 4 =>
 					AD:="00000000000"&IR(5 downto 2)&"0"; 
 					AS<='0'; 
-				--when 7 =>
 				when others =>
-					PC<=Di; SR(TRAP)<='0'; SR(15 downto 13)<="000"; 
+					PC<=Di; SR(TRAP)<='0'; 
 					A16:='0'; A17:='0'; A18:='0';
+					SR(15 downto 13)<="000"; 
+					SR(9 downto 7)<="000";
 					rest2:=true; 
 				end case;
 			when "1000010" =>              -- RETi  PRET don't change opcode
 				case TT is
 				when 0 =>
-					AD:=stmp; AS<='0';   set_stack;
+					A18:='0'; A17:='0'; A16:='0';
+					AD:=IST+2; AS<='0';  
 				when 1 =>
-					--ST<=stmp;
-				--when 2 =>
-					 ST<=stmp+2;   AS<='1';
-					if bwb='0' then SR<=Di; else SR(15 downto 13)<=Di(15 downto 13); end if;
+					IST<=IST+2;
 				when 2 =>
-					AD:=ST;	AS<='0';  
+					 IST<=IST+2;   AS<='1';
+					if bwb='0' then SR<=Di; else SR(15 downto 13)<=Di(15 downto 13); end if;
+				when 3 =>
+					AD:=IST;	AS<='0';  
 				--when 4 =>
 				when others =>	
 					PC<=Di; 

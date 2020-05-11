@@ -1,8 +1,17 @@
 
-To make the astro4.bin needed to run Astro in Lion  :
+To make the astro4.bin (or any other bin from an asm file) you needed to run Astro in Lion  :
 
 javac astro4S.class
 java_grinder astro4S.class astro4S.asm Lionsys
 jgoptimizer astro4S.asm astro4.asm
 
 Then open astro4.asm with lionasm and compile 
+
+The code produced is relalocatable and can be loaded and run from anyware in memory range btop (about 17000) to 48000-bin_file_size.
+The function btop always returns the first free andress after the basic program area.
+
+A convinient way to load a binary and execute it is:
+
+LCODE "astro4",btop
+RCODE btop
+

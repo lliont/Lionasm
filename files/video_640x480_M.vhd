@@ -60,8 +60,8 @@ begin
 
 addr<=addr1;
 vidc<=not vidc when rising_edge(vclk);
-HSYN<='0' when (pixel<6)  else '1'; 
-VSYN<='0' when lines<96 else '1';
+HSYN<='0' when (pixel<96)  else '1'; 
+VSYN<='0' when lines<2 else '1';
 VSINT<='0' when (lines=0) and (pixel<6) else '1';
 HSINT<='0' when pixel<6 and lines>=l1 and lines<=l2 else '1';
 hline<=std_logic_vector(to_unsigned(lines,16));
@@ -510,7 +510,7 @@ variable f,f2:std_logic_vector(15 downto 0);
 					if c4/="000000000000" and harmonic>0 then temp2<=not temp2;	end if;
 					c4<=(others => '0');			
 				end if;
-				if vol > to_integer(unsigned(c4(7 downto 0))) then Aud2<=temp;  else Aud2<='0'; end if;
+				if vol > to_integer(unsigned(c4(7 downto 0))) then Aud2<=temp2;  else Aud2<='0'; end if;
 				
 				end if;
 				if i=399 then i<=0; count<=count+'1'; else i<=i+1; end if;

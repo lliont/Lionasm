@@ -154,15 +154,15 @@ INT5T17	DA		CIRC     ; Circle A1,A2,A3
 HINT:		INC		(COUNTER)
 INTEXIT:	RETI        ; trace interrupt
 		
-INTR4:	STI
-		SDP		0
+INTR4:	;SDP		0
+		STI
 		SRCLR		4
 		SLL		A0,1
 		ADD		A0,INT4T0
 		JMP		(A0)
 
 INTR5:	STI
-		SDP		0
+		;SDP		0
 		SRCLR		4
 		SLL		A0,1
 		ADD		A0,INT5T0
@@ -868,6 +868,7 @@ FILESAV:
 	PUSH	A5	
 	PUSH	A6
 	PUSH	A7
+	SDP   0
 	JSR	FINDFN
 	CMPI	A0,0
 	JZ	FSV7
@@ -958,6 +959,7 @@ FILEDEL:
 	PUSH	A3
 	PUSH	A4
 	PUSH	A5	
+	SDP   0
 	JSR	FINDFN
 	CMPI	A0,0
 	JZ	FDELX
@@ -1007,6 +1009,7 @@ FDELX:
 VMOUNT:
 	PUSH	A1
 	PUSH	A2
+	SDP   0
 	MOVI	A0,13
 	MOVI	A1,0
 	MOV	A2,SDCBUF1
@@ -1053,7 +1056,8 @@ VMEX:	POP	A2
 
 ;-------------------------------------------------
 ; INT 5,A0=13 Load screen
-LDSCR:	JSR	FINDFN    
+LDSCR:	SDP   0
+		JSR	FINDFN    
 		MOV	A4,A0
 		CMPI	A0,0
 		JZ	INTEXIT
@@ -1068,6 +1072,7 @@ SCLOAD:	; A4 cluster, A3 Dest address
 	PUSH	A4
 	PUSH	A5
 	PUSH	A6
+	SDP   0
 SLD1:	MOV	A6,A4
 	SRL	A6,8   ; DIVIDE BY 256
 	MOV	A1,(FSTFAT)
@@ -1132,6 +1137,7 @@ FLOAD:	; A4 #cluster, A3 Dest address
 	PUSH	A4
 	PUSH	A5
 	PUSH	A6
+	SDP   0
 FLD1:	MOV	A6,A4
 	SRL	A6,8   ; DIVIDE BY 256
 	MOV	A1,(FSTFAT)
@@ -1276,7 +1282,7 @@ WSEC:
 	PUSH	A2
 	PUSH	A3
 	PUSH	A4
-
+	SDP   0
 	PUSH  A2   ; save buffer address
 	OUT	19,0
 	MOVI	A3,0
@@ -1369,6 +1375,7 @@ WRIF:	MOV 	A1,$FF  ; send clocks
 READSEC:
 	PUSHX
 	SETX	4
+	SDP   0
 RDSCR:
 	MOVI	A0,13
 	JSR	READSC
@@ -1469,7 +1476,7 @@ SPI_INIT:
 	PUSH 	A1
 	PUSH	A2
 	PUSH	A3
-
+	SDP   0
 	MOV   (SDHC),0
 	MOVI	A3,0
 
@@ -1742,6 +1749,7 @@ PUTC:
 		PUSHX   
 		PUSH		A4
 		PUSH		A1
+		SDP   0
 		IN		A0,24
 		CMPI		A0,1 ;(VMODE),1
 		JZ		PUTC1             
@@ -1772,6 +1780,7 @@ PUTC1:       ; VMODE1 PRINT Character in A1 at A2 (XY)
 		PUSH		A5
 		PUSH 		A3
 		PUSH		A2
+		SDP   0
 		AND		A1,$00FF
 		SUB.B		A1,32    
 		MULU		A1,6
@@ -1830,6 +1839,7 @@ P3C:		OUT.B		A0,A5
 ;----------------------------------------
 PSTR:		PUSH	A3
 		PUSH	A4
+		;SDP   0
 		MOV.B	A3,XCC
 		MOV.B	A4,YCC
 		IN	A0,24
@@ -1882,6 +1892,7 @@ SCROLL:
 
 SCROLL1:	PUSHX
 		PUSH		A1
+		SDP   0
 		SETX		15359          ;5759	
 		MOV		A0,VBASE1
 		MOV		A1,34048   ; 49152+384
@@ -1912,6 +1923,7 @@ CLRSCR:
 
 CLRSCR1:	PUSHX
 		PUSH	A1
+		SDP   0
 		MOV.B		A1,(SCOL)
 		SLL		A1,4
 		MOV.B		A1,(SCOL)
@@ -1926,6 +1938,7 @@ CLRSCR1:	PUSHX
 
 ;----------------------------------------
 PLOT:		IN	A0,24
+		SDP   0
 		CMPI	A0,1  ;(VMODE),1
 		JZ	PLOT1
 		PUSH		A1
@@ -2432,7 +2445,7 @@ _MLEXIT:
   RETI
 
 ; -------------------------------------
-SKEYBIN:	
+SKEYBIN:	SDP   0
 		IN	A0,6  ;Read serial byte if availiable
 		BTST	A0,2  ;Result in A1, A0(2)=0 if not avail
 		JZ	INTEXIT
@@ -2457,7 +2470,7 @@ SKEXT:	MOVI	A0,0
 		RETI
 ;---------------------------------------
 KEYB:		
-		
+		SDP   0
 		PUSHX
 		CMP	A1,$5A 
 		JNZ	NOTCR
