@@ -115,7 +115,7 @@ namespace Lion_assembler
             colorList.Add("SWAP", Color.Blue);
             colorList.Add("MUL", Color.Blue);
             colorList.Add("CMP", Color.Blue);
-            colorList.Add("CMPHL", Color.Blue);
+            colorList.Add("CMPH", Color.Blue);
             colorList.Add("AND", Color.Blue);
             colorList.Add("OR", Color.Blue);
             colorList.Add("XOR", Color.Blue);
@@ -235,6 +235,10 @@ namespace Lion_assembler
             colorList.Add("ITOI.B", Color.Blue);
             colorList.Add("NTOM", Color.Blue);
             colorList.Add("NTOI", Color.Blue);
+            colorList.Add("JAZ", Color.Blue);
+            colorList.Add("JANZ", Color.Blue);
+            colorList.Add("JAZ.B", Color.Blue);
+            colorList.Add("JANZ.B", Color.Blue);
             colorList.Add("END", Color.DarkMagenta);
             colorList.Add("ORG", Color.DarkMagenta);
             colorList.Add("DB", Color.DarkMagenta);
@@ -314,7 +318,7 @@ namespace Lion_assembler
             instList.Add("SUB.B", 2);
             //ilist.Add("MUL.B", 2);
             instList.Add("CMP.B", 2);
-            instList.Add("CMPHL", 2);
+            instList.Add("CMPH", 2);
             instList.Add("AND.B", 2);
             instList.Add("OR.B", 2);
             instList.Add("XOR.B", 2);
@@ -354,7 +358,6 @@ namespace Lion_assembler
             instList.Add("POPX", 0);
             instList.Add("SETSP", 1);
             instList.Add("GETSP", 1);
-            //ilist.Add("CMPHL", 1);
             instList.Add("MOVR", 2);
             instList.Add("MOVR.B", 2);
             instList.Add("GADR", 2);
@@ -383,6 +386,10 @@ namespace Lion_assembler
             instList.Add("NTOM", 2);
             instList.Add("MTOI.B", 2);
             instList.Add("MTOM.B", 2);
+            instList.Add("JAZ", 2);
+            instList.Add("JANZ", 2);
+            instList.Add("JAZ.B", 2);
+            instList.Add("JANZ.B", 2);
         }
 
         public void fill_dlist()
@@ -3674,7 +3681,7 @@ namespace Lion_assembler
                     return gen3(il, "1010010");
                 case "CMPI.B":
                     return gen3(il, "0110000");
-                case "CMPHL":
+                case "CMPH":
                     return gen1(il, "0110010");
                 case "SETX":
                     return gen5(il, "0010011");
@@ -3706,6 +3713,14 @@ namespace Lion_assembler
                     return gen7(il, "1110001", '1');
                 case "JRXAW":
                     return gen7(il, "1110001", '0');
+                case "JAZ":
+                    return gen1(il, "1101011", '1');
+                case "JANZ":
+                    return gen1(il, "1101011", '0');
+                case "JAZ.B":
+                    return gen1(il, "1101100", '1');
+                case "JANZ.B":
+                    return gen1(il, "1101100", '0');
                 case "MTOI":
                     return gen4(il, "0111111", '1');
                 case "MTOM":

@@ -85,8 +85,8 @@ SDOKO:	MOVI		A0,5        ; sd card ok
 		JNZ		SDNOT
 		MOV		A4,BOOTBIN
 		JSR		FINDFN        ; Find BOOT.BIN
-		CMPI		A0,0
-		JZ		SDNOT
+		;CMPI		A0,0
+		JAZ		A0,SDNOT
 		PUSH		A0
 		MOV		A0,A1
 		JSR		PRNHEX
@@ -806,7 +806,9 @@ SVD1:	JSR	DELAY
 	CMPI	A0,0     ; Is it full
 	JZ	SVDE
 
-	CMPHL A0,A4    ; same fat offset
+	SWAP	A0
+	CMP.B A0,A4    ; same fat offset
+	SWAP	A0
 	JZ	NORELD
 
 	JSR	DELAY
@@ -1125,7 +1127,7 @@ FLEXIT:	POP	A5
 ;-------------------------------------------------
 
 DELAY: PUSHX
-	SETX	60000
+	SETX	64000
 LDDL: JMPX	LDDL    ;delay
 	POPX
 	RET
@@ -1843,14 +1845,14 @@ PSTR:		PUSH	A3
 		MOV.B	A3,XCC
 		MOV.B	A4,YCC
 		IN	A0,24
-		CMPI	A0,0 ;(VMODE),1
-      	JZ	PSTR0
+		;CMPI	A0,0 ;(VMODE),1
+      	JAZ	A0,PSTR0
 		MOV.B	A3,XCC2
 		MOV.B	A4,YCC2
 PSTR0:	MOVI	A0,0     ; PRINT 0 OR 13 TERM.STR POINTED BY A1 AT A2
 		MOV.B	A0,(A1)
-		CMPI.B A0,0
-		JZ	STREXIT
+		;CMPI.B A0,0
+		JAZ.B	A0,STREXIT
 		CMPI.B A0,13
 		JZ  	STREXIT
 PSTR2:	PUSH 	A1
@@ -1859,7 +1861,9 @@ PSTR2:	PUSH 	A1
 		INT	4
 		POP	A1
 		ADD	A2,$0100
-		CMPHL	A2,A3
+		SWAP	A2
+		CMP.B	A2,A3
+		SWAP	A2
 		JB	PSTR3
 		INC	A2
 		AND	A2,$00FF
@@ -2183,8 +2187,8 @@ DIV:
 		PUSH		A3
 		MOV		A3,A1
 		MOV		A1,32767
-		CMPI		A3,0
-		JZ		DIVE
+		;CMPI		A3,0
+		JAZ		A3,DIVE
 		MOVI		A1,0
 		MOV		A0,A1
 		XOR		A0,A2
@@ -2220,8 +2224,8 @@ DIV12:	MOV		A3,A1
 		MOV		A1,A2
 		POP		A2  ; Get no of shifts
 		SUB		A1,A2
-DIV10:	CMPI		A2,0
-		JZ		DIV9
+DIV10:	;CMPI		A2,0
+		JAZ		A2,DIV9
 		SRL		A3,1  ; align back
 		SRL		A0,1
 		DEC		A2
@@ -2249,8 +2253,8 @@ UDIV:
 		PUSH		A3
 		MOV		A3,A1
 		MOV		A1,65535
-		CMPI		A3,0
-		JZ		UDIVE
+		;CMPI		A3,0
+		JAZ		A3,UDIVE
 UDIV3:	MOV		A1,A2
 		CMP		A3,A1
 		JBE		UDIV4
@@ -2276,8 +2280,8 @@ UDIV12:	MOV		A3,A1
 		MOV		A1,A2
 		POP		A2  ; Get no of shifts
 		SUB		A1,A2
-UDIV10:	CMPI		A2,0
-		JZ          UDIV9
+UDIV10:	;CMPI		A2,0
+		JAZ         A2,UDIV9
 		SRL		A3,1
 		SRL		A0,1
 		DEC		A2
@@ -2337,9 +2341,9 @@ _DL3:          ;   left align dividend
   INC A7
   JMP _DL3
 _DL6:
+  JAZ A7,_DL12
   SUB A0,A7       ;  // shift difference   
-  CMPI A7,0
-  JZ _DL12
+  ;CMPI A7,0
 _DL11:           ;       // shift right
   SRLL A1,A2
   SRLL A3,A4
