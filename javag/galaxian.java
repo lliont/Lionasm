@@ -607,7 +607,8 @@ static int arc[] = {
 		int buffer0=0, esc=0; score=0; 
 		int i,j,s,t,ti,t2,ti2,t3,ti3,t4,ti4,frame1;
 		int key=0, asct=0, near=0, turn=0; 
-		Lionsys.out(11,1); Lionsys.out(13,10000); Lionsys.out(28,180); 
+		//Lionsys.out(24,1);
+		Lionsys.out(11,1); //Lionsys.out(13,10000); //Lionsys.out(28,180); 
 		Lionsys.out(25,60); Lionsys.out(26,70);  Lionsys.out(27,70);
 		while ((key!='Q') && (key!='q'))
 		{
@@ -628,6 +629,7 @@ static int arc[] = {
 				Lionsys.sound(2,ptable2[stune[snd]/16],2);
 				snd++;
 			}
+			Lionsys.out(32,2);
 			while ( (key!='q') && (key!='Q') && ships>0) {
 				key=Lionsys.inkey(); char k =(char) key;
 				if (k=='s' ) { if (shipx<260) shipx+=2; }
@@ -689,8 +691,10 @@ static int arc[] = {
 				{ 	aliencnt=0; attackno=0;
 					if (shipdie>0) { 
 						Lionsys.out(27,200);
-						Lionsys.sound(0,60+shipdie*2,3);
-						Lionsys.sound(2,30+shipdie*2,3);
+						Lionsys.out(31,1);
+						Lionsys.sound(0,320+shipdie*2,4);
+						//Lionsys.sound(2,50+shipdie*2,4);
+						
 						set_sprite_data(0,0,shipdata,3-shipdie/8,0);
 						set_sprite_data(0,1,shipdata,3-shipdie/8,0);
 						set_sprite(0,0,1,shipx,shipy);
@@ -699,6 +703,7 @@ static int arc[] = {
 						shipdie--;
 						if (shipdie==0) {
 							ships--;
+							Lionsys.out(31,0);
 							Lionsys.print_num(0,50,ships);
 							set_sprite_data(0,0,shipdata,0,0);
 							attackdl1=60;
@@ -854,6 +859,7 @@ static int arc[] = {
 				key=Lionsys.inkey();
 			}
 		}
+		Lionsys.out(11,0); Lionsys.out(32,0);
 	}
 }
 

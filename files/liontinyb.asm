@@ -2320,6 +2320,7 @@ GL1:
 		INT	4           ; Get keyboard code for serial port
 		BTST  A0,1
 		JNZ   KEYIN
+		IN	A0,6
 		BTST	A0,2        ; if availiable
 		JZ	GL1
 GL6:		MOVI	A0,7
@@ -2330,10 +2331,10 @@ GL6:		MOVI	A0,7
 		INT	4
 KEYIN:
 		MOV	A0,A1      ; CHAR IN A0
-		CMP.B	A0,97
-		JC	SKP2
-		CMP.B	A0,122
-		JA	SKP2
+		;CMP.B	A0,97
+		;JC	SKP2
+		;CMP.B	A0,122
+		;JA	SKP2
 		;AND.B	A0,$DF        ; UPPER CASE 
 SKP2:	      CMPI.B A0,8       ; BS
 		JNZ   GL2

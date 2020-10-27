@@ -226,7 +226,7 @@
             this.VHDL.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.VHDL.CausesValidation = false;
-            this.VHDL.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.VHDL.Font = new System.Drawing.Font("Courier New", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(161)));
             this.VHDL.Location = new System.Drawing.Point(696, 33);
             this.VHDL.MaxLength = 0;
             this.VHDL.Multiline = true;
@@ -310,7 +310,7 @@
             this.btnCopy.Name = "btnCopy";
             this.btnCopy.Size = new System.Drawing.Size(71, 21);
             this.btnCopy.TabIndex = 10;
-            this.btnCopy.Text = "Copy VHDL";
+            this.btnCopy.Text = "Copy Output List";
             this.btnCopy.UseVisualStyleBackColor = true;
             this.btnCopy.Click += new System.EventHandler(this.btnCopy_Click);
             // 
@@ -342,6 +342,7 @@
             this.BinSize.Size = new System.Drawing.Size(10, 12);
             this.BinSize.TabIndex = 13;
             this.BinSize.Text = "0";
+            this.BinSize.Click += new System.EventHandler(this.BinSize_Click);
             // 
             // label1
             // 
@@ -351,6 +352,7 @@
             this.label1.Size = new System.Drawing.Size(37, 12);
             this.label1.TabIndex = 14;
             this.label1.Text = "Bin size";
+            this.label1.Click += new System.EventHandler(this.label1_Click);
             // 
             // SSend
             // 

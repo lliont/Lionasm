@@ -136,7 +136,6 @@ set_location_assignment PIN_Y15 -to Tx
 set_global_assignment -name RESERVE_DCLK_AFTER_CONFIGURATION "USE AS PROGRAMMING PIN"
 set_global_assignment -name RESERVE_DATA0_AFTER_CONFIGURATION "COMPILER CONFIGURED"
 set_global_assignment -name RESERVE_DATA1_AFTER_CONFIGURATION "COMPILER CONFIGURED"
-set_location_assignment PIN_A15 -to BRI
 set_location_assignment PIN_Y14 -to Int
 set_location_assignment PIN_M9 -to iClock
 set_global_assignment -name EDA_TIME_SCALE "1 ps" -section_id eda_simulation
@@ -197,7 +196,7 @@ set_location_assignment PIN_T22 -to JOYST2[3]
 set_location_assignment PIN_P22 -to JOYST2[4]
 set_location_assignment PIN_B5 -to ASo
 set_location_assignment PIN_A5 -to DSo
-set_location_assignment PIN_B6 -to Holdao
+set_location_assignment PIN_Y16 -to Holdao
 set_location_assignment PIN_A7 -to IA[1]
 set_location_assignment PIN_A8 -to IA[0]
 set_location_assignment PIN_A9 -to IACK
@@ -205,19 +204,7 @@ set_location_assignment PIN_A10 -to IOo
 set_location_assignment PIN_B10 -to Iv[1]
 set_location_assignment PIN_C9 -to Iv[0]
 set_location_assignment PIN_G10 -to RWo
-set_location_assignment PIN_AB18 -to XY_DECODE
 set_global_assignment -name OPTIMIZE_SSN "NORMAL COMPILATION"
-set_location_assignment PIN_Y17 -to DACA[0]
-set_location_assignment PIN_Y16 -to DACA[1]
-set_location_assignment PIN_L1 -to DACD[0]
-set_location_assignment PIN_L2 -to DACD[1]
-set_location_assignment PIN_G1 -to DACD[2]
-set_location_assignment PIN_G2 -to DACD[3]
-set_location_assignment PIN_E2 -to DACD[4]
-set_location_assignment PIN_D3 -to DACD[5]
-set_location_assignment PIN_C1 -to DACD[6]
-set_location_assignment PIN_C2 -to DACD[7]
-set_location_assignment PIN_AB17 -to XY_MUX
 set_global_assignment -name VHDL_FILE XY_Disp.vhd
 set_global_assignment -name VHDL_FILE LionCPU16r.vhd
 set_global_assignment -name VHDL_FILE video_640x480_M.vhd
@@ -248,6 +235,24 @@ set_location_assignment PIN_A12 -to MOSI4
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to MISO
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to KCLK
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to KDATA
-set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to JOYST1*
-set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to JOYST2*
+set_location_assignment PIN_Y17 -to ADo[1]
+set_location_assignment PIN_AB18 -to ADo[0]
+set_location_assignment PIN_B13 -to BRIB
+set_location_assignment PIN_A15 -to BRIG
+set_location_assignment PIN_F10 -to BRIR
+set_location_assignment PIN_C2 -to D[7]
+set_location_assignment PIN_C1 -to D[6]
+set_location_assignment PIN_D3 -to D[5]
+set_location_assignment PIN_E2 -to D[4]
+set_location_assignment PIN_G2 -to D[3]
+set_location_assignment PIN_G1 -to D[2]
+set_location_assignment PIN_L2 -to D[1]
+set_location_assignment PIN_L1 -to D[0]
+set_location_assignment PIN_N2 -to ER_SEL
+set_location_assignment PIN_D9 -to ERH
+set_location_assignment PIN_E9 -to ERL
+set_location_assignment PIN_W19 -to RW2
+set_instance_assignment -name CLAMPING_DIODE ON -to KCLK
+set_instance_assignment -name CLAMPING_DIODE ON -to KDATA
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to JOYST*
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

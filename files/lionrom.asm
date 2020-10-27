@@ -2452,19 +2452,19 @@ _MLEXIT:
 SKEYBIN:	SDP   0
 		IN	A0,6  ;Read serial byte if availiable
 		BTST	A0,2  ;Result in A1, A0(2)=0 if not avail
-		JZ	INTEXIT
+		JZ	SKEXT
 		IN	A1,14
 		OUT	15,2
 		OUT	15,0
-		CMP 	A1,$12
+		CMP.B	A1,$12
 		JNZ	SKB1
 		MOV.B (SHIFT),1
 		JMP	SKEXT
-SKB1:		CMP	A1,$59
+SKB1:		CMP.B	A1,$59
 		JNZ   SKB2
 		MOV.B (SHIFT),1
 		JMP	SKEXT		
-SKB2:		CMP   A1,$58
+SKB2:		CMP.B   A1,$58
 		JNZ   INTEXIT
 		MOV.B	(SHIFT),0
 		MOV.B	A1,(CAPSL)
@@ -2476,15 +2476,15 @@ SKEXT:	MOVI	A0,0
 KEYB:		
 		SDP   0
 		PUSHX
-		CMP	A1,$5A 
+		CMP.B	A1,$5A 
 		JNZ	NOTCR
 		MOVI	A1,13
 		JMP	KB10
-NOTCR:	CMP	A1,$66
+NOTCR:	CMP.B	A1,$66
 		JNZ	NOTBS
 		MOVI	A1,8
 		JMP	KB10
-NOTBS:	CMP	A1,$76
+NOTBS:	CMP.B	A1,$76
 		JNZ	KB1
 		MOV	A1,27
 		JMP	KB10		
@@ -2493,7 +2493,7 @@ KB1:		SETX 	55           ; Convert Keyboard scan codes to ASCII
 KB3:		CMP.B	A1,(A0)
 		JZ	KB4
 		JXAB	A0,KB3
-		MOV	A1,0
+		MOVI	A1,0
 		JMP	KB10
 KB4:		SUB   A0,KEYBCD
 		CMP.B   (CAPSL),1

@@ -454,15 +454,17 @@ variable f,f2:std_logic_vector(15 downto 0);
 		   Aud<='0'; Aud2<='0'; c3<=0;  i<=0;  play<='0'; dur<=0; --count<=(others=>'0');
 		elsif  Clk'EVENT AND Clk = '1' then
 			if wr='0' then 
-				f:=Q; 
+				f:=Q;
 				if (harmonic<9) then
-					f2:="000"&(Q(12 downto 0)-std_logic_vector(shift_right(unsigned(Q(12 downto 0)),to_integer(unsigned(harmonic)))));
-				elsif (harmonic<15) then
-					f2:="000"&(std_logic_vector(shift_right(unsigned(Q(12 downto 0)),1))+
-					           std_logic_vector(shift_right(unsigned(Q(12 downto 0)),to_integer(unsigned(harmonic-6)))));
+					f2:=Q-std_logic_vector(shift_right(unsigned(Q),to_integer(unsigned(harmonic))));
+--			f2:="000"&(Q(12 downto 0)-std_logic_vector(shift_right(unsigned(Q(12 downto 0)),to_integer(unsigned(harmonic)))));
+--				elsif (harmonic<15) then
+--					f2:="000"&(std_logic_vector(shift_right(unsigned(Q(12 downto 0)),1))+
+--					           std_logic_vector(shift_right(unsigned(Q(12 downto 0)),to_integer(unsigned(harmonic-6)))));
 				else 
-					f2:="000"&(Q(12 downto 0)-std_logic_vector(shift_right(unsigned(Q(12 downto 0)),2))
-            					-std_logic_vector(shift_right(unsigned(Q(12 downto 0)),4)));
+					f2:=Q+std_logic_vector(shift_right(unsigned(Q),to_integer(unsigned(harmonic-8))));
+--					f2:="000"&(Q(12 downto 0)-std_logic_vector(shift_right(unsigned(Q(12 downto 0)),2))
+--            					-std_logic_vector(shift_right(unsigned(Q(12 downto 0)),4)));
 				end if;
 			   play<='1';
 				CASE f(15 downto 13) is
@@ -501,7 +503,7 @@ variable f,f2:std_logic_vector(15 downto 0);
 				else 
 
 				if c2=f(12 downto 0) then
-				if c2/="000000000000" then temp<=not temp; end if;
+				if c2/="0000000000000" then temp<=not temp; end if;
 					c2<=(others => '0');			
 				end if;
 				if vol > to_integer(unsigned(c2(7 downto 0))) then Aud<=temp;  else Aud<='0'; end if;

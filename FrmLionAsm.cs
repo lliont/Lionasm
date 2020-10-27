@@ -654,10 +654,11 @@ namespace Lion_assembler
             serialPort1.Write("GCODE BTOP+2,"+BinSize.Text);
             bt[0] = 13;  serialPort1.Write(bt, 0, 1);
             for (int j = 0; j < 16; j++)  for (int i = 0; i < 200000; i++) { int k = i * 3; }
-            while (true)
+            for (int j=0;j<br.BaseStream.Length;j++)
             {
                 try
                 {
+                    br.BaseStream.Seek((long)j,0);
                     bt[0] = br.ReadByte();
                 }
                 catch (IOException ex)
@@ -716,6 +717,16 @@ namespace Lion_assembler
         private void scmnd_KeyPress(object sender, KeyPressEventArgs e)
         {
         
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void BinSize_Click(object sender, EventArgs e)
+        {
+
         }
 
         private void scmnd_KeyUp(object sender, KeyEventArgs e)

@@ -14,11 +14,11 @@ entity LionSystem is
 		RWo,ASo,DSo : OUT Std_logic;
 		RD,Reset,iClock,HOLD: IN Std_Logic;
 		Int: IN Std_Logic;
-		IOo,Holdao,A16o,A17o,A18o : OUT std_logic;
+		IOo,Holdao,A16o,A17o,A18o,ERH,ERL,ER_SEL,RW2 : OUT std_logic;
 		Iv  : IN std_logic_vector(1 downto 0);
 		IACK: OUT std_logic;
 		IA : OUT std_logic_vector(1 downto 0);
-		R,G,B,VSYN,HSYN,VSYN2,HSYN2,BRI : OUT std_Logic;
+		R,G,B,VSYN,HSYN,VSYN2,HSYN2,BRIR,BRIG,BRIB : OUT std_Logic;
 		PB, PG, PR : OUT std_Logic;
 		Tx  : OUT std_logic ;
 		Rx : IN std_logic ;
@@ -29,9 +29,6 @@ entity LionSystem is
 		KCLK,KDATA:INOUT std_logic;
 		RTC_CE,RTC_CLK:OUT std_logic;
 		RTC_DATA:INOUT std_logic;
-		XY_DECODE,XY_MUX: OUT std_logic;
-		DACA: OUT std_logic_vector(1 downto 0);
-		DACD: OUT std_logic_vector(7 downto 0);
 		SCLK2,MOSI2,MOSI3,MOSI4,SPICS2,LDAC: OUT std_logic
 	);
 end LionSystem;
@@ -216,19 +213,6 @@ COMPONENT XY_Display_MCP4822 is
 	);
 end COMPONENT;
 
---
---COMPONENT XY_Display_MCP is
---	port
---	(
---		sclk: IN std_logic;
---		reset: IN std_logic;
---		addr: OUT natural range 0 to 1023;
---		Q: IN std_logic_vector(15 downto 0);
---		I2CC: OUT std_logic:='1';
---		I2CD1,I2CD2,I2CD3: INOUT std_logic:='1'
---	);
---end COMPONENT;
-
 constant ZERO16 : std_logic_vector(15 downto 0):= (OTHERS => '0');
 
 Signal pdelay: natural range 0 to 2047 :=0;
@@ -238,10 +222,10 @@ Signal hsyn0,vsyn0,hsyn1,vsyn1,Vmod: std_logic:='0';
 Signal vq: std_logic_vector (15 downto 0);
 Signal harm1,harm2,harm3 : std_logic_vector(3 downto 0):="0000";
 Signal di,do,AD,qa,qro,aq,aq2,aq3,q16, hline,hline0,hline1: std_logic_vector(15 downto 0);
-Signal ncnt : std_logic_vector(13 downto 0);
+Signal ncnt : std_logic_vector(15 downto 0);
 Signal count,count2,count3 : std_logic_vector(31 downto 0);
 Signal lfsr_bw : std_logic_vector(15 downto 0):="0010000000000000";
-Signal WAud, WAud2,WAud3, PB0, PG0, PR0: std_logic:='1';
+Signal WAud, WAud2,WAud3,BRI, PB0, PG0, PR0: std_logic:='1';
 Signal HOLDA, A16,A17,A18,IO,nen1,nen2,nen3,ne1,ne2,ne3: std_logic:='0';
 Signal rst, rst2, AS, DS, RW, Int_in,vint,vint0,vint1,hint,hint0,hint1,xyd: std_logic:='1';
 Signal w1,spw1, spw2, spw3,xyw,xyen: std_logic:='0';
@@ -310,17 +294,13 @@ CPLL:LPLL2
 	PORT MAP (iClock,Clock0,Clock1);
 PS2:PS2KEYB
 	PORT MAP (KDATA,KCLK,clock1,rst,kr,kready,kdo);
---XYC:XY_Display_TLC
---	PORT MAP (clock1,rst,xyadr,xyq1,XY_decode,XY_MUX,DACA,DACD);
 XYC:XY_Display_MCP4822
 	PORT MAP (clock1,rst,xyadr,xyq1,SPICS2,SCLK2,MOSI2,MOSI3,MOSI4,LDAC,XYmode);
---XYC:XY_Display_MCP
---	PORT MAP (clock1,rst,xyadr,xyq1,I2CC,I2CD1,I2CD2,I2CD3);
 rst2<=not reset when rising_edge(clock0);
 rst<=rst2 when rising_edge(clock0);
 
 HOLDAo<=HOLDA;
-Di<=Di1 when IO='1' else qa;
+Di<=Di1 when IO='1' else qa when A17='0' and A18='0' else D when AD(0)='1' else D(7 downto 0)&D(15 downto 8);
 A16o<=A16 when HOLDA='0' else 'Z';
 A17o<=A17 when HOLDA='0' else 'Z';
 A18o<=A18 when HOLDA='0' else 'Z';
@@ -328,12 +308,15 @@ ASo<=AS when HOLDA='0' else 'Z';
 DSo<=DS when HOLDA='0' else 'Z'; 
 IOo<=IO when HOLDA='0' else 'Z'; 
 RWo<=RW when HOLDA='0' else 'Z';
+RW2<=RW when HOLDA='0' else 'Z';
 D<= Do when RW='0' and DS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 ADo<= AD when AS='0' AND HOLDA='0' else "ZZZZZZZZZZZZZZZZ";
 --IACK<=IAC;
 
 BSEL<= "01" when BACS='1' and AD(0)='1' else "10" when BACS='1' and AD(0)='0' else "11";
-
+ERL<=not BSEL(0);  -- external ram
+ERH<=not BSEL(1);   -- external ram
+ER_SEL<=not (A17 OR A18);  -- external ram
 
 nen1<='1' when (ne1='1') and (play='1') and (aq(12 downto 0)/="0000000000000") else '0';
 nen2<='1' when (ne2='1') and (play2='1') and (aq2(12 downto 0)/="0000000000000") else '0';
@@ -355,6 +338,9 @@ PR<= SR1 when  SPDET1='1' else SR2 when  SPDET2='1' else SR3 when SPDET3='1' els
 PG<= SG1 when  SPDET1='1' else SG2 when  SPDET2='1' else SG3 when SPDET3='1' else G1 when Vmod='1' else G0;
 PB<= SB1 when  SPDET1='1' else SB2 when  SPDET2='1' else SB3 when SPDET3='1' else B1 when Vmod='1' else B0;
 BRI<= SBRI1 when SPDET1='1' else SBRI2 when SPDET2='1' else SBRI3 when SPDET3='1' else BRI1 when Vmod='1' else BRI0;
+BRIR<=BRI;
+BRIG<=BRI;
+BRIB<=BRI;
 
 ad1<=vad1 when Vmod='1'  else vad0;
 HSYN<=HSYN1 when Vmod='1' else HSYN0;
@@ -447,7 +433,7 @@ begin
 		if AD=21 then Di1:=count(31 downto 16); end if;
 		if AD=23 then Di1:="00000000000000"&Vsyn&hsyn; end if;  -- VSYNCH HSYNCH STATUS
 		if AD=24 then Di1:="000000000000000"&Vmod; end if;
-		if AD=23 then Di1:=hline; end if;
+		if AD=35 then Di1:=hline; end if;
 	end if;
 end process;
 	
@@ -609,14 +595,15 @@ Signal rFIFO: FIFO_r;
 	attribute ramstyle : string;
 	attribute ramstyle of rFIFO : signal is "logic";
 Signal inb: std_logic_vector(9 downto 1);
-Signal lastkey: std_logic_vector(7 downto 0);
+Signal lastkey: std_logic_vector(7 downto 0):="00000000";
 --Signal delay:natural range 0 to 65535:=0;
 signal dr: boolean:=false;
 signal rptr1, rptr2: natural range 0 to rblen := 0; 
 signal rstate: natural range 0 to 15 :=0 ;
-Signal kl,k1,k2,k3: std_logic:='0';
+Signal k0,k1,k2,k3,k4: std_logic:='1';
 begin
-
+	--Rx<=RXin when clk'EVENT  and clk = '0';
+	
 	process (clk,kclk,reset)
 	
    variable ra:boolean :=false ;
@@ -626,7 +613,7 @@ begin
 			rptr1<=0; rptr2<=0; data_ready<='0'; rstate<=0;
 			 dr<=false; ra:=false; lastkey<="00000000";
 		elsif  clk'EVENT  and clk = '1' then
-			if (kl='1') and (k1='0') then	
+			if (k0='1') and ((k1 or k2 or k3 or k4)='0') then	
 				if rstate=0 and Rx='0' then
 					rstate<=1; 
 				elsif rstate>0 and rstate<10 then
@@ -657,10 +644,11 @@ begin
 				end if;
 			end if;
 			
-			K3<=kclk;
+			k4<=kclk;
+			k3<=k4;
 			k2<=k3;
 			k1<=k2;
-			kl<=k1;
+			k0<=k1;
 			
 			if r='1' and ra=false then 
 				if dr then

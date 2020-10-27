@@ -47,9 +47,9 @@ constant StoreState:Std_logic_vector(2 downto 0):="111";
 
 SIGNAL IDX: Std_logic_vector(15 downto 0):=ZERO16;
 SIGNAL PC,X2,Ao,AoII: Std_logic_vector(15 downto 0);
-SIGNAL RPC:Std_logic_vector(15 downto 0):="0000000000010000";
+SIGNAL RPC:Std_logic_vector(15 downto 0):="0000000000100000";
 SIGNAL Z1: Std_logic_vector(15 downto 0):=ZERO16;
-SIGNAL SR: Std_logic_vector(15 downto 0):=ZERO16;
+SIGNAL SR: Std_logic_vector(15 downto 0):="0000000001000000";
 SIGNAL IST: Std_logic_vector(15 downto 0):="1111111111111110";
 SIGNAL ST: Std_logic_vector(15 downto 0):= "1111111111000000";
 SIGNAL FF: Std_logic_vector(2 downto 0):=InitialState;
@@ -144,13 +144,13 @@ begin
 	 HOLDA<='0';	AD:=PC; half:='0';   stmp:=ST+2; rest2:=false;
 	AS<='0'; sub:='0'; cin:='0';  setreg:=true; set_code;
 	fetch<=false; fetch1<=false; fetch2<=false; mem_trans<=false;
-	PC<=PC+2; mtmp:=ST-2; BACS<='0';
+	 mtmp:=ST-2; BACS<='0';
 end init_next_ins;
 
 begin
 IF rising_edge(clock) THEN
 	IF Reset = '1' THEN
-		PC<="0000000000010000"; SR<="0000000000100000";  HOLDA<='0'; FF<=InitialState; TT<=0;
+		PC<="0000000000100000"; SR<="0000000001000000";  HOLDA<='0'; FF<=InitialState; TT<=0;
 		AS<='1';  DS<='1'; RW<='1'; ST<="1111111111111110"; IO<='0'; rest3:=false;
 		A16:='0'; A17:='0'; A18:='0'; rest2:=false; IA<="00"; IACK<='0'; icnt:=0; BACS<='0';
 		IST<="1111111111000000"; Wen:='0';
@@ -160,11 +160,11 @@ IF rising_edge(clock) THEN
 	ELSIF (INT='0') and (rest2=true or rest3=true)  and (SR(INT_DIS)='0') and (IACK='0') THEN   -- Interrupts
 		mtmp:=ST-2; FF<=ExecutionState; IA<=I; IACK<='1'; IR:="100000100000"&I&"00";
 		HOLDA<='0'; rest2:=false; Wen:='0'; setreg:=true;  
-		if rest3=true then PC<=PC-2; TT<=0; rest3:=false; end if;
+		if rest3=true then TT<=0; rest3:=false; end if;
 	ELSIF SR(TRAP)='1' and IR(15 downto 9)/="1000010" and (rest2=true or rest3=true) then  -- SR(5) = trace flag reti
 		IR:="1000001000111100";  --INT 15
 		HOLDA<='0'; rest2:=false; mtmp:=ST-2; FF<=ExecutionState; Wen:='0'; 
-		if rest3=true then PC<=PC-2; TT<=0; rest3:=false; end if;
+		if rest3=true then TT<=0; rest3:=false; end if;
 	ELSE
 		rest:=false;   
 		case  FF is 
@@ -173,13 +173,13 @@ IF rising_edge(clock) THEN
 			when 0 =>
 				init_next_ins; Wen:='0';
 			when others => 
-				 rest:=true; rhalf:='0'; Wen:='0';  rest3:=false; BACS<='0';
-				IR:=Di; RR:=Di(4 downto 2); R:=Di(8 downto 6);
-				bt:=to_integer(unsigned(Di(5 downto 2)));
+				rest:=true; rhalf:='0'; Wen:='0';  rest3:=false; BACS<='0';
+				IR:=Di; RR:=Di(4 downto 2); R:=Di(8 downto 6); 
+				bt:=to_integer(unsigned(Di(5 downto 2))); PC<=PC+2;
 				bwb:=Di(5); rel:=(Di(15 downto 13)="111");  
 				fetch3<=(Di(15 downto 12)="1100"); r2:=Di(4 downto 2); r1:=Di(8 downto 6);	
 				if Di(0)='1' then 
-					FF<=FetchState; AD:=PC; AS<='0'; 
+					FF<=FetchState; AD:=PC+2; AS<='0'; 
 				else 
 					AS<='1';
 					if Di(1)='1' then	FF<=IndirectState;
@@ -195,10 +195,12 @@ IF rising_edge(clock) THEN
 			if fetch3 then 
 				FF<=Fetch2State;
 			else	
-				if IR(1)='1' then	
-					if rel then FF<=RelativeState; else FF<=IndirectState; end if;
+				X1:=Ao;	Y1:=AoII;
+				if rel then RPC<=PC+X+2; end if; -- skip relative cycle
+				if IR(1)='1' then
+					FF<=IndirectState; 
 				else	
-					if rel then FF<=RelativeState; else FF<=ExecutionState; end if;
+					FF<=ExecutionState;
 				end if;
 			end if;
 		when Fetch2State =>             -- fetch one more into Y
@@ -229,7 +231,7 @@ IF rising_edge(clock) THEN
 			end case;
 		when RelativeState =>              -- relative
 			X1:=Ao;	Y1:=AoII;
-			if fetch then RPC<=PC+X; else RPC<=PC+X1; end if;
+			RPC<=PC+X1;
 			if IR(1)='1' then FF<=IndirectState; else FF<=ExecutionState; end if;
 			rest:=true; 
 		when ExecutionState =>        --- F="110" Operation execution cycles   
@@ -320,6 +322,29 @@ IF rising_edge(clock) THEN
 				when others =>
 					rest3:=true;
 					set_reg(r2,M(31 downto 16),'0','0');
+				end case;
+			when "0001100" => -- MOV .B  An1,offset(An2)
+				case TT is
+				when 0 =>
+					X1:=X; half:=bwb; set_data;
+				when 1 =>
+					AD:=Z1; AS<='0';
+				when others =>
+					AS<='1';	
+					if bwb='1' and AD(0)='0' then
+						set_reg(r1,Di(7 downto 0)&Di(15 downto 8),bwb,'0');
+					else
+						set_reg(r1,Di,bwb,'0'); 
+					end if;
+					rest2:=true;
+				end case;
+			when "1001010" => -- MOV .B  offset(An1),An2
+				case TT is
+				when 0 =>
+					tmp:=Y1; set_data;
+					Y1:=X; half:=bwb;
+				when others =>
+					AD:=Z1; Y1:=tmp; rest:=true; BACS<=bwb; FF<=StoreState; 
 				end case;
 			when "0001101" =>               -- CMP & CMP.B (n),Reg
 				half:=bwb;
@@ -1104,13 +1129,15 @@ IF rising_edge(clock) THEN
 				--when 1=>
 				when others =>
 					rest3:=true;
-					if fetch2 then	tmp:=Di; else tmp:=RPC;	end if;
+					if fetch2 then	
+						if RPC(0)='0' and bwb='1' then tmp:=Di(7 downto 0)&Di(15 downto 8);
+					   else tmp:=Di; end if;
+					else tmp:=RPC;	end if;
 					set_reg(r1,tmp,bwb,'0');   --AS<='1';
 				end case;
 			when "1111100" =>              -- MOVR MOVR.B([n],[R]),Reg	   
 				AD:=RPC; set_data; --RW<='1'; 
-				BACS<=bwb;
-				AS<='1';	rest:=true; FF<=StoreState;
+				BACS<=bwb; AS<='1'; rest:=true; FF<=StoreState;
 			when "1111101" =>   -- JRGE ! 		
 				If SR(ZR)='1' or (SR(NG)=SR(OV)) then	PC<=RPC; end if;  
 			   rest2:=true;
