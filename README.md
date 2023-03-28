@@ -12,4 +12,4 @@ http://users.sch.gr/tliontakis/index.php/my-projects/13-vhdl-cpu
 
 https://hackaday.io/project/162876-lion-fpga-cpucomputer
 
-This free software can be used and distributed under the coditions of the GNU License.
+Hardware design and software released under the Creative Commons License BY-NC-SA https://creativecommons.org/licenses/by-nc-sa/4.0/
